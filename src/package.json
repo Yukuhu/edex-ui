@@ -16,7 +16,7 @@
     "type": "git",
     "url": "git+https://github.com/Yukuhu/edex-ui.git"
   },
-  "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
+  "author": "nDEX-UI contributors",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/Yukuhu/edex-ui/issues"

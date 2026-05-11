@@ -1,0 +1,149 @@
+/* Claude chat modal — TRON-themed, hooks into existing modal_popup augmented-ui frame. */
+
+div.modal_popup .claudeChat_root {
+    width: 70vw;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    margin-bottom: 1vh;
+}
+
+div.modal_popup .claudeChat_scrollback {
+    height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1vh 1.2vh;
+    border: 0.15vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    font-family: var(--font_mono);
+    font-size: 1.55vh;
+    line-height: 1.45;
+}
+
+div.modal_popup .claudeChat_bubble {
+    margin-bottom: 1.4vh;
+    padding-bottom: 1vh;
+    border-bottom: 0.092vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+}
+
+div.modal_popup .claudeChat_bubble:last-child {
+    border-bottom: none;
+}
+
+div.modal_popup .claudeChat_bubble pre {
+    margin: 0;
+    margin-top: 0.4vh;
+    padding: 0;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    font-family: var(--font_mono);
+    font-size: 1.55vh;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: transparent;
+    border: none;
+}
+
+div.modal_popup .claudeChat_role {
+    font-family: var(--font_main_light);
+    font-size: 1.3vh;
+    letter-spacing: 0.18vh;
+    opacity: 0.65;
+    text-transform: uppercase;
+}
+
+div.modal_popup .claudeChat_user .claudeChat_role {
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+div.modal_popup .claudeChat_assistant .claudeChat_role {
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    opacity: 0.9;
+}
+
+div.modal_popup .claudeChat_assistant.pending .claudeChat_role::after {
+    content: " …";
+    animation: claudeChat_pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes claudeChat_pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+div.modal_popup .claudeChat_bubble.error pre {
+    color: var(--color_red, #f44);
+}
+
+div.modal_popup .claudeChat_inputRow {
+    display: flex;
+    align-items: stretch;
+    gap: 1vh;
+}
+
+div.modal_popup .claudeChat_inputRow textarea {
+    flex: 1 1 auto;
+    background: var(--color_light_black);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    border: 0.15vh solid rgb(var(--color_r), var(--color_g), var(--color_b));
+    padding: 0.8vh 1vh;
+    font-family: var(--font_mono);
+    font-size: 1.55vh;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 6vh;
+    max-height: 25vh;
+}
+
+div.modal_popup .claudeChat_inputRow textarea:focus,
+div.modal_popup .claudeChat_inputRow textarea:active {
+    outline: none !important;
+}
+
+div.modal_popup .claudeChat_inputRow textarea::placeholder {
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    opacity: 0.5;
+}
+
+div.modal_popup .claudeChat_inputRow button#claudeChat_send {
+    flex: 0 0 auto;
+    align-self: stretch;
+    margin-left: 0;
+    padding: 0 2vh;
+    font-family: var(--font_main_light);
+    font-size: 1.85vh;
+    letter-spacing: 0.18vh;
+}
+
+div.modal_popup .claudeChat_status {
+    font-family: var(--font_main_light);
+    font-size: 1.3vh;
+    opacity: 0.55;
+    letter-spacing: 0.1vh;
+}
+
+div.modal_popup .claudeChat_modelLine {
+    font-family: var(--font_main_light);
+    font-size: 1.35vh;
+    letter-spacing: 0.12vh;
+    opacity: 0.7;
+}
+
+div.modal_popup .claudeChat_modelLine #claudeChat_modelName {
+    font-family: var(--font_mono);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    opacity: 1;
+}
+
+/* Scrollbar in scrollback */
+div.modal_popup .claudeChat_scrollback::-webkit-scrollbar {
+    width: 0.6vh;
+}
+div.modal_popup .claudeChat_scrollback::-webkit-scrollbar-track {
+    background: transparent;
+}
+div.modal_popup .claudeChat_scrollback::-webkit-scrollbar-thumb {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+    border-radius: 0;
+}

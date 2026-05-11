@@ -886,7 +886,8 @@ window.openShortcutsHelp = () => {
         "FS_DOTFILES": "Toggle hidden files and directories in the file browser.",
         "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
-        "DEV_RELOAD": "Trigger front-end hot reload."
+        "DEV_RELOAD": "Trigger front-end hot reload.",
+        "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI)."
     };
 
     let appList = "";
@@ -1036,6 +1037,9 @@ window.useAppShortcut = action => {
             return true;
         case "DEV_RELOAD":
             window.location.reload(true);
+            return true;
+        case "CLAUDE_CHAT":
+            window.ClaudeChat.open();
             return true;
         default:
             console.warn(`Unknown "${action}" app shortcut action`);

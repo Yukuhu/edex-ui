@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
-  "version": "2.2.8",
-  "description": "eDEX-UI sci-fi interface",
+  "name": "ndex-ui",
+  "productName": "nDEX-UI",
+  "version": "3.0.0-SNAPSHOT",
+  "description": "nDEX-UI sci-fi interface",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -14,34 +14,34 @@
   "main": "_boot.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GitSquared/edex-ui.git"
+    "url": "git+https://github.com/Yukuhu/edex-ui.git"
   },
   "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/GitSquared/edex-ui/issues"
+    "url": "https://github.com/Yukuhu/edex-ui/issues"
   },
-  "homepage": "https://github.com/GitSquared/edex-ui#readme",
+  "homepage": "https://github.com/Yukuhu/edex-ui#readme",
   "dependencies": {
-    "@electron/remote": "^1.2.2",
+    "@electron/remote": "^2.1.2",
     "augmented-ui": "^1.1.2",
     "color": "3.2.1",
-    "geolite2-redist": "^2.0.4",
+    "geolite2-redist": "^3.1.3",
     "howler": "2.2.3",
     "maxmind": "4.3.2",
     "mime-types": "^2.1.33",
-    "nanoid": "3.1.30",
-    "node-pty": "0.10.1",
-    "pdfjs-dist": "2.11.338",
+    "nanoid": "^3.3.12",
+    "node-pty": "^1.0.0",
+    "pdfjs-dist": "^4.10.38",
     "pretty-bytes": "5.6.0",
     "shell-env": "3.0.1",
     "signale": "1.4.0",
-    "smoothie": "1.35.0",
-    "systeminformation": "5.9.7",
+    "smoothie": "^1.36.1",
+    "systeminformation": "^5.31.6",
     "tail": "2.2.4",
     "username": "5.1.0",
     "which": "2.0.2",
-    "ws": "7.5.5",
+    "ws": "^8.18.0",
     "xterm": "4.14.1",
     "xterm-addon-attach": "0.6.0",
     "xterm-addon-fit": "0.5.0",

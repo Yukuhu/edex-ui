@@ -45,15 +45,16 @@ class Netstat {
         this.geoLookup = {
             get: () => null
         };
-        let geolite2 = require("geolite2-redist");
         let maxmind = require("maxmind");
-        geolite2.downloadDbs(require("path").join(require("@electron/remote").app.getPath("userData"), "geoIPcache")).then(() => {
-           geolite2.open('GeoLite2-City', path => {
-                return maxmind.open(path);
-            }).catch(e => {throw e}).then(lookup => {
-                this.geoLookup = lookup;
-                this.lastconn.finished = true;
-            });
+        // geolite2-redist 3.x is ESM-only — must use dynamic import from CJS.
+        import("geolite2-redist").then(mod => {
+            const geolite2 = mod.default || mod;
+            return geolite2.open('GeoLite2-City', path => maxmind.open(path));
+        }).then(reader => {
+            this.geoLookup = reader;
+            this.lastconn.finished = true;
+        }).catch(e => {
+            console.warn("GeoIP setup failed:", e);
         });
     }
     updateInfo() {

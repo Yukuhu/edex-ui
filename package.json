@@ -99,10 +99,10 @@
     }
   },
   "dependencies": {
-    "@electron/rebuild": "^3.6.0",
+    "@electron/rebuild": "^4.0.4",
     "clean-css": "^5.3.3",
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0",
     "mime-types": "^2.1.35",
     "node-json-minify": "1.0.0",
     "terser": "^5.31.0"

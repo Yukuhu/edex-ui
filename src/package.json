@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
+  "name": "ndex-ui",
+  "productName": "nDEX-UI",
   "version": "3.0.0-SNAPSHOT",
-  "description": "eDEX-UI sci-fi interface",
+  "description": "nDEX-UI sci-fi interface",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -14,14 +14,14 @@
   "main": "_boot.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GitSquared/edex-ui.git"
+    "url": "git+https://github.com/Yukuhu/edex-ui.git"
   },
   "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/GitSquared/edex-ui/issues"
+    "url": "https://github.com/Yukuhu/edex-ui/issues"
   },
-  "homepage": "https://github.com/GitSquared/edex-ui#readme",
+  "homepage": "https://github.com/Yukuhu/edex-ui#readme",
   "dependencies": {
     "@electron/remote": "^2.1.2",
     "augmented-ui": "^1.1.2",

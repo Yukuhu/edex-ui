@@ -255,7 +255,6 @@ function createWindow(settings) {
         display = electron.screen.getPrimaryDisplay();
     }
     let {x, y, width, height} = display.bounds;
-    width++; height++;
     win = new BrowserWindow({
         title: "nDEX-UI",
         x,

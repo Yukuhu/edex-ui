@@ -2,6 +2,56 @@
 window.eval = global.eval = function () {
     throw new Error("eval() is disabled for security reasons.");
 };
+
+// Wayland viewport overshoot fix (#32). Electron 42 + KWin Wayland
+// makes the renderer's layout viewport (window.innerWidth/Height)
+// larger than the actually-visible screen — observed as
+// innerWidth=3474 on a 3440-wide display, with the surplus rendered
+// past the right and bottom edges of the window. Scaling the
+// documentElement via CSS transform fits everything into the visible
+// area without introducing black bars. The transform also makes
+// <html> the containing block for position:fixed descendants, so
+// they get the same compression and pin to the visible edges instead
+// of the off-screen ones. Click coordinates are auto-corrected by
+// the browser through the transform; pointer interaction is
+// unaffected. The clean root-cause fix would be --ozone-platform=x11
+// but that crashes the GPU process on the open-source radv AMD
+// driver and breaks WebGL (globe widget).
+(function fixViewportOvershoot() {
+    if (typeof window === "undefined" || !window.screen) return;
+    const OVERSHOOT_THRESHOLD_PX = 8;
+    const apply = () => {
+        const sw = window.screen.availWidth || window.screen.width;
+        const sh = window.screen.availHeight || window.screen.height;
+        const iw = window.innerWidth;
+        const ih = window.innerHeight;
+        if (!sw || !sh || !iw || !ih) return;
+        const root = document.documentElement;
+        if (iw - sw < OVERSHOOT_THRESHOLD_PX && ih - sh < OVERSHOOT_THRESHOLD_PX) {
+            // Clear any earlier transform if we no longer overshoot.
+            if (root.style.transform) {
+                root.style.transform = "";
+                root.style.transformOrigin = "";
+            }
+            return;
+        }
+        const s = Math.min(sw / iw, sh / ih, 1);
+        // Center the scaled content within the visible screen so the
+        // unused strip is split evenly across both edges of the
+        // constrained axis (#32 follow-up).
+        const tx = Math.max(0, (sw - iw * s) / 2);
+        const ty = Math.max(0, (sh - ih * s) / 2);
+        root.style.transformOrigin = "top left";
+        root.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+    };
+    // The renderer's window settles to its final size after script
+    // load on some boots — race condition between BrowserWindow
+    // creation and the renderer's first measurement. Re-apply on
+    // every resize so we converge regardless of timing.
+    apply();
+    window.addEventListener("resize", apply);
+})();
+
 // Security helper :)
 window._escapeHtml = text => {
     let map = {

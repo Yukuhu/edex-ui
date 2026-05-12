@@ -212,6 +212,10 @@ function createWindow(settings) {
             webSecurity: true,
             nodeIntegration: true,
             nodeIntegrationInSubFrames: false,
+            // Lets the chat-modal's TTS worker (src/workers/tts-worker.js)
+            // require("kokoro-js") + @huggingface/transformers off the
+            // renderer's JS thread, so synthesis doesn't block UI.
+            nodeIntegrationInWorker: true,
             allowRunningInsecureContent: false,
             experimentalFeatures: settings.experimentalFeatures || false
         }

@@ -31,11 +31,22 @@ original author Gabriel "Squared" SAILLARD — see the README
   scanlines clipped to the head silhouette. Theme-aware via
   `--color_r/g/b`. (PR #4)
 - **Neural text-to-speech** via Kokoro-82M (`kokoro-js ^1.2.1`,
-  default voice `af_heart` at `q8` quantization). Fetches the ~92 MB
-  ONNX model from HuggingFace on first use within a session; falls
-  back to `speechSynthesis` if the model load fails. Voice toggle
-  in the chat modal — off by default; reads each completed
-  assistant response aloud. (PR #4)
+  default voice `af_heart` at `q8` quantization). Fetches the ONNX
+  model from HuggingFace on first use within a session; falls back
+  to `speechSynthesis` if the model load fails. Voice toggle in the
+  chat modal — off by default. **Streams sentence-by-sentence as
+  Claude is still generating** via a custom eager splitter
+  (`EagerSentenceSplitter`) — sentences yield on `.!?` or newline
+  immediately (kokoro-js's own splitter waits for a chunk past the
+  terminator, which delayed every sentence by one delta). Markdown
+  bold/italic/code markers, URLs, and code-fence lines are stripped
+  before synthesis so kokoro doesn't speak "asterisk asterisk" or
+  "three backticks". Synthesis runs entirely in a Web Worker
+  (`src/workers/tts-worker.js`) — the renderer's JS thread stays
+  unblocked during synthesis, and only handles audio playback. The
+  pipeline is pre-warmed on voice toggle so the first sentence
+  doesn't pay model-load + ONNX-warmup latency. (PR #4, streaming
+  + worker added by PR closing #22)
 - **Assistant persona for the chat modal**: full `--system-prompt`
   override drops the default Claude Code coding-agent framing.
   `WebSearch` and `WebFetch` are pre-allowed; file/shell tools

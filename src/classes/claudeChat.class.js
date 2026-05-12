@@ -3,6 +3,139 @@
 // within the same modal reuses it (Claude CLI's --session-id), so context
 // carries across turns; closing the modal drops the session.
 
+// Eagerly emits sentences as soon as a terminator is seen, even at the
+// end of the current buffer. Replaces kokoro-js's TextSplitterStream
+// which only yields a sentence after seeing non-whitespace text past
+// the terminator — that look-ahead made every sentence land one
+// chunk-delay behind, and the final sentence wait for close(). For
+// streaming TTS over a live LLM response, eager yield is the win;
+// the rare "Mr. Smith" / "..." misclassification is mitigated by an
+// abbreviation skip-list (see ClaudeChat.ABBREVIATIONS).
+class EagerSentenceSplitter {
+    constructor(abbreviations) {
+        this._buf = "";
+        this._queue = [];
+        this._closed = false;
+        this._resolve = null;
+        this._abbreviations = abbreviations || new Set();
+        // Track whether we've already yielded the first chunk of a turn.
+        // The very first yield is allowed to break on a soft boundary
+        // (comma / semicolon / em-dash) so the user hears audio sooner
+        // when the response opens with a long clause-rich sentence.
+        // Subsequent yields stick to the full-sentence rule.
+        this._firstYielded = false;
+        // Don't early-yield until at least this many chars have arrived
+        // — avoids cutting "Hi," off as a standalone chunk.
+        this._earlyYieldMinChars = 25;
+        // If the buffer grows past this many chars without a real
+        // terminator, force a soft-boundary split anyway. Bounds the
+        // worst-case first-audio latency.
+        this._earlyYieldMaxChars = 80;
+    }
+    push(text) {
+        if (!text) return;
+        this._buf += text;
+        this._scan();
+    }
+    close() {
+        if (this._closed) return;
+        this._closed = true;
+        const tail = this._buf.trim();
+        if (tail.length > 0) this._queue.push(tail);
+        this._buf = "";
+        this._wake();
+    }
+    _scan() {
+        // Two kinds of break (both for full sentences):
+        //   1. Sentence terminator [.!?…。？！]+ optionally followed by
+        //      closing quotes/brackets, lookahead-bounded by whitespace
+        //      or end-of-buffer.
+        //   2. Newline run (\n+). Treats every line break as a sentence
+        //      boundary — required for markdown bullet lists and other
+        //      structured output where there are no periods between
+        //      items. Kokoro's own splitter does the same.
+        const re = /[.!?…。？！]+["')\]}」』]*(?=\s|$)|\n+/g;
+        let lastEnd = 0;
+        let m;
+        while ((m = re.exec(this._buf)) !== null) {
+            const isNewlineBreak = m[0].startsWith("\n");
+            // Abbreviation skip only applies to the terminator branch;
+            // newlines always cut.
+            if (!isNewlineBreak) {
+                const beforeMatch = this._buf.slice(lastEnd, m.index).match(/(\w+)$/);
+                const word = beforeMatch ? beforeMatch[1].toLowerCase() : "";
+                if (this._abbreviations.has(word)) continue;
+            }
+            const cut = m.index + m[0].length;
+            const sentence = this._buf.slice(lastEnd, cut).trim();
+            if (sentence.length > 0) {
+                this._queue.push(sentence);
+                this._firstYielded = true;
+            }
+            // Skip any whitespace after the break so the next sentence
+            // doesn't start with a stray space.
+            lastEnd = cut;
+            while (lastEnd < this._buf.length && /\s/.test(this._buf[lastEnd])) {
+                lastEnd++;
+            }
+            re.lastIndex = lastEnd;
+        }
+        if (lastEnd > 0) this._buf = this._buf.slice(lastEnd);
+
+        // First-chunk early-yield. If we still haven't yielded anything
+        // for this turn and the buffer is long enough, look for a soft
+        // boundary (comma, semicolon, dash) — splitting there gets
+        // first audio out the door sooner. Past _earlyYieldMaxChars we
+        // give up on punctuation and just split on the nearest space.
+        if (!this._firstYielded && this._buf.length >= this._earlyYieldMinChars) {
+            let softCut = -1;
+            const softRe = /[,;:][\s)\]}」』]|—|–/g;
+            let sm;
+            while ((sm = softRe.exec(this._buf)) !== null) {
+                softCut = sm.index + 1; // include the comma/semicolon
+                break;
+            }
+            if (softCut === -1 && this._buf.length >= this._earlyYieldMaxChars) {
+                // Force-split on the last space within the cap.
+                const tail = this._buf.slice(0, this._earlyYieldMaxChars);
+                const lastSpace = tail.lastIndexOf(" ");
+                if (lastSpace > this._earlyYieldMinChars) softCut = lastSpace;
+            }
+            if (softCut > 0) {
+                const chunk = this._buf.slice(0, softCut).trim();
+                if (chunk.length > 0) {
+                    this._queue.push(chunk);
+                    this._firstYielded = true;
+                    let trimStart = softCut;
+                    while (trimStart < this._buf.length && /\s/.test(this._buf[trimStart])) {
+                        trimStart++;
+                    }
+                    this._buf = this._buf.slice(trimStart);
+                }
+            }
+        }
+
+        if (this._queue.length > 0) this._wake();
+    }
+    _wake() {
+        if (this._resolve) {
+            const r = this._resolve;
+            this._resolve = null;
+            r();
+        }
+    }
+    async *[Symbol.asyncIterator]() {
+        while (true) {
+            if (this._queue.length > 0) {
+                yield this._queue.shift();
+                continue;
+            }
+            if (this._closed) return;
+            await new Promise(r => { this._resolve = r; });
+        }
+    }
+}
+
 class ClaudeChat {
     // Forced via --model on every spawn so the chat doesn't inherit
     // whatever the user's Claude Code default happens to be.
@@ -69,6 +202,30 @@ class ClaudeChat {
         { id: "q4",    label: "q4 (~50 MB, low)" }
     ];
 
+    // Common English abbreviations that look like sentence endings but
+    // aren't. Subset of kokoro-js's own list, used by EagerSplitter to
+    // avoid yielding mid-sentence on "Mr.", "Dr.", "etc." and friends.
+    static ABBREVIATIONS = new Set([
+        "mr", "mrs", "ms", "dr", "prof", "sr", "jr",
+        "st", "mt", "etc", "co", "inc", "ltd", "dept", "vs", "p", "pg",
+        "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept",
+        "oct", "nov", "dec",
+        "sun", "mon", "tue", "wed", "thu", "fri", "sat"
+    ]);
+
+    // Patterns shared between `_extractSources` (end-of-turn cleanup of
+    // the bubble text) and the streaming TTS filter (`_ttsPushTail`).
+    // Keeping them in one place ensures the spoken text and the rendered
+    // text agree on what counts as a URL / sources block.
+    //
+    // `SOURCES_BLOCK_RE` matches an optional markdown-emphasis wrapper
+    // around Sources/References/Citations + the rest of the string.
+    // `INLINE_LINK_RE` matches `[label](url)` markdown links.
+    // `BARE_URL_RE` matches standalone http(s) URLs.
+    static SOURCES_BLOCK_RE = /\n+\s*(?:[#*_]+\s*)?(?:Sources?|References?|Citations?)\s*(?:[*_]+)?\s*:?\s*\n[\s\S]*$/i;
+    static INLINE_LINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;
+    static BARE_URL_RE = /https?:\/\/\S+/g;
+
     // URL safety helper — only http(s) URLs are allowed to reach
     // shell.openExternal. `javascript:` or `file:` schemes can execute
     // arbitrary code via the OS handler, so we hard-reject them.
@@ -107,9 +264,30 @@ class ClaudeChat {
         this.currentTtsReq = null;
         this.neuralTtsAvailable = true; // WASM, demoted on first failure
         this.pendingAudioUrl = null;
-        this._kokoroModule = null;  // lazy-imported kokoro-js namespace
-        this._kokoroTts = null;     // cached KokoroTTS instance
-        this._kokoroDtype = null;   // dtype the cached instance was loaded with
+        // Kokoro runs in a Web Worker — see src/workers/tts-worker.js.
+        // Keeping the pipeline off the renderer's JS thread means
+        // phonemize (WASM, sync), ONNX preprocessing, and the
+        // Float32→WAV conversion don't block the chat UI during
+        // synthesis. The worker itself loads kokoro-js via require()
+        // (enabled by `nodeIntegrationInWorker: true` in _boot.js).
+        this._ttsWorker = null;          // Worker instance
+        this._ttsWorkerLoadedDtype = null;
+        this._ttsLoadPromise = null;     // in-flight load, if any
+        this._ttsLoadResolve = null;
+        this._ttsLoadReject = null;
+        this._ttsSynthPending = new Map(); // id → { resolve, reject }
+        this._ttsSynthNextId = 1;
+
+        // Streaming TTS state. The splitter accepts delta chunks via
+        // `push(text)` and yields full sentences to kokoro's `stream()`
+        // generator; each yielded sentence is synthesized and queued
+        // for sequential playback. See _ttsBegin / _ttsConsume.
+        this._ttsStream = null;          // TextSplitterStream instance
+        this._ttsTurnKey = 0;            // bumped on cancel; consumers check before acting
+        this._ttsAudioQueue = [];        // [{ url, audio }] pending playback
+        this._ttsPlaying = false;        // an <audio> element is actively playing
+        this._ttsPushedLen = 0;          // chars from rolling buffer already pushed
+        this._ttsSourcesReached = false; // saw Sources block — stop pushing
 
         // Typewriter-style streaming: buffer raw deltas, then reveal
         // characters on a steady RAF tick so the output reads like a
@@ -200,6 +378,13 @@ class ClaudeChat {
             if (this.avatar && this.avatar.state === "thinking") {
                 this.avatar.setState("responding");
             }
+            // Streaming TTS — kick off (idempotent) on the first delta
+            // and push the new tail. Cheap; nothing happens unless
+            // voice is on AND neural TTS is available.
+            if (this.voiceEnabled && this.neuralTtsAvailable) {
+                this._ttsBegin();
+                this._ttsPushTail();
+            }
         };
         this._onDone = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
@@ -219,7 +404,16 @@ class ClaudeChat {
             this._finalizeAssistant();
             this.firstTurn = false;
             this.status.innerText = "Ready.";
-            if (this.voiceEnabled && spoken.trim().length > 0) {
+            // If a streaming TTS pipeline was started during this turn,
+            // close the splitter and let the consumer drain — the
+            // playback queue will settle the avatar back to idle on its
+            // own. Otherwise (voice off, or neural unavailable so
+            // streaming never began) fall through to the legacy
+            // one-shot path with the full cleaned text.
+            const streaming = this._ttsFinish();
+            if (streaming) {
+                // Consumer pumps the queue; nothing more to do here.
+            } else if (this.voiceEnabled && spoken.trim().length > 0) {
                 this._speak(spoken);
             } else if (this.avatar) {
                 this.avatar.setState("idle");
@@ -266,6 +460,10 @@ class ClaudeChat {
         if (!prompt) return;
         if (this.pendingReqId) return; // already in flight
 
+        // Cancel any TTS still in flight from the previous turn — both
+        // playing audio and the streaming consumer.
+        this._cancelSpeech();
+
         this._appendUserBubble(prompt);
         this.input.value = "";
         this._beginAssistantBubble();
@@ -293,6 +491,17 @@ class ClaudeChat {
             this._cancelSpeech();
             if (this.avatar && !this.pendingReqId) this.avatar.setState("idle");
         }
+        if (this.voiceEnabled && this.neuralTtsAvailable) {
+            // Pre-warm the Kokoro pipeline. Model load is the long pole on
+            // the first turn of a session — kicking it off here means it's
+            // (usually) ready by the time the user submits, so streaming
+            // can start synthesizing as soon as the first sentence
+            // boundary arrives instead of waiting for the model.
+            const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+            this._ensureWorkerLoaded(dtype).catch(err => {
+                console.warn("Kokoro pre-warm failed:", err);
+            });
+        }
         if (this.voiceEnabled && !this.neuralTtsAvailable && typeof speechSynthesis !== "undefined" && speechSynthesis.getVoices().length === 0) {
             this.status.innerText = "Voice enabled, but no TTS voice is available on this system.";
         }
@@ -309,6 +518,8 @@ class ClaudeChat {
             try { URL.revokeObjectURL(this.pendingAudioUrl); } catch (_) {}
             this.pendingAudioUrl = null;
         }
+        // Tear down any active streaming TTS pipeline too.
+        this._ttsCancel();
         // No IPC cancel for WASM piper — we drop currentTtsReq, and
         // _speakPiper will see the mismatch and abandon its result.
         this.currentTtsReq = null;
@@ -322,6 +533,93 @@ class ClaudeChat {
         }
     }
 
+    // Lazily creates the TTS Worker and wires its message handler. The
+    // worker outlives individual turns — we kill it on modal close.
+    _ensureWorker() {
+        if (this._ttsWorker) return this._ttsWorker;
+        // `workers/tts-worker.js` is served via file:// alongside the
+        // renderer. CSP `default-src file:` covers it.
+        this._ttsWorker = new Worker("workers/tts-worker.js");
+        this._ttsWorker.addEventListener("message", (ev) => this._onTtsWorkerMessage(ev));
+        this._ttsWorker.addEventListener("error", (err) => {
+            console.warn("[TTS Worker] error:", err.message || err);
+            // Reject any in-flight promises so consumers don't hang.
+            if (this._ttsLoadReject) {
+                this._ttsLoadReject(new Error(err.message || "Worker error"));
+                this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
+            }
+            for (const [id, p] of this._ttsSynthPending) {
+                p.reject(new Error(err.message || "Worker error"));
+            }
+            this._ttsSynthPending.clear();
+        });
+        return this._ttsWorker;
+    }
+
+    // Load (or reuse) the Kokoro pipeline in the worker for the given
+    // dtype. Idempotent: returns the same promise while a load is in
+    // flight; resolves immediately if already loaded with the same dtype.
+    _ensureWorkerLoaded(dtype) {
+        this._ensureWorker();
+        if (this._ttsWorkerLoadedDtype === dtype && !this._ttsLoadPromise) {
+            return Promise.resolve();
+        }
+        if (this._ttsLoadPromise) return this._ttsLoadPromise;
+
+        this.status.innerText = `Loading Kokoro TTS (${dtype})…`;
+        this._showProgress(`Loading model (${dtype})…`);
+        this._ttsLoadPromise = new Promise((resolve, reject) => {
+            this._ttsLoadResolve = resolve;
+            this._ttsLoadReject = reject;
+        });
+        this._ttsWorker.postMessage({ type: "load", dtype });
+        return this._ttsLoadPromise;
+    }
+
+    // Send a sentence to the worker for synthesis. Returns a Promise
+    // that resolves with an audio Blob (WAV) ready to play.
+    _synthInWorker(text, voice) {
+        if (!this._ttsWorker || this._ttsWorkerLoadedDtype === null) {
+            return Promise.reject(new Error("Worker not loaded"));
+        }
+        const id = this._ttsSynthNextId++;
+        return new Promise((resolve, reject) => {
+            this._ttsSynthPending.set(id, { resolve, reject });
+            this._ttsWorker.postMessage({ type: "synthesize", id, text, voice });
+        });
+    }
+
+    // Worker → main thread message dispatcher.
+    _onTtsWorkerMessage(ev) {
+        const msg = ev.data || {};
+        if (msg.type === "load-progress") {
+            this._onTtsProgress(msg.event);
+        } else if (msg.type === "load-ready") {
+            console.info(`[TTS] Worker load(${msg.dtype}) load=${msg.loadMs.toFixed(0)}ms warmup=${msg.warmMs.toFixed(0)}ms`);
+            this._ttsWorkerLoadedDtype = msg.dtype;
+            this._hideProgress();
+            this.status.innerText = `Kokoro ready (${msg.dtype}).`;
+            if (this._ttsLoadResolve) this._ttsLoadResolve();
+            this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
+        } else if (msg.type === "load-error") {
+            this._hideProgress();
+            if (this._ttsLoadReject) this._ttsLoadReject(new Error(msg.message));
+            this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
+        } else if (msg.type === "synth-result") {
+            const pending = this._ttsSynthPending.get(msg.id);
+            if (!pending) return;
+            this._ttsSynthPending.delete(msg.id);
+            const blob = new Blob([msg.wav], { type: "audio/wav" });
+            console.info(`[TTS] sentence synth=${msg.synthMs.toFixed(0)}ms chars=${msg.chars}`);
+            pending.resolve(blob);
+        } else if (msg.type === "synth-error") {
+            const pending = this._ttsSynthPending.get(msg.id);
+            if (!pending) return;
+            this._ttsSynthPending.delete(msg.id);
+            pending.reject(new Error(msg.message));
+        }
+    }
+
     async _speakNeural(text) {
         this._cancelSpeech();
         const opId = `tts_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
@@ -331,59 +629,12 @@ class ClaudeChat {
         const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
         this._refreshTtsConfigDisplay();
         try {
-            // Dtype is baked in at from_pretrained — drop the cached
-            // instance when the user picks a different precision so the
-            // next call re-loads with the right weights.
-            if (this._kokoroTts && this._kokoroDtype !== dtype) {
-                this._kokoroTts = null;
-                this._kokoroDtype = null;
-            }
-            if (!this._kokoroTts) {
-                this.status.innerText = `Loading Kokoro TTS (${dtype})…`;
-                // Show the bar immediately so cache hits (no progress
-                // events) still give visible feedback. The label gets
-                // overwritten by per-file progress when a real download
-                // actually starts.
-                this._showProgress(`Loading model (${dtype})…`);
-                if (!this._kokoroModule) {
-                    // kokoro-js ships a CJS build under its `require` export
-                    // condition (dist/kokoro.cjs). Dynamic `import("kokoro-js")`
-                    // silently failed in the renderer because the browser-side
-                    // ESM resolver does not understand bare specifiers — Kokoro
-                    // was falling back to speechSynthesis on every call.
-                    // require() resolves through Node and bypasses that.
-                    this._kokoroModule = require("kokoro-js");
-
-                    // In the Electron renderer, transformers.node.cjs's
-                    // file-system cache trips over its own FileResponse/match
-                    // logic and throws "Unable to get model file path or
-                    // buffer" on the model file. Force buffer-mode loading by
-                    // disabling both caches — slightly slower (re-fetches on
-                    // every cold launch) but reliable.
-                    try {
-                        const transformers = require("@huggingface/transformers");
-                        transformers.env.useFSCache = false;
-                        transformers.env.useBrowserCache = false;
-                    } catch (envErr) {
-                        console.warn("Could not configure transformers env:", envErr);
-                    }
-                }
-                this._kokoroTts = await this._kokoroModule.KokoroTTS.from_pretrained(
-                    ClaudeChat.TTS_MODEL_ID,
-                    { dtype: dtype, progress_callback: (e) => this._onTtsProgress(e) }
-                );
-                this._hideProgress();
-                this._kokoroDtype = dtype;
-                this.status.innerText = `Kokoro ready (${dtype}).`;
-            }
+            await this._ensureWorkerLoaded(dtype);
             if (this.currentTtsReq !== opId) return; // cancelled while loading
             this.status.innerText = "Synthesizing…";
-            const rawAudio = await this._kokoroTts.generate(text, {
-                voice: voice
-            });
+            const wavBlob = await this._synthInWorker(text, voice);
             if (this.currentTtsReq !== opId) return; // cancelled mid-synthesis
             this.status.innerText = "Speaking.";
-            const wavBlob = rawAudio.toBlob();
             const url = URL.createObjectURL(wavBlob);
             this.pendingAudioUrl = url;
             const audio = new Audio(url);
@@ -418,6 +669,204 @@ class ClaudeChat {
             if (this.currentTtsReq === opId) this.currentTtsReq = null;
             this._speakSystem(text);
         }
+    }
+
+    // -------------------------------------------------------------------
+    // Streaming TTS pipeline.
+    //
+    // Kicked off from `_onDelta` on the first chunk of a turn (when voice
+    // is enabled). Each subsequent delta pushes its tail into a
+    // TextSplitterStream; the stream yields complete sentences to
+    // kokoro's `stream()` generator, which synthesizes audio per
+    // sentence; `_ttsPumpQueue` plays the resulting Audio elements in
+    // order. Cancellation (Esc / voice off / new prompt / modal close)
+    // goes through `_ttsCancel`, which bumps `_ttsTurnKey` so any
+    // in-flight consumer aborts after its current yield.
+
+    // Initialize a new streaming turn. Idempotent within a turn: callable
+    // from every delta, only kicks off the pipeline on the first call.
+    _ttsBegin() {
+        if (this._ttsStream || this._ttsLoadingTurnKey) return;
+        if (!this.voiceEnabled || !this.neuralTtsAvailable) return;
+
+        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
+
+        this._ttsTurnKey++;
+        const turnKey = this._ttsTurnKey;
+        this._ttsLoadingTurnKey = turnKey;
+        this._ttsPushedLen = 0;
+        this._ttsSourcesReached = false;
+        this._ttsPendingClose = false;
+        this._ttsAudioQueue = [];
+
+        this._refreshTtsConfigDisplay();
+
+        this._ensureWorkerLoaded(dtype).then(() => {
+            // Worker ready. If the user cancelled / opened a new turn
+            // while loading, abandon.
+            if (this._ttsTurnKey !== turnKey) {
+                this._ttsLoadingTurnKey = null;
+                return;
+            }
+            this._ttsLoadingTurnKey = null;
+            // Use our eager splitter, not kokoro's TextSplitterStream —
+            // see EagerSentenceSplitter's comment for why.
+            this._ttsStream = new EagerSentenceSplitter(ClaudeChat.ABBREVIATIONS);
+            // Push everything that arrived during load.
+            this._ttsPushTail();
+            // If _onDone fired while we were loading, propagate the close.
+            if (this._ttsPendingClose) {
+                this._ttsPendingClose = false;
+                try { this._ttsStream.close(); } catch (_) {}
+            }
+            this._ttsConsume(turnKey, voice);
+        }).catch(err => {
+            // Pipeline load failed. _onDone's fallback path will speak
+            // via the system voice over the full text.
+            this._ttsLoadingTurnKey = null;
+            console.warn("Kokoro pipeline load failed:", err);
+            this._hideProgress();
+        });
+    }
+
+    // Push the new tail of `activeAssistantBuf + _pendingChars` into the
+    // splitter, after stripping URLs and detecting the Sources block.
+    _ttsPushTail() {
+        if (this._ttsSourcesReached) return;
+        if (!this._ttsStream) return;
+        const rolling = this.activeAssistantBuf + this._pendingChars;
+        let cutoff = rolling.length;
+        const blockMatch = rolling.match(ClaudeChat.SOURCES_BLOCK_RE);
+        if (blockMatch) {
+            this._ttsSourcesReached = true;
+            cutoff = blockMatch.index;
+        }
+        if (cutoff <= this._ttsPushedLen) return;
+        const tail = rolling.slice(this._ttsPushedLen, cutoff);
+        // Strip URLs from the tail. Markdown links keep their label so
+        // the spoken text reads naturally; bare URLs are dropped.
+        let cleaned = tail.replace(ClaudeChat.INLINE_LINK_RE, (_m, label) => label);
+        cleaned = cleaned.replace(ClaudeChat.BARE_URL_RE, "");
+        // Strip markdown emphasis / code-span markers. Kokoro phonemizes
+        // them literally ("asterisk asterisk Whit Sunday asterisk
+        // asterisk"), which both slows synthesis 2-3× and produces ugly
+        // audio. Order matters: ** before *, ` separately.
+        cleaned = cleaned.replace(/\*\*([^*\n]+?)\*\*/g, "$1");        // **bold**
+        cleaned = cleaned.replace(/(?<![*])\*([^*\n]+?)\*(?![*])/g, "$1"); // *italic*
+        cleaned = cleaned.replace(/__([^_\n]+?)__/g, "$1");            // __bold__
+        cleaned = cleaned.replace(/(?<![_\w])_([^_\n]+?)_(?![_\w])/g, "$1"); // _italic_
+        cleaned = cleaned.replace(/`+([^`\n]+?)`+/g, "$1");            // `code`
+        // Strip whole ``` code-fence lines (with optional language tag)
+        // so kokoro doesn't speak "three backticks" between code-block
+        // boundaries. Contents of the block are still pushed — speech
+        // for hex/hashes is awkward but not always wrong.
+        cleaned = cleaned.replace(/^```[^\n]*\n?/gm, "");
+        if (cleaned.length > 0) {
+            try { this._ttsStream.push(cleaned); } catch (_) {}
+        }
+        this._ttsPushedLen = cutoff;
+    }
+
+    // Called from _onDone. Closes the splitter (or queues a pending
+    // close if the pipeline is still loading). Returns true if a stream
+    // was active so the caller can skip the legacy `_speak(spoken)`.
+    _ttsFinish() {
+        if (!this._ttsStream && !this._ttsLoadingTurnKey) return false;
+        this._ttsPushTail();
+        if (this._ttsStream) {
+            try { this._ttsStream.close(); } catch (_) {}
+        } else {
+            this._ttsPendingClose = true;
+        }
+        return true;
+    }
+
+    // Hard cancel — drops everything, stops audio, bumps the turn key so
+    // any in-flight consumer or pending load bails after its next check.
+    _ttsCancel() {
+        this._ttsTurnKey++;
+        this._ttsLoadingTurnKey = null;
+        if (this._ttsStream) {
+            try { this._ttsStream.close(); } catch (_) {}
+            this._ttsStream = null;
+        }
+        for (const item of this._ttsAudioQueue) {
+            try { URL.revokeObjectURL(item.url); } catch (_) {}
+        }
+        this._ttsAudioQueue = [];
+        this._ttsPlaying = false;
+        this._ttsPushedLen = 0;
+        this._ttsSourcesReached = false;
+        this._ttsPendingClose = false;
+    }
+
+    // Async consumer loop — pulls one sentence at a time from our eager
+    // splitter, synthesizes it via kokoro.generate(), queues the audio,
+    // and pumps the queue. Bypasses kokoro's own stream() generator so
+    // we get eager sentence emission instead of one-chunk-behind.
+    async _ttsConsume(turnKey, voice) {
+        const turnStart = performance.now();
+        let firstSentenceTime = null;
+        let sentenceCount = 0;
+        try {
+            for await (const sentence of this._ttsStream) {
+                if (this._ttsTurnKey !== turnKey) return;
+                if (!sentence || !sentence.trim()) continue;
+                if (firstSentenceTime === null) {
+                    firstSentenceTime = performance.now() - turnStart;
+                    console.info(`[TTS] First sentence yielded at +${firstSentenceTime.toFixed(0)}ms: ${sentence.slice(0, 50)}…`);
+                }
+                sentenceCount++;
+                const blob = await this._synthInWorker(sentence, voice);
+                if (this._ttsTurnKey !== turnKey) return;
+                const url = URL.createObjectURL(blob);
+                const el = new Audio(url);
+                this._ttsAudioQueue.push({ url, audio: el });
+                this._ttsPumpQueue();
+            }
+        } catch (err) {
+            if (this._ttsTurnKey !== turnKey) return;
+            console.warn("Kokoro streaming failed mid-turn:", err);
+            // Fall back to system voice over whatever the bubble holds.
+            this._speakSystem(this.activeAssistantBuf || "");
+        } finally {
+            // Stream consumed to completion (close or break) — drop the
+            // splitter reference so the next turn starts fresh. Do not
+            // touch the audio queue here; pumpQueue handles draining.
+            if (this._ttsTurnKey === turnKey) {
+                this._ttsStream = null;
+            }
+        }
+    }
+
+    // Sequential audio player. Each Audio waits for the previous to end
+    // before starting, so sentences land in order. Settles the avatar
+    // back to idle once the queue drains AND no more sentences are
+    // pending from the consumer.
+    _ttsPumpQueue() {
+        if (this._ttsPlaying) return;
+        const next = this._ttsAudioQueue.shift();
+        if (!next) return;
+        this._ttsPlaying = true;
+        if (this.avatar) this.avatar.setState("speaking");
+        this.status.innerText = "Speaking.";
+        const cleanup = () => {
+            try { URL.revokeObjectURL(next.url); } catch (_) {}
+            this._ttsPlaying = false;
+            if (this.currentAudio === next.audio) this.currentAudio = null;
+            if (this._ttsAudioQueue.length > 0) {
+                this._ttsPumpQueue();
+            } else if (!this._ttsStream && this.avatar && !this.pendingReqId) {
+                // Stream is closed and queue is empty — turn is done.
+                this.avatar.setState("idle");
+                this.status.innerText = "Ready.";
+            }
+        };
+        next.audio.onended = cleanup;
+        next.audio.onerror = cleanup;
+        this.currentAudio = next.audio;
+        next.audio.play().catch(cleanup);
     }
 
     // HuggingFace transformers.js progress callback. Emits per-file
@@ -607,31 +1056,28 @@ class ClaudeChat {
             sources.push({ url: trimmed, label: label || trimmed });
         };
 
-        // 1. Trailing sources block. Matches an optional markdown-emphasis
-        //    wrapper (#, *, _) around "Sources" / "References" / "Citations",
-        //    optional trailing emphasis + colon, and consumes everything to
-        //    end of string.
-        const blockRe = /\n+\s*(?:[#*_]+\s*)?(?:Sources?|References?|Citations?)\s*(?:[*_]+)?\s*:?\s*\n[\s\S]*$/i;
-        const blockMatch = cleaned.match(blockRe);
+        // 1. Trailing sources block. Same regex used by the streaming
+        //    TTS filter so the spoken cutoff matches the bubble cutoff.
+        const blockMatch = cleaned.match(ClaudeChat.SOURCES_BLOCK_RE);
         if (blockMatch) {
             const block = blockMatch[0];
             // Pull URLs (markdown-link OR bare) out of the trailing block.
-            block.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, label, url) => {
+            block.replace(ClaudeChat.INLINE_LINK_RE, (_m, label, url) => {
                 pushUrl(url, label);
                 return "";
             });
-            (block.match(/https?:\/\/\S+/g) || []).forEach(u => pushUrl(u, null));
+            (block.match(ClaudeChat.BARE_URL_RE) || []).forEach(u => pushUrl(u, null));
             cleaned = cleaned.slice(0, blockMatch.index);
         }
 
         // 2. Markdown links in main body: keep label, capture url.
-        cleaned = cleaned.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, label, url) => {
+        cleaned = cleaned.replace(ClaudeChat.INLINE_LINK_RE, (_m, label, url) => {
             pushUrl(url, label);
             return label;
         });
 
         // 3. Bare URLs in main body: strip and capture.
-        cleaned = cleaned.replace(/https?:\/\/\S+/g, url => {
+        cleaned = cleaned.replace(ClaudeChat.BARE_URL_RE, url => {
             pushUrl(url, null);
             return "";
         });
@@ -753,6 +1199,12 @@ class ClaudeChat {
             this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
         }
         this._cancelSpeech();
+        if (this._ttsWorker) {
+            try { this._ttsWorker.terminate(); } catch (_) {}
+            this._ttsWorker = null;
+            this._ttsWorkerLoadedDtype = null;
+            this._ttsSynthPending.clear();
+        }
         if (this.avatar) {
             this.avatar.destroy();
             this.avatar = null;

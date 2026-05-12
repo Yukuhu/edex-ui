@@ -848,24 +848,49 @@ class ClaudeChat {
         // the spoken text reads naturally; bare URLs are dropped.
         let cleaned = tail.replace(ClaudeChat.INLINE_LINK_RE, (_m, label) => label);
         cleaned = cleaned.replace(ClaudeChat.BARE_URL_RE, "");
-        // Strip markdown emphasis / code-span markers. Kokoro phonemizes
-        // them literally ("asterisk asterisk Whit Sunday asterisk
-        // asterisk"), which both slows synthesis 2-3× and produces ugly
-        // audio. Order matters: ** before *, ` separately.
-        cleaned = cleaned.replace(/\*\*([^*\n]+?)\*\*/g, "$1");        // **bold**
-        cleaned = cleaned.replace(/(?<![*])\*([^*\n]+?)\*(?![*])/g, "$1"); // *italic*
-        cleaned = cleaned.replace(/__([^_\n]+?)__/g, "$1");            // __bold__
-        cleaned = cleaned.replace(/(?<![_\w])_([^_\n]+?)_(?![_\w])/g, "$1"); // _italic_
-        cleaned = cleaned.replace(/`+([^`\n]+?)`+/g, "$1");            // `code`
-        // Strip whole ``` code-fence lines (with optional language tag)
-        // so kokoro doesn't speak "three backticks" between code-block
-        // boundaries. Contents of the block are still pushed — speech
-        // for hex/hashes is awkward but not always wrong.
-        cleaned = cleaned.replace(/^```[^\n]*\n?/gm, "");
+        // Markdown strip is a fast path here — works when a `**bold**`
+        // run fits in one delta. The sentence-time pass in _ttsConsume
+        // catches anything that straddles a delta boundary (#54).
+        cleaned = this._stripMarkdownForTts(cleaned);
         if (cleaned.length > 0) {
             try { this._ttsStream.push(cleaned); } catch (_) {}
         }
         this._ttsPushedLen = cutoff;
+    }
+
+    // Scrub markdown for TTS. Called at two points: per-tail (fast
+    // path while text is streaming in) and per-sentence (safety net
+    // after assembly). The orphan-marker passes at the end matter
+    // for the sentence call: when `**bold**` straddles a streaming
+    // delta boundary, neither half has a balanced pair and the
+    // first regex misses; the orphan kill catches it. Per-tail
+    // calls fall through those passes as no-ops on well-formed input.
+    _stripMarkdownForTts(text) {
+        if (!text) return text;
+        // Code fences first so balanced strips don't operate inside them.
+        text = text.replace(/^```[^\n]*\n?/gm, "");
+        // Inline code spans: keep content, drop backticks.
+        text = text.replace(/`+([^`\n]+?)`+/g, "$1");
+        // Balanced emphasis pairs.
+        text = text.replace(/\*\*([^*\n]+?)\*\*/g, "$1");                  // **bold**
+        text = text.replace(/(?<![*])\*([^*\n]+?)\*(?![*])/g, "$1");       // *italic*
+        text = text.replace(/__([^_\n]+?)__/g, "$1");                      // __bold__
+        text = text.replace(/(?<![_\w])_([^_\n]+?)_(?![_\w])/g, "$1");     // _italic_
+        // Orphan markers from cross-delta or cross-sentence splits.
+        // Multi-char runs are always safe to nuke once their balanced
+        // pairs have been consumed above.
+        text = text.replace(/\*\*+/g, "");
+        text = text.replace(/__+/g, "");
+        // Single-char orphans: only kill when adjacent to a word char,
+        // so whitespace-surrounded literal `*` (e.g. `git commit *`)
+        // and standalone `_` (e.g. variable names already past the
+        // balanced pass) survive.
+        text = text.replace(/\*(?=\w)|(?<=\w)\*/g, "");
+        text = text.replace(/_(?=\w)|(?<=\w)_/g, "");
+        // Line-leading bullet markers — otherwise kokoro reads each
+        // list item as "asterisk item one, asterisk item two."
+        text = text.replace(/^\s*[*+\-]\s+/gm, "");
+        return text;
     }
 
     // Called from _onDone. Closes the splitter (or queues a pending
@@ -910,8 +935,16 @@ class ClaudeChat {
         let firstSentenceTime = null;
         let sentenceCount = 0;
         try {
-            for await (const sentence of this._ttsStream) {
+            for await (const rawSentence of this._ttsStream) {
                 if (this._ttsTurnKey !== turnKey) return;
+                if (!rawSentence || !rawSentence.trim()) continue;
+                // Safety-net scrub — the per-tail strip in
+                // _ttsPushTail misses markers that straddle a
+                // streaming delta boundary (#54). At this point the
+                // sentence is fully assembled, so the balanced-pair
+                // regexes and orphan-marker passes both see complete
+                // context.
+                const sentence = this._stripMarkdownForTts(rawSentence);
                 if (!sentence || !sentence.trim()) continue;
                 if (firstSentenceTime === null) {
                     firstSentenceTime = performance.now() - turnStart;

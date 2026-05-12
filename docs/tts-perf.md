@@ -197,8 +197,25 @@ don't relitigate.
 
 | Variant | Status | Win over baseline | Notes |
 |---|---|---|---|
-| 1a | _TBD_ | _TBD_ | |
-| 1b | _TBD_ | _TBD_ | |
-| 1c | _TBD_ | _TBD_ | |
-| 2 | _TBD_ | _TBD_ | |
-| 3b | _TBD_ | _TBD_ | |
+| 1a. Aggressive sub-sentence chunking | REJECTED | None — regression | T-first-audio got worse on cold and warm; prosody broken at every comma; chunker bug froze UI for 13.5s on cold. |
+| 1b. Pre-warm on chat modal open | SKIPPED | None on T-first-audio | Pre-warm already finishes before submit. Quality-of-life only; defer. |
+| 1c. Concurrent worker synthesis | SKIPPED | None expected | queue-peak 9-24 shows synthesis already outpaces playback. Revisit only if a future voice/model makes the queue drain. |
+| 2. WebGPU EP | REJECTED (blocked) | n/a | kokoro.web.js's bundled transformers reports `device: ['cpu']` only in the node-integrated worker. Worker file kept dormant for a future non-Node worker context. |
+| 2. CoreML EP (macOS) | **KEPT** | ~10% synth-ms/char on Apple Silicon | `session_options.executionProviders = ["coreml", "cpu"]` on darwin; non-darwin unchanged. |
+| 3a. Stage instrumentation | **KEPT** (diagnostic) | n/a | Two `[PERF]` console.info lines per turn + PerformanceObserver for long tasks. Zero cost when DevTools is closed. |
+| 3b. Acting on 3a's findings | SKIPPED | n/a | No realistic lever on the dominant `ipc → first-delta` (Claude CLI TTFT) stage without a different LLM backend or SDK swap (out of scope per CLAUDE.md). |
+
+## Manual-edit knob: `ttsBackend`
+
+The WebGPU worker is opt-in via `window.settings.ttsBackend === "webgpu"`.
+This setting is **not** wired into `src/_boot.js` defaults or the
+in-app settings editor in `src/_renderer.js` — it's a developer escape
+hatch only, set by manually editing `settings.json`:
+
+```json
+{ "ttsBackend": "webgpu" }
+```
+
+Any other value (including missing) uses the default node-CPU worker.
+If the WebGPU worker fails to load, the renderer transparently falls
+back to the node-CPU worker for the rest of the session.

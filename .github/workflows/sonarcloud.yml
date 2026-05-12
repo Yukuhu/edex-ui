@@ -9,6 +9,13 @@ on:
 jobs:
   scan:
     name: Scan
+    # Skip on Dependabot PRs: GitHub withholds Actions secrets from
+    # dependabot[bot]-triggered runs, so SONAR_TOKEN comes through
+    # empty and the scanner errors with "Project not found". Dependabot
+    # PRs only touch dependency manifests, so we lose no useful signal
+    # by skipping. To restore coverage, copy SONAR_TOKEN into
+    # Settings → Secrets and variables → Dependabot and drop this guard.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read

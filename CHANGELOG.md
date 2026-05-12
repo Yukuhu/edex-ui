@@ -17,6 +17,18 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **Central control menu** (`Ctrl+Shift+O`): Omarchy-style launcher
+  that surfaces every common action behind a single hotkey, modelled
+  on the existing Fuzzy Finder modal. Type to filter, arrow keys to
+  navigate, Enter to activate or descend into a submenu, Backspace to
+  ascend, Esc to close. Top-level entries: **Settings**, **Shortcuts**,
+  **Style** (live theme switch, keyboard layout picker), **Toggle**
+  (panels, on-screen keyboard, filesystem dotfiles, list view,
+  pass-mode), **Open** (fuzzy file search, file browser, Claude chat),
+  **Dev** (DevTools, reload UI, restart eDEX), and **Quit**. Existing
+  direct shortcuts (`Ctrl+Shift+S/K/F/E/...`) are unchanged — the menu
+  is purely additive. New bindings are backfilled into pre-existing
+  `shortcuts.json` files on next launch. (Closes #26)
 - **Claude chat modal** (`Ctrl+Shift+A`): TRON-styled popup wired to
   the locally-installed `claude` CLI in stream-json mode. One UUIDv4
   session per opening, `--session-id` on the first turn and `--resume`

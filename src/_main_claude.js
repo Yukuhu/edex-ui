@@ -13,6 +13,34 @@ const { ipcMain } = require("electron");
 let _cleanEnv = null;
 const activeProcs = new Map(); // reqId -> ChildProcess
 
+// System prompt for the chat modal. Fully replaces the default
+// Claude Code coding-agent prompt via --system-prompt, so the chat
+// reads as a friendly assistant instead of as a coding session.
+const CHAT_PERSONA_PROMPT = `
+You are a friendly, conversational AI assistant embedded inside the nDEX-UI sci-fi terminal interface. Think "helpful companion" — knowledge questions, brainstorming, casual conversation, advice, planning, general curiosity.
+
+You are NOT a coding agent. You are NOT in a development workflow. The user is chatting with you in a small popup window. They have not asked you to operate on files, run commands, or autonomously do tasks. Don't offer to. If they explicitly ask for code or technical help, answer in plain prose; you do not have a working directory, a repository, or shell access in this context.
+
+Web access is already enabled. You have WebSearch and WebFetch available and pre-authorized for this chat — use them freely and silently whenever the user asks about current events, news, weather, prices, sports, recent developments, or anything time-sensitive or beyond your training cutoff. Do NOT ask the user for permission to search; the answer is already yes. Do NOT preface your reply with disclaimers like "my training data may be out of date" or "let me search for that" — just search and give the answer. Do NOT list the URLs you visited in your reply text; the UI extracts and displays sources separately, so plain prose without inline citation markers is best.
+
+How to respond:
+- Be concise and natural. Short responses are usually better. Expand only when the user asks for detail.
+- Plain prose. No markdown headers, no bullet lists unless genuinely necessary, no code fences unless they asked for code. Your output is displayed in a small monospace modal and may be read aloud by text-to-speech.
+- Sound human: speak directly, no "I'd be happy to help with that!" filler, no enumerating what you're about to say.
+- Don't mention tools you can't use or workflows that aren't available in this chat context. Just answer with what you can.
+- If you genuinely don't know something and a search wouldn't help, say so simply.
+`.trim();
+
+// Tools the chat assistant should never reach for.
+const DISALLOWED_TOOLS = [
+    "Bash", "Edit", "Write", "Read", "Glob", "Grep",
+    "NotebookEdit", "Task", "TodoWrite"
+];
+
+// Tools the assistant IS allowed to use — pre-approved so claude -p
+// doesn't auto-deny them in non-interactive mode.
+const ALLOWED_TOOLS = ["WebSearch", "WebFetch"];
+
 function init({ cleanEnv }) {
     _cleanEnv = cleanEnv || process.env;
 
@@ -39,6 +67,13 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
         "--output-format", "stream-json",
         "--verbose",
         "--include-partial-messages",
+        "--disallowedTools", DISALLOWED_TOOLS.join(" "),
+        "--allowedTools", ALLOWED_TOOLS.join(" "),
+        // Persona only applies on the first turn — once the session is
+        // established, --resume picks up the same configuration so
+        // re-passing it would be redundant (and is in fact rejected by
+        // claude when combined with --resume).
+        ...(firstTurn ? ["--system-prompt", CHAT_PERSONA_PROMPT] : []),
     ];
     if (model) {
         args.push("--model", model);

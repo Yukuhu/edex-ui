@@ -1,7 +1,15 @@
 section#main_shell {
     width: 65%;
     height: 60.3%;
+    /* Match xterm's terminal background so any rows-rounding gap at
+     * the bottom of the WebGL canvas isn't visible against the body. */
+    background-color: var(--color_light_black);
     padding: 0.74vh;
+    /* Without border-box, padding is added on top of the percentage
+     * size — fine at 65% × 60.3% but at 100% × 100% (fullscreen mode)
+     * the box overflows the viewport by 1.48vh, clipping the
+     * augmented-ui border at the bottom and right edges. */
+    box-sizing: border-box;
     /* border: 0.18vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5); */
     /* border-radius: 0.278vh; */
 

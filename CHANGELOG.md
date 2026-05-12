@@ -62,6 +62,16 @@ original author Gabriel "Squared" SAILLARD — see the README
   keyboard grows the terminal to ~92% of the body height (up from
   ~60%). The resize is top-anchored so the terminal's top edge stays
   fixed and only the bottom edge moves. (PR #8)
+- **`Ctrl+Shift+M` toggles the left + right side panels** (system
+  / network widgets). Hiding them grows the terminal horizontally
+  from 65% to 95% width. Runtime-only — resets on relaunch. (PR
+  closing #12)
+- **Combined fullscreen terminal mode**: when both `Ctrl+Shift+B`
+  and `Ctrl+Shift+M` are toggled on, the terminal expands to fill
+  the viewport minus a thin breathing-room inset that lets the
+  augmented-ui frame's `bl-clip` corner and bottom/right border
+  render fully. No new shortcut — composes from the existing two.
+  (PR closing #12)
 - **Global Esc closes the topmost modal** across the whole app —
   Settings, Shortcuts help, Claude chat, sources, error dialogs.
   Stacked modals (e.g. chat → sources) close one at a time
@@ -138,6 +148,19 @@ original author Gabriel "Squared" SAILLARD — see the README
   unused `media/youtube-demo-teaser.gif`. (PR #2)
 
 ### Fixed
+
+- **Terminal frame is no longer clipped in fullscreen mode**: switched
+  the fullscreen-mode sizing from percentage-based (`calc(100% - …)`)
+  to explicit viewport units (`calc(100vw - …)` / `calc(100vh - …)`)
+  because the body's `flex-wrap: wrap` interacted with the percentage
+  height in a way that pushed main_shell past the viewport bottom,
+  clipping the augmented-ui frame's bottom border + `bl-clip` corner.
+  Also added `box-sizing: border-box` to `section#main_shell` so its
+  `padding` doesn't add extra dimensions on top of the percentage
+  width/height, and a matching `background-color: var(--color_light_black)`
+  so any xterm-rows-rounding gap at the bottom doesn't reveal the
+  body grid through. (PR closing #12)
+
 
 - **Modernization unblocks Apple Silicon / macOS 26** — the original
   Electron 12 / node-pty 0.10 stack failed to compile on Node ≥ 18

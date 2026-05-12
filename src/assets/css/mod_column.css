@@ -15,6 +15,44 @@ section.mod_column {
     transition: opacity .5s cubic-bezier(0.4, 0, 1, 1);
 }
 
+/* Ctrl+Shift+M toggles `body.panelsHidden`. When set, both side
+ * columns collapse and the terminal grows horizontally to fill the
+ * freed space. main_shell already transitions width over 0.5s, so
+ * the resize is smooth on its own. */
+body.panelsHidden section.mod_column {
+    display: none;
+}
+body.panelsHidden section#main_shell {
+    width: 95%;
+}
+
+/* Combined "fullscreen" terminal mode: both side panels AND the
+ * on-screen keyboard hidden → grow the terminal to fill the full
+ * viewport. Triggered implicitly by toggling Ctrl+Shift+M and
+ * Ctrl+Shift+B both on; no new shortcut.
+ *
+ * We deliberately do NOT zero out body.padding-top — the title bar /
+ * tab strip is position: fixed at top: 0.74vh and lives inside that
+ * 1.85vh padding gap above main_shell. Removing the padding made the
+ * title strip overlap the terminal canvas.
+ *
+ * The 1vh subtraction on the bottom and right is intentional: it
+ * leaves the augmented-ui frame's bl-clip corner and the bottom and
+ * right border lines fully visible. Without it, those edges paint
+ * right at the viewport boundary and get clipped by body's
+ * overflow: hidden. */
+body.keyboardHidden.panelsHidden section#main_shell {
+    /* Explicit viewport units — percentage-based `height: calc(100% - …)`
+     * was being resolved against something larger than the body's
+     * content area (likely interacting with `flex-wrap: wrap`), pushing
+     * main_shell past the viewport bottom and clipping the augmented-ui
+     * frame's bl-clip corner + bottom border. Using vh/vw is reliable. */
+    width: calc(100vw - 1vh);
+    height: calc(100vh - 1.85vh - 1vh);
+    margin-left: 0.5vh;
+    box-sizing: border-box;
+}
+
 section.mod_column.activated {
     opacity: 1;
 }

@@ -617,7 +617,15 @@ window.focusShellTab = number => {
 
 // Settings editor
 window.openSettings = async () => {
-    if (document.getElementById("settingsEditor")) return;
+    // The DOM-only guard isn't enough: the `await
+    // window.si.networkInterfaces()` below means N rapid presses of
+    // Ctrl+Shift+S all pass the guard before the first modal lands
+    // in the DOM, stacking N copies (#50). Pair the DOM check with
+    // an in-flight flag set synchronously after the guard and
+    // cleared in finally, so only the first call wins the race.
+    if (window._settingsOpening || document.getElementById("settingsEditor")) return;
+    window._settingsOpening = true;
+    try {
 
     // Build lists of available keyboards, themes, monitors
     let keyboards, themes, monitors, ifaces;
@@ -891,6 +899,10 @@ window.openSettings = async () => {
         // Focus back on the term
         window.term[window.currentTerm].term.focus();
     });
+
+    } finally {
+        window._settingsOpening = false;
+    }
 };
 
 window.openControlMenu = () => {

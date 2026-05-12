@@ -907,6 +907,7 @@ window.openShortcutsHelp = () => {
         "FS_DOTFILES": "Toggle hidden files in the focused pane of the filesystem browser.",
         "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
         "KB_TOGGLE": "Show / hide the on-screen keyboard. Hiding it grows the terminal to fill the freed space.",
+        "PANELS_TOGGLE": "Show / hide the left + right side panels (system / network widgets). Hiding them grows the terminal horizontally.",
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
         "DEV_RELOAD": "Trigger front-end hot reload.",
         "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI)."
@@ -1084,6 +1085,16 @@ window.useAppShortcut = action => {
         case "KB_TOGGLE":
             document.body.classList.toggle("keyboardHidden");
             // Re-fit xterm after the CSS height transition settles.
+            setTimeout(() => {
+                if (window.term && window.term[window.currentTerm]) {
+                    try { window.term[window.currentTerm].fit(); } catch (_) {}
+                }
+            }, 550);
+            return true;
+        case "PANELS_TOGGLE":
+            document.body.classList.toggle("panelsHidden");
+            // Re-fit xterm after the CSS width transition settles
+            // (main_shell already transitions width over 0.5s).
             setTimeout(() => {
                 if (window.term && window.term[window.currentTerm]) {
                     try { window.term[window.currentTerm].fit(); } catch (_) {}

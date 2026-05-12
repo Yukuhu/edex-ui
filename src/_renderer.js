@@ -270,6 +270,8 @@ function displayLine() {
     switch(true) {
         case i === 2:
             bootScreen.innerHTML += `nDEX-UI Kernel version ${remote.app.getVersion()} boot at ${Date().toString()}; root:xnu-1699.22.73~1/RELEASE_X86_64`;
+            setTimeout(displayLine, 500);
+            break;
         case i === 4:
             setTimeout(displayLine, 500);
             break;

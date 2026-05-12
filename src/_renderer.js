@@ -491,6 +491,15 @@ async function initUI() {
 
     await _delay(100);
 
+    // Anchor main_shell to the top NOW that xterm has had a chance to
+    // initialize its WebGL canvas against the body's default centered
+    // flex layout. Applying align-self in CSS from the start confuses
+    // the canvas paint and the terminal boots with the body background
+    // showing through. Applying it post-boot via JS gives us the
+    // top-anchored growth animation for Ctrl+Shift+B without breaking
+    // the initial render.
+    document.getElementById("main_shell").style.alignSelf = "flex-start";
+
     // The inline filesystem panel was retired in favor of the two-pane
     // FsModal (Ctrl+Shift+E). The terminal still tracks its own CWD —
     // resend it after a hot reload so anything else relying on
@@ -897,6 +906,7 @@ window.openShortcutsHelp = () => {
         "FS_LIST_VIEW": "Toggle list / grid view in the focused pane of the filesystem browser.",
         "FS_DOTFILES": "Toggle hidden files in the focused pane of the filesystem browser.",
         "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
+        "KB_TOGGLE": "Show / hide the on-screen keyboard. Hiding it grows the terminal to fill the freed space.",
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
         "DEV_RELOAD": "Trigger front-end hot reload.",
         "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI)."
@@ -1070,6 +1080,15 @@ window.useAppShortcut = action => {
             return true;
         case "KB_PASSMODE":
             window.keyboard.togglePasswordMode();
+            return true;
+        case "KB_TOGGLE":
+            document.body.classList.toggle("keyboardHidden");
+            // Re-fit xterm after the CSS height transition settles.
+            setTimeout(() => {
+                if (window.term && window.term[window.currentTerm]) {
+                    try { window.term[window.currentTerm].fit(); } catch (_) {}
+                }
+            }, 550);
             return true;
         case "DEV_DEBUG":
             remote.getCurrentWindow().webContents.toggleDevTools();

@@ -17,6 +17,25 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **WebApps launcher**: install and open web-first tools (YouTube,
+  Reddit, Hacker News, GitHub all seeded by default) as in-app
+  launchers without leaving nDEX. Reachable via
+  `Ctrl+Shift+O → Apps ›`, with synthetic `+ Add new...` and
+  `⚙ Manage...` entries on the same list. Each app runs in an
+  Electron `<webview>` with a per-app cookie partition
+  (`persist:webapp-<id>`), so YouTube remembers your login without
+  bleeding session into other apps. While a WebApp is open:
+  - `F11` toggles the modal between standard size and a full nDEX
+    viewport fill.
+  - `Ctrl+Shift+T` reserves the slot for the future "promote into a
+    terminal tab" feature (tracked in issue #29; shows a placeholder
+    warning today).
+  - `Esc` closes the WebApp cleanly.
+  Persisted to `userData/webapps.json`. Boot-time backfill restores
+  any missing seeded apps without touching user-added ones. DRM-
+  encrypted streams (YouTube Music, Spotify, Netflix) do not play
+  on vanilla Electron — Widevine support is tracked in issue #30.
+  (Closes #28)
 - **Central control menu** (`Ctrl+Shift+O`): Omarchy-style launcher
   that surfaces every common action behind a single hotkey, modelled
   on the existing Fuzzy Finder modal. Type to filter, arrow keys to

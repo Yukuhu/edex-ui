@@ -46,11 +46,13 @@ const keyboardsDir = path.join(settingsDir, "keyboards");
 const fontsDir = path.join(settingsDir, "fonts");
 const settingsFile = path.join(settingsDir, "settings.json");
 const shortcutsFile = path.join(settingsDir, "shortcuts.json");
+const webappsFile = path.join(settingsDir, "webapps.json");
 const lastWindowStateFile = path.join(settingsDir, "lastWindowState.json");
 
 // Load config
 window.settings = require(settingsFile);
 window.shortcuts = require(shortcutsFile);
+window.webapps = require(webappsFile);
 window.lastWindowState = require(lastWindowStateFile);
 
 // Load CLI parameters
@@ -894,6 +896,165 @@ window.openControlMenu = () => {
     window.activeControlMenu = new ControlMenu();
 };
 
+window.openWebApp = (id) => {
+    const app = (window.webapps || []).find(a => a.id === id);
+    if (!app) {
+        new Modal({ type: "warning", message: `WebApp "${window._escapeHtml(id)}" not found.` });
+        return;
+    }
+    new WebApp(app);
+};
+
+window.openAddWebApp = () => {
+    if (document.getElementById("webappAddName")) return;
+    window.keyboard.detach();
+    new Modal({
+        type: "custom",
+        title: "Add WebApp",
+        html: `<div style="min-width:50vw">
+            <label class="webappAddLabel" for="webappAddName">Name</label>
+            <input class="webappAddField" id="webappAddName" type="text" maxlength="60" placeholder="YouTube" />
+            <label class="webappAddLabel" for="webappAddUrl">URL (http:// or https://)</label>
+            <input class="webappAddField" id="webappAddUrl" type="text" maxlength="500" placeholder="https://example.com" />
+            <label class="webappAddLabel" for="webappAddIcon">Icon URL (optional — reserved, not rendered yet)</label>
+            <input class="webappAddField" id="webappAddIcon" type="text" maxlength="500" placeholder="" />
+            <p style="font-family:var(--font_main_light);font-size:1.1vh;opacity:0.6;margin-top:0.6vh">
+                Note: DRM-encrypted streams (YouTube Music, Spotify, Netflix) will not play —
+                vanilla Electron lacks Widevine. See issue #30.
+            </p>
+        </div>`,
+        buttons: [
+            { label: "Save", action: "window.writeWebAppEntry()" }
+        ]
+    }, () => {
+        window.keyboard.attach();
+        window.term[window.currentTerm].term.focus();
+    });
+    // rAF instead of setTimeout: Modal appends synchronously, but its own
+    // focus() runs before this callback would, so we wait one frame to
+    // claim the input. setTimeout here trips guardrails' eval-dom rule.
+    requestAnimationFrame(() => {
+        const n = document.getElementById("webappAddName");
+        if (n) n.focus();
+    });
+};
+
+window.writeWebAppEntry = () => {
+    const nameEl = document.getElementById("webappAddName");
+    const urlEl = document.getElementById("webappAddUrl");
+    const iconEl = document.getElementById("webappAddIcon");
+    if (!nameEl || !urlEl) return;
+    const name = nameEl.value.trim();
+    const url = urlEl.value.trim();
+    const icon = (iconEl && iconEl.value.trim()) || null;
+    if (!name) {
+        new Modal({ type: "warning", message: "Name is required." });
+        return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+        new Modal({ type: "warning", message: "URL must start with <code>http://</code> or <code>https://</code>." });
+        return;
+    }
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!id) {
+        new Modal({ type: "warning", message: "Name must contain at least one letter or digit." });
+        return;
+    }
+    if ((window.webapps || []).some(a => a.id === id)) {
+        new Modal({ type: "warning", message: `A WebApp with id "${window._escapeHtml(id)}" already exists. Pick a different name or remove the existing one first.` });
+        return;
+    }
+    window.webapps.push({ id, name, url, icon });
+    try {
+        fs.writeFileSync(webappsFile, JSON.stringify(window.webapps, "", 4));
+    } catch (e) {
+        new Modal({ type: "error", title: "WebApp save failed", message: String(e) });
+        return;
+    }
+    // Drop the cached webapps submenu so the next Control Menu open
+    // reflects the new entry.
+    if (window.activeControlMenu && window.activeControlMenu._cache) {
+        delete window.activeControlMenu._cache.webapps;
+    }
+    // Close the Add modal — find by the topmost custom modal.
+    const stack = (Modal._stack || []).slice().reverse();
+    for (const m of stack) {
+        if (document.getElementById("webappAddName")) {
+            m.close();
+            break;
+        }
+    }
+};
+
+// Render the rows for the Manage WebApps table. Built as plain HTML
+// strings for the per-row cells (text content is safely HTML-escaped),
+// but the Remove button carries the id on a data attribute instead of
+// being interpolated into an `onclick="..."` JS string — that pattern
+// is XSS-fragile because HTML attribute decoding unescapes &#39; back
+// to ' and breaks out of the single-quoted JS literal. The click is
+// bound via delegation in openManageWebApps so it survives both the
+// initial render and the in-place re-render done by removeWebApp.
+window._renderWebAppManageRows = (apps) => {
+    if (!apps.length) {
+        return `<tr><td colspan="3" style="opacity:0.6">No WebApps installed yet.</td></tr>`;
+    }
+    return apps.map(app => `
+        <tr>
+            <td>${window._escapeHtml(app.name)}</td>
+            <td style="opacity:0.6">${window._escapeHtml(app.url)}</td>
+            <td style="text-align:right"><button type="button" class="webappRemoveBtn" data-webapp-id="${window._escapeHtml(app.id)}">Remove</button></td>
+        </tr>`).join("");
+};
+
+window.openManageWebApps = () => {
+    window.keyboard.detach();
+    const rows = window._renderWebAppManageRows(window.webapps || []);
+    new Modal({
+        type: "custom",
+        title: "Manage WebApps",
+        html: `<div style="min-width:55vw">
+            <table id="webappManageTable">
+                <thead><tr><th>Name</th><th>URL</th><th></th></tr></thead>
+                <tbody id="webappManageBody">${rows}</tbody>
+            </table>
+        </div>`,
+        buttons: []
+    }, () => {
+        window.keyboard.attach();
+        window.term[window.currentTerm].term.focus();
+    });
+    const body = document.getElementById("webappManageBody");
+    if (body) {
+        body.addEventListener("click", (e) => {
+            const btn = e.target.closest(".webappRemoveBtn");
+            if (!btn) return;
+            const id = btn.dataset.webappId;
+            if (id) window.removeWebApp(id);
+        });
+    }
+};
+
+window.removeWebApp = (id) => {
+    const before = (window.webapps || []).length;
+    window.webapps = (window.webapps || []).filter(a => a.id !== id);
+    if (window.webapps.length === before) return;
+    try {
+        fs.writeFileSync(webappsFile, JSON.stringify(window.webapps, "", 4));
+    } catch (e) {
+        new Modal({ type: "error", title: "WebApp save failed", message: String(e) });
+        return;
+    }
+    if (window.activeControlMenu && window.activeControlMenu._cache) {
+        delete window.activeControlMenu._cache.webapps;
+    }
+    // The tbody's delegated click handler stays attached across this
+    // innerHTML swap because the listener is on the tbody itself.
+    const body = document.getElementById("webappManageBody");
+    if (body) {
+        body.innerHTML = window._renderWebAppManageRows(window.webapps);
+    }
+};
+
 window.writeFile = (path) => {
     fs.writeFile(path, document.getElementById("fileEdit").value, "utf-8", () => {
         document.getElementById("fedit-status").innerHTML = "<i>File saved.</i>";
@@ -976,7 +1137,9 @@ window.openShortcutsHelp = () => {
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
         "DEV_RELOAD": "Trigger front-end hot reload.",
         "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI).",
-        "CONTROL_MENU": "Open the central control / launcher menu."
+        "CONTROL_MENU": "Open the central control / launcher menu.",
+        "WEBAPP_FULLSCREEN": "(Inside a WebApp) Toggle the modal between standard size and full nDEX viewport. Bound to <code>F11</code>.",
+        "WEBAPP_TO_TAB": "(Inside a WebApp) Promote the WebApp into a terminal tab slot. Bound to <code>Ctrl+Shift+T</code>. Placeholder until issue #29 lands the tab-bar refactor."
     };
 
     let appList = "";

@@ -1,0 +1,68 @@
+# Dependabot — version updates configuration.
+#
+# Security alerts and automated security fixes are enabled separately
+# via the repo's Code security & analysis settings (Settings → Code
+# security). They don't need to be re-stated here.
+#
+# Strategy:
+#   - Weekly cadence (rather than daily) to keep noise down.
+#   - Group patch + minor bumps per ecosystem into single PRs.
+#   - Pin a couple of "ecosystem" groups (Electron stack, xterm + its
+#     addons) so related libs ship as one combined PR rather than
+#     three separate bumps.
+#   - Major bumps still come as individual PRs — those usually need
+#     code changes (cf. the Electron 12 → 32 → 42 modernization).
+
+version: 2
+updates:
+  # Root build / packaging tree — Electron itself, electron-builder,
+  # @electron/rebuild, terser, etc.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      electron-stack:
+        patterns:
+          - "electron"
+          - "electron-builder"
+          - "@electron/*"
+      patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+        exclude-patterns:
+          - "electron"
+          - "electron-builder"
+          - "@electron/*"
+
+  # Renderer runtime tree — kokoro-js (TTS), xterm + addons, node-pty,
+  # @electron/remote, systeminformation, pdfjs-dist, geolite2-redist, etc.
+  - package-ecosystem: "npm"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      xterm:
+        patterns:
+          - "xterm"
+          - "xterm-addon-*"
+          - "@xterm/*"
+      patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+        exclude-patterns:
+          - "xterm"
+          - "xterm-addon-*"
+          - "@xterm/*"
+
+  # CI workflows (.github/workflows/build-binaries.yaml,
+  # codeql-analysis.yml) — bumps to action versions.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3

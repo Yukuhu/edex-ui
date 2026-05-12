@@ -77,10 +77,24 @@ class FuzzyFinder {
     }
 
     search(text) {
-           let files = window.fsDisp.cwd;
+           // Resolve the active terminal's CWD. The legacy inline filesystem
+           // panel exposed this via window.fsDisp; that panel has been
+           // retired in favor of the FsModal (Ctrl+Shift+E), so the
+           // terminal is now the single source of truth.
+           const fs = require("fs");
+           const term = window.term && window.term[window.currentTerm];
+           let cwd = (term && term.cwd) || (window.settings && window.settings.cwd);
+           if (cwd && cwd.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
+           this._currentCwd = cwd;
+           let files;
+           try {
+               files = fs.readdirSync(cwd).map(name => ({ name }));
+           } catch (_) {
+               files = [];
+           }
            let i = 0;
            let results = files.filter(file => {
-               if (i >= 5 || file.type === "showDisks" || file.type === "up") {
+               if (i >= 5) {
                     return false;
                 } else if (file.name.toLowerCase().includes(text.toLowerCase())) {
                     i++
@@ -123,7 +137,7 @@ class FuzzyFinder {
              return;
         }
         
-        let filePath = path.resolve(window.fsDisp.dirpath, file);
+        let filePath = path.resolve(this._currentCwd || ".", file);
         
           window.term[window.currentTerm].write(`'${filePath}'`);
           this.disp.close();

@@ -780,6 +780,14 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>spawnOnTabCycle</td>
+                        <td>When cycling tabs with Ctrl+Tab / Ctrl+Shift+Tab, spawn a new terminal into any empty slot the cycle passes through. When false, the cycle only switches between already-initialized tabs.</td>
+                        <td><select id="settingsEditor-spawnOnTabCycle">
+                            <option>${window.settings.spawnOnTabCycle !== false}</option>
+                            <option>${window.settings.spawnOnTabCycle === false}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>experimentalGlobeFeatures</td>
                         <td>Toggle experimental features for the network globe</td>
                         <td><select id="settingsEditor-experimentalGlobeFeatures">
@@ -845,6 +853,7 @@ window.writeSettingsFile = () => {
         excludeThreadsFromToplist: (document.getElementById("settingsEditor-excludeThreadsFromToplist").value === "true"),
         hideDotfiles: (document.getElementById("settingsEditor-hideDotfiles").value === "true"),
         fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
+        spawnOnTabCycle: (document.getElementById("settingsEditor-spawnOnTabCycle").value === "true"),
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };
@@ -972,20 +981,36 @@ window.useAppShortcut = action => {
         case "PASTE":
             window.term[window.currentTerm].clipboard.paste();
             return true;
-        case "NEXT_TAB":
-                if (window.term[window.currentTerm+1]) {
-                    window.focusShellTab(window.currentTerm+1);
-                } else if (window.term[window.currentTerm+2]) {
-                    window.focusShellTab(window.currentTerm+2);
-                } else if (window.term[window.currentTerm+3]) {
-                    window.focusShellTab(window.currentTerm+3);
-                } else if (window.term[window.currentTerm+4]) {
-                    window.focusShellTab(window.currentTerm+4);
+        case "NEXT_TAB": {
+            // spawnOnTabCycle (default true): cycle through all 5 slots and
+            // let focusShellTab() spawn a TTY into any empty one. When the
+            // user explicitly sets it false, fall back to the legacy
+            // skip-empty-slots behavior so cycling only walks already-
+            // initialized tabs.
+            if (window.settings.spawnOnTabCycle !== false) {
+                const cur = window.currentTerm || 0;
+                window.focusShellTab((cur + 1) % 5);
+            } else {
+                const j = window.currentTerm || 0;
+                if (window.term[j+1]) {
+                    window.focusShellTab(j+1);
+                } else if (window.term[j+2]) {
+                    window.focusShellTab(j+2);
+                } else if (window.term[j+3]) {
+                    window.focusShellTab(j+3);
+                } else if (window.term[j+4]) {
+                    window.focusShellTab(j+4);
                 } else {
                     window.focusShellTab(0);
                 }
+            }
             return true;
-        case "PREVIOUS_TAB":
+        }
+        case "PREVIOUS_TAB": {
+            if (window.settings.spawnOnTabCycle !== false) {
+                const cur = window.currentTerm || 0;
+                window.focusShellTab((cur + 4) % 5);
+            } else {
                 let i = window.currentTerm || 4;
                 if (window.term[i] && i !== window.currentTerm) {
                     window.focusShellTab(i);
@@ -998,7 +1023,9 @@ window.useAppShortcut = action => {
                 } else if (window.term[i-4]) {
                     window.focusShellTab(i-4);
                 }
+            }
             return true;
+        }
         case "TAB_1":
             window.focusShellTab(0);
             return true;

@@ -18,6 +18,7 @@ class ControlMenu {
             { id: "files",  label: "File browser",     hint: "Ctrl+Shift+E", action: () => window.useAppShortcut("FS_OPEN") },
             { id: "claude", label: "Claude chat",      hint: "Ctrl+Shift+A", action: () => window.useAppShortcut("CLAUDE_CHAT") }
         ]},
+        { id: "apps", label: "Apps", buildSubmenu: "webapps" },
         { id: "dev", label: "Dev", submenu: [
             { id: "devtools", label: "DevTools",   hint: "Ctrl+Shift+I",  action: () => window.useAppShortcut("DEV_DEBUG") },
             { id: "reload",   label: "Reload UI",  hint: "Ctrl+Shift+F5", action: () => window.useAppShortcut("DEV_RELOAD") },
@@ -142,6 +143,18 @@ class ControlMenu {
 
     _buildSubmenu(kind) {
         if (this._cache[kind]) return this._cache[kind];
+        if (kind === "webapps") {
+            const apps = Array.isArray(window.webapps) ? window.webapps : [];
+            const entries = apps.map(app => ({
+                id: app.id,
+                label: app.name,
+                action: () => window.openWebApp(app.id)
+            }));
+            entries.push({ id: "__add",    label: "+ Add new...", action: () => window.openAddWebApp() });
+            entries.push({ id: "__manage", label: "⚙ Manage...",   action: () => window.openManageWebApps() });
+            this._cache[kind] = entries;
+            return entries;
+        }
         const fs = require("fs");
         const path = require("path");
         const remote = require("@electron/remote");

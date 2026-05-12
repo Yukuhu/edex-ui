@@ -24,6 +24,16 @@ process.on("uncaughtException", e => {
     process.exit(1);
 });
 
+// Disable Chromium's site isolation so embedded <webview> content
+// (the WebApps launcher, src/classes/webApp.class.js) renders in the
+// parent's process and shares its hit-test grid. Required to work
+// around an Electron + Wayland fractional-scaling bug where OOPIF
+// pointer events land in wrong webview coordinates — observed as
+// "real mouse clicks do nothing inside YouTube/GitHub" while
+// programmatic .click() succeeded. Must be set before app.whenReady().
+app.commandLine.appendSwitch("disable-site-isolation-trials");
+app.commandLine.appendSwitch("disable-features", "IsolateOrigins,site-per-process");
+
 signale.start(`Starting nDEX-UI v${app.getVersion()}`);
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
@@ -52,6 +62,7 @@ ipc.on("log", (e, type, content) => {
 var win, tty, extraTtys;
 const settingsFile = path.join(electron.app.getPath("userData"), "settings.json");
 const shortcutsFile = path.join(electron.app.getPath("userData"), "shortcuts.json");
+const webappsFile = path.join(electron.app.getPath("userData"), "webapps.json");
 const lastWindowStateFile = path.join(electron.app.getPath("userData"), "lastWindowState.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
@@ -156,6 +167,35 @@ if (!fs.existsSync(shortcutsFile)) {
         signale.warn("CONTROL_MENU shortcut backfill failed:", e);
     }
 }
+// Create / backfill the WebApps registry (src/classes/webApp.class.js).
+// Curated starter list — DRM-encrypted sites (YouTube Music, Spotify,
+// Netflix) are intentionally omitted from the seed because vanilla
+// Electron lacks Widevine.
+const WEBAPP_SEEDS = [
+    { id: "youtube", name: "YouTube",     url: "https://www.youtube.com",       icon: null },
+    { id: "reddit",  name: "Reddit",      url: "https://www.reddit.com",        icon: null },
+    { id: "hn",      name: "Hacker News", url: "https://news.ycombinator.com",  icon: null },
+    { id: "github",  name: "GitHub",      url: "https://github.com",            icon: null }
+];
+if (!fs.existsSync(webappsFile)) {
+    fs.writeFileSync(webappsFile, JSON.stringify(WEBAPP_SEEDS, "", 4));
+    signale.info(`Default WebApps written to ${webappsFile}`);
+} else {
+    try {
+        const cur = JSON.parse(fs.readFileSync(webappsFile, "utf-8"));
+        let changed = false;
+        for (const seed of WEBAPP_SEEDS) {
+            if (!cur.some(a => a.id === seed.id)) {
+                cur.push(seed);
+                changed = true;
+                signale.info(`Backfilled WebApp "${seed.id}" into existing webapps.json`);
+            }
+        }
+        if (changed) fs.writeFileSync(webappsFile, JSON.stringify(cur, "", 4));
+    } catch (e) {
+        signale.warn("WebApps backfill failed:", e);
+    }
+}
 //Create default window state file
 if(!fs.existsSync(lastWindowStateFile)) {
     fs.writeFileSync(lastWindowStateFile, JSON.stringify({
@@ -240,6 +280,10 @@ function createWindow(settings) {
             // require("kokoro-js") + @huggingface/transformers off the
             // renderer's JS thread, so synthesis doesn't block UI.
             nodeIntegrationInWorker: true,
+            // Enables the <webview> tag used by the WebApps launcher
+            // (src/classes/webApp.class.js) to host third-party sites
+            // in an isolated Chromium renderer with per-app cookies.
+            webviewTag: true,
             allowRunningInsecureContent: false,
             experimentalFeatures: settings.experimentalFeatures || false
         }
@@ -392,13 +436,96 @@ app.on('ready', async () => {
 });
 
 app.on('web-contents-created', (e, contents) => {
-    // Prevent creating more than one window
+    // The WebApps launcher (src/classes/webApp.class.js) embeds third-
+    // party sites in a <webview>. Each guest gets its own webContents
+    // and this event fires for it too — so a single global handler
+    // that denies popups and blocks navigation will sink every link
+    // click inside the webview (GitHub "open in new tab", YouTube
+    // OAuth popups, GitHub repo links) and look like "click does
+    // nothing". Scope the guards by getType():
+    //   - "webview" → let the embedded page navigate freely, allow
+    //                 popups so OAuth flows work (popups inherit the
+    //                 webview's partition → cookies/session persist).
+    //   - everything else (the main BrowserWindow) → keep the original
+    //     deny-popup + lock-navigation behavior.
+    //
+    // Note: <webview>'s `new-window` DOM event was removed in Electron
+    // 22+ with no direct replacement (see breaking-changes / issue
+    // #31117), so popup routing for webviews must live here in the
+    // main process, not in the renderer.
+    if (contents.getType() === 'webview') {
+        // Spoof the partition's client-hint headers to match real
+        // Chrome. Without this, Google's anti-embedded-browser check
+        // sees Sec-CH-UA="Chromium" (not "Google Chrome") and blocks
+        // sign-in with "Couldn't sign you in / this browser may not be
+        // secure". The UA string is already spoofed on the <webview>
+        // element; this is the matching server-side signal. Paired
+        // with the navigator.userAgentData override in
+        // src/classes/webApp-preload.js — sites that compare the JS
+        // brand list against the request headers won't see a mismatch.
+        //
+        // Trade-off: violates Google's ToS, may break next time they
+        // tighten detection. See the Go-with-B discussion in the
+        // commit message for #28.
+        const sess = contents.session;
+        if (sess && !sess._ndexChHeaderHookInstalled) {
+            sess._ndexChHeaderHookInstalled = true;
+            const CHROME_BRAND_LIST = '"Not_A Brand";v="8", "Chromium";v="148", "Google Chrome";v="148"';
+            sess.webRequest.onBeforeSendHeaders((details, callback) => {
+                const headers = details.requestHeaders;
+                // Header names from Chromium are typically Title-Case,
+                // but Electron normalizes them inconsistently. Patch
+                // every common case rather than rely on one spelling.
+                for (const k of Object.keys(headers)) {
+                    const lk = k.toLowerCase();
+                    if (lk === "sec-ch-ua") headers[k] = CHROME_BRAND_LIST;
+                    else if (lk === "sec-ch-ua-full-version-list") headers[k] = CHROME_BRAND_LIST;
+                    else if (lk === "sec-ch-ua-mobile") headers[k] = "?0";
+                    else if (lk === "sec-ch-ua-platform") headers[k] = '"Linux"';
+                }
+                callback({ requestHeaders: headers });
+            });
+        }
+        // Popup windows (Google OAuth, target=_blank) need the same
+        // preload + non-isolated context as the parent webview, or
+        // their navigator.userAgentData reverts to Electron's Chromium
+        // brand list and Google's anti-embedded-browser check trips.
+        // Without overrideBrowserWindowOptions the popup runs vanilla
+        // and the spoof effectively only protects the webview, not
+        // the actual sign-in page that opens in a new window.
+        const webappPreload = path.join(__dirname, "classes/webApp-preload.js");
+        contents.setWindowOpenHandler(({ url }) => {
+            return {
+                action: 'allow',
+                overrideBrowserWindowOptions: {
+                    webPreferences: {
+                        preload: webappPreload,
+                        contextIsolation: false,
+                        nodeIntegration: false,
+                        sandbox: false
+                    }
+                }
+            };
+        });
+        // setUserAgent on the popup before it can issue any further
+        // network requests. The opener's UA isn't inherited reliably
+        // for popups across Electron versions, so be explicit.
+        contents.on('did-create-window', (childWin) => {
+            try {
+                const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
+                childWin.webContents.setUserAgent(UA);
+            } catch (err) {
+                signale.warn("WebApp popup setUserAgent failed:", err);
+            }
+        });
+        return;
+    }
+
+    // Host (main UI) webContents — keep the original guards.
     contents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url);
         return { action: 'deny' };
     });
-
-    // Prevent loading something else than the UI
     contents.on('will-navigate', (e, url) => {
         if (url !== contents.getURL()) e.preventDefault();
     });

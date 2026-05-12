@@ -2,6 +2,13 @@ const signale = require("signale");
 const {app, BrowserWindow, dialog, shell} = require("electron");
 
 process.on("uncaughtException", e => {
+    // EPIPE on stdout/stderr is benign — happens when piping log output
+    // to a process that closed its read end, or when an IPC subprocess
+    // dies mid-write during shutdown. Skip both the fatal log and the
+    // user-facing crash dialog for it.
+    if (e && e.code === "EPIPE") {
+        return;
+    }
     signale.fatal(e);
     dialog.showErrorBox("nDEX-UI crashed", e.message || "Cannot retrieve error message.");
     if (tty) {
@@ -94,6 +101,8 @@ if (!fs.existsSync(settingsFile)) {
         fsListView: false,
         spawnOnTabCycle: true,
         modalCloseButton: true,
+        ttsVoice: "af_heart",
+        ttsDtype: "q8",
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

@@ -9,11 +9,65 @@ class ClaudeChat {
     static DEFAULT_MODEL = "claude-haiku-4-5";
 
     // Kokoro TTS — neural, runs fully in the renderer via WASM/ONNX.
-    // The model + voice are cached after first use; the model file is
-    // ~92 MB (q8 quantization). `af_heart` is the highest-graded voice.
+    // Models are fetched from HuggingFace on first use of each dtype —
+    // never bundled. We currently re-download on every cold start
+    // (`useFSCache: false`); see the from_pretrained call below for the
+    // rationale. The defaults here are the fallbacks when
+    // window.settings is missing.
     static TTS_MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
     static TTS_DTYPE = "q8";
     static TTS_VOICE = "af_heart";
+
+    // All voices shipped in Kokoro-82M-v1.0-ONNX. Same model file
+    // covers them all — switching voices does not trigger a re-fetch.
+    // Grades come from kokoro-js's own voice index (overall quality).
+    static VOICES = [
+        // American Female
+        { id: "af_heart",   grade: "A",  region: "US", gender: "F", traits: "❤️" },
+        { id: "af_bella",   grade: "A-", region: "US", gender: "F", traits: "🔥" },
+        { id: "af_nicole",  grade: "B-", region: "US", gender: "F", traits: "🎧" },
+        { id: "af_aoede",   grade: "C+", region: "US", gender: "F" },
+        { id: "af_kore",    grade: "C+", region: "US", gender: "F" },
+        { id: "af_sarah",   grade: "C+", region: "US", gender: "F" },
+        { id: "af_alloy",   grade: "C",  region: "US", gender: "F" },
+        { id: "af_nova",    grade: "C",  region: "US", gender: "F" },
+        { id: "af_sky",     grade: "C-", region: "US", gender: "F" },
+        { id: "af_jessica", grade: "D",  region: "US", gender: "F" },
+        { id: "af_river",   grade: "D",  region: "US", gender: "F" },
+        // American Male
+        { id: "am_fenrir",  grade: "C+", region: "US", gender: "M" },
+        { id: "am_michael", grade: "C+", region: "US", gender: "M" },
+        { id: "am_puck",    grade: "C+", region: "US", gender: "M" },
+        { id: "am_echo",    grade: "D",  region: "US", gender: "M" },
+        { id: "am_eric",    grade: "D",  region: "US", gender: "M" },
+        { id: "am_liam",    grade: "D",  region: "US", gender: "M" },
+        { id: "am_onyx",    grade: "D",  region: "US", gender: "M" },
+        { id: "am_santa",   grade: "D-", region: "US", gender: "M" },
+        { id: "am_adam",    grade: "F+", region: "US", gender: "M" },
+        // British Female
+        { id: "bf_emma",     grade: "B-", region: "UK", gender: "F", traits: "🚺" },
+        { id: "bf_isabella", grade: "C",  region: "UK", gender: "F" },
+        { id: "bf_alice",    grade: "D",  region: "UK", gender: "F", traits: "🚺" },
+        { id: "bf_lily",     grade: "D",  region: "UK", gender: "F", traits: "🚺" },
+        // British Male
+        { id: "bm_fable",  grade: "C",  region: "UK", gender: "M", traits: "🚹" },
+        { id: "bm_george", grade: "C",  region: "UK", gender: "M" },
+        { id: "bm_lewis",  grade: "D+", region: "UK", gender: "M" },
+        { id: "bm_daniel", grade: "D",  region: "UK", gender: "M", traits: "🚹" }
+    ];
+
+    // Quantization tiers. Each is a separate .onnx file on HuggingFace,
+    // fetched on first use of that dtype within a session. With
+    // FS-cache disabled, switching to a new dtype refetches; switching
+    // back within the same session reuses the in-memory pipeline if it
+    // wasn't invalidated. Sizes are approximate.
+    static DTYPES = [
+        { id: "q8",    label: "q8 (~92 MB, recommended)" },
+        { id: "fp16",  label: "fp16 (~163 MB)" },
+        { id: "fp32",  label: "fp32 (~326 MB)" },
+        { id: "q4f16", label: "q4f16 (~155 MB)" },
+        { id: "q4",    label: "q4 (~50 MB, low)" }
+    ];
 
     // URL safety helper — only http(s) URLs are allowed to reach
     // shell.openExternal. `javascript:` or `file:` schemes can execute
@@ -55,6 +109,7 @@ class ClaudeChat {
         this.pendingAudioUrl = null;
         this._kokoroModule = null;  // lazy-imported kokoro-js namespace
         this._kokoroTts = null;     // cached KokoroTTS instance
+        this._kokoroDtype = null;   // dtype the cached instance was loaded with
 
         // Typewriter-style streaming: buffer raw deltas, then reveal
         // characters on a steady RAF tick so the output reads like a
@@ -78,6 +133,7 @@ class ClaudeChat {
                         <div class="claudeChat_headerInfo">
                             <div class="claudeChat_modelLine" id="claudeChat_modelLine">model: <span id="claudeChat_modelName">${ClaudeChat.DEFAULT_MODEL}</span></div>
                             <div class="claudeChat_voiceLine">voice: <button id="claudeChat_voiceToggle" type="button">VOICE: OFF</button></div>
+                            <div class="claudeChat_ttsLine">TTS: <span id="claudeChat_ttsConfig">…</span></div>
                         </div>
                     </div>
                     <div class="claudeChat_scrollback" id="claudeChat_scrollback"></div>
@@ -92,6 +148,10 @@ class ClaudeChat {
                         <button id="claudeChat_send" type="button">SEND</button>
                     </div>
                     <div class="claudeChat_status" id="claudeChat_status">Ready. Type a prompt and press Send.</div>
+                    <div class="claudeChat_progress" id="claudeChat_progress" hidden>
+                        <div class="claudeChat_progress_label" id="claudeChat_progress_label"></div>
+                        <div class="claudeChat_progress_track"><div class="claudeChat_progress_fill" id="claudeChat_progress_fill"></div></div>
+                    </div>
                 </div>`,
             buttons: []
         }, () => {
@@ -108,8 +168,13 @@ class ClaudeChat {
         this.input = document.getElementById("claudeChat_input");
         this.sendBtn = document.getElementById("claudeChat_send");
         this.status = document.getElementById("claudeChat_status");
+        this.progressEl = document.getElementById("claudeChat_progress");
+        this.progressLabel = document.getElementById("claudeChat_progress_label");
+        this.progressFill = document.getElementById("claudeChat_progress_fill");
         this.modelName = document.getElementById("claudeChat_modelName");
+        this.ttsConfigEl = document.getElementById("claudeChat_ttsConfig");
         this.voiceToggle = document.getElementById("claudeChat_voiceToggle");
+        this._refreshTtsConfigDisplay();
         this.avatarCanvas = document.getElementById("claudeChat_avatar");
 
         this.avatar = new AIAvatar(this.avatarCanvas);
@@ -223,6 +288,7 @@ class ClaudeChat {
             ? `VOICE: ON${this.neuralTtsAvailable ? " (KOKORO)" : ""}`
             : "VOICE: OFF";
         this.voiceToggle.classList.toggle("on", this.voiceEnabled);
+        this._refreshTtsConfigDisplay();
         if (!this.voiceEnabled) {
             this._cancelSpeech();
             if (this.avatar && !this.pendingReqId) this.avatar.setState("idle");
@@ -261,22 +327,59 @@ class ClaudeChat {
         const opId = `tts_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
         this.currentTtsReq = opId;
         if (this.avatar) this.avatar.setState("speaking");
+        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
+        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+        this._refreshTtsConfigDisplay();
         try {
+            // Dtype is baked in at from_pretrained — drop the cached
+            // instance when the user picks a different precision so the
+            // next call re-loads with the right weights.
+            if (this._kokoroTts && this._kokoroDtype !== dtype) {
+                this._kokoroTts = null;
+                this._kokoroDtype = null;
+            }
             if (!this._kokoroTts) {
-                this.status.innerText = "Loading Kokoro TTS (first run downloads ~92 MB)…";
+                this.status.innerText = `Loading Kokoro TTS (${dtype})…`;
+                // Show the bar immediately so cache hits (no progress
+                // events) still give visible feedback. The label gets
+                // overwritten by per-file progress when a real download
+                // actually starts.
+                this._showProgress(`Loading model (${dtype})…`);
                 if (!this._kokoroModule) {
-                    // Dynamic ESM import from CJS — same pattern as geolite2-redist 3.x.
-                    this._kokoroModule = await import("kokoro-js");
+                    // kokoro-js ships a CJS build under its `require` export
+                    // condition (dist/kokoro.cjs). Dynamic `import("kokoro-js")`
+                    // silently failed in the renderer because the browser-side
+                    // ESM resolver does not understand bare specifiers — Kokoro
+                    // was falling back to speechSynthesis on every call.
+                    // require() resolves through Node and bypasses that.
+                    this._kokoroModule = require("kokoro-js");
+
+                    // In the Electron renderer, transformers.node.cjs's
+                    // file-system cache trips over its own FileResponse/match
+                    // logic and throws "Unable to get model file path or
+                    // buffer" on the model file. Force buffer-mode loading by
+                    // disabling both caches — slightly slower (re-fetches on
+                    // every cold launch) but reliable.
+                    try {
+                        const transformers = require("@huggingface/transformers");
+                        transformers.env.useFSCache = false;
+                        transformers.env.useBrowserCache = false;
+                    } catch (envErr) {
+                        console.warn("Could not configure transformers env:", envErr);
+                    }
                 }
                 this._kokoroTts = await this._kokoroModule.KokoroTTS.from_pretrained(
                     ClaudeChat.TTS_MODEL_ID,
-                    { dtype: ClaudeChat.TTS_DTYPE }
+                    { dtype: dtype, progress_callback: (e) => this._onTtsProgress(e) }
                 );
+                this._hideProgress();
+                this._kokoroDtype = dtype;
+                this.status.innerText = `Kokoro ready (${dtype}).`;
             }
             if (this.currentTtsReq !== opId) return; // cancelled while loading
             this.status.innerText = "Synthesizing…";
             const rawAudio = await this._kokoroTts.generate(text, {
-                voice: ClaudeChat.TTS_VOICE
+                voice: voice
             });
             if (this.currentTtsReq !== opId) return; // cancelled mid-synthesis
             this.status.innerText = "Speaking.";
@@ -303,12 +406,101 @@ class ClaudeChat {
                 cleanup();
             });
         } catch (err) {
+            // Per-call fallback only. Pre-PR-21 we demoted permanently
+            // (`neuralTtsAvailable = false`), but with user-switchable
+            // dtypes a transient failure on a not-yet-cached dtype would
+            // disable neural TTS for the whole session — even though
+            // switching back to a known-good dtype would work. Let the
+            // next call retry from_pretrained.
             console.warn("Kokoro TTS failed, falling back to speechSynthesis:", err);
             this.status.innerText = `Kokoro failed (${err && err.message ? err.message : err}); using system voice.`;
-            this.neuralTtsAvailable = false; // demote permanently for this session
+            this._hideProgress();
             if (this.currentTtsReq === opId) this.currentTtsReq = null;
             this._speakSystem(text);
         }
+    }
+
+    // HuggingFace transformers.js progress callback. Emits per-file
+    // events with a 0-100 progress field while a model shard streams
+    // in. We show one bar per active file; the label updates as files
+    // complete. Cached files emit no progress events at all.
+    _onTtsProgress(e) {
+        if (!this.progressEl || !e) return;
+        const file = e.file || "";
+        if (e.status === "progress") {
+            const pct = Math.max(0, Math.min(100, Number(e.progress) || 0));
+            const loaded = Number(e.loaded) || 0;
+            const total = Number(e.total) || 0;
+            const now = performance.now();
+            // Reset speed tracker when the file changes.
+            if (this._progFile !== file) {
+                this._progFile = file;
+                this._progLastT = now;
+                this._progLastLoaded = loaded;
+                this._progSpeedBps = 0;
+            }
+            // Sample speed at ~750ms intervals so the readout is stable
+            // without lagging real bandwidth changes.
+            const dt = (now - this._progLastT) / 1000;
+            if (dt >= 0.75) {
+                this._progSpeedBps = (loaded - this._progLastLoaded) / dt;
+                this._progLastT = now;
+                this._progLastLoaded = loaded;
+            }
+            const speedStr = this._progSpeedBps > 0
+                ? ` — ${this._formatBytes(this._progSpeedBps)}/s`
+                : "";
+            this.progressEl.hidden = false;
+            this.progressFill.classList.remove("indeterminate");
+            this.progressLabel.innerText =
+                `${file} — ${pct.toFixed(0)}%  (${this._formatBytes(loaded)} / ${this._formatBytes(total)})${speedStr}`;
+            this.progressFill.style.width = pct.toFixed(1) + "%";
+        } else if (e.status === "initiate" || e.status === "download") {
+            this.progressEl.hidden = false;
+            this.progressLabel.innerText = `${file} — starting…`;
+            this._progFile = null;
+            this._progSpeedBps = 0;
+        } else if (e.status === "done") {
+            this.progressFill.classList.remove("indeterminate");
+            this.progressLabel.innerText = `${file} — done`;
+            this.progressFill.style.width = "100%";
+            this._progFile = null;
+        } else if (e.status === "ready") {
+            this._hideProgress();
+        }
+    }
+
+    _showProgress(labelText) {
+        if (!this.progressEl) return;
+        this.progressEl.hidden = false;
+        // Indeterminate look for cache hits: a thin fill while we wait
+        // for either a real progress event or `ready`/await resolution.
+        this.progressLabel.innerText = labelText || "";
+        this.progressFill.classList.add("indeterminate");
+        this.progressFill.style.width = "30%";
+    }
+
+    _hideProgress() {
+        if (!this.progressEl) return;
+        this.progressEl.hidden = true;
+        this.progressFill.classList.remove("indeterminate");
+        this.progressFill.style.width = "0%";
+        this.progressLabel.innerText = "";
+    }
+
+    _refreshTtsConfigDisplay() {
+        if (!this.ttsConfigEl) return;
+        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
+        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+        this.ttsConfigEl.innerText = `${voice} / ${dtype}`;
+    }
+
+    _formatBytes(n) {
+        if (typeof n !== "number" || !isFinite(n) || n < 0) return "?";
+        if (n < 1024) return `${n} B`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+        if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+        return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
     }
 
     _speakSystem(text) {

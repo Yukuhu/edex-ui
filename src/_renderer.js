@@ -798,6 +798,40 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>ttsVoice</td>
+                        <td>Voice used by the Claude Chat neural TTS (Kokoro-82M). All voices share the same model file, so switching is free once the model is cached. Grades come from kokoro-js's own voice index.</td>
+                        <td><select id="settingsEditor-ttsVoice">
+                            ${(() => {
+                                const cur = window.settings.ttsVoice || "af_heart";
+                                const list = (typeof ClaudeChat !== "undefined" && ClaudeChat.VOICES) ? ClaudeChat.VOICES : [{id: cur, grade: "", region: "", gender: ""}];
+                                const label = (v) => {
+                                    const tail = [v.grade, [v.region, v.gender].filter(Boolean).join("/"), v.traits].filter(Boolean).join(", ");
+                                    return tail ? `${v.id} (${tail})` : v.id;
+                                };
+                                const curObj = list.find(v => v.id === cur) || {id: cur, grade: "", region: "", gender: ""};
+                                const ordered = [curObj, ...list.filter(v => v.id !== cur)];
+                                return ordered.map(v => `<option value="${v.id}">${label(v)}</option>`).join("");
+                            })()}
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>ttsDtype</td>
+                        <td>Quantization for the Kokoro TTS model. Each tier is fetched on demand on first use and cached locally; the old tier stays cached, so switching back is free.</td>
+                        <td><select id="settingsEditor-ttsDtype">
+                            ${(() => {
+                                const cur = window.settings.ttsDtype || "q8";
+                                const list = (typeof ClaudeChat !== "undefined" && ClaudeChat.DTYPES)
+                                    ? ClaudeChat.DTYPES
+                                    : [{id: cur, label: cur}];
+                                const ordered = [
+                                    list.find(d => d.id === cur) || {id: cur, label: cur},
+                                    ...list.filter(d => d.id !== cur)
+                                ];
+                                return ordered.map(d => `<option value="${d.id}">${d.label}</option>`).join("");
+                            })()}
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>experimentalGlobeFeatures</td>
                         <td>Toggle experimental features for the network globe</td>
                         <td><select id="settingsEditor-experimentalGlobeFeatures">
@@ -865,6 +899,8 @@ window.writeSettingsFile = () => {
         fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
         spawnOnTabCycle: (document.getElementById("settingsEditor-spawnOnTabCycle").value === "true"),
         modalCloseButton: (document.getElementById("settingsEditor-modalCloseButton").value === "true"),
+        ttsVoice: document.getElementById("settingsEditor-ttsVoice").value,
+        ttsDtype: document.getElementById("settingsEditor-ttsDtype").value,
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };

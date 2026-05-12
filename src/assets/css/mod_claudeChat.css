@@ -201,6 +201,55 @@ div.modal_popup .claudeChat_status {
     letter-spacing: 0.1vh;
 }
 
+div.modal_popup .claudeChat_progress {
+    margin-top: 0.6vh;
+    font-family: var(--font_main_light);
+    font-size: 1.2vh;
+    letter-spacing: 0.1vh;
+    opacity: 0.85;
+}
+
+div.modal_popup .claudeChat_progress_label {
+    margin-bottom: 0.3vh;
+    opacity: 0.7;
+}
+
+div.modal_popup .claudeChat_progress_track {
+    width: 100%;
+    height: 0.6vh;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.15);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+    overflow: hidden;
+}
+
+div.modal_popup .claudeChat_progress_fill {
+    height: 100%;
+    width: 0%;
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    transition: width 120ms linear;
+}
+
+@keyframes claudeChat_progressSweep {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+div.modal_popup .claudeChat_progress_fill.indeterminate {
+    animation: claudeChat_progressSweep 0.9s ease-in-out infinite;
+}
+
+div.modal_popup .claudeChat_ttsLine {
+    font-family: var(--font_main_light);
+    font-size: 1.3vh;
+    opacity: 0.7;
+    letter-spacing: 0.1vh;
+}
+
+div.modal_popup .claudeChat_ttsLine span {
+    font-family: var(--font_main);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
 div.modal_popup .claudeChat_header {
     display: flex;
     align-items: center;

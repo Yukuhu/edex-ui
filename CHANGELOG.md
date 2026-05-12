@@ -31,10 +31,11 @@ original author Gabriel "Squared" SAILLARD — see the README
   scanlines clipped to the head silhouette. Theme-aware via
   `--color_r/g/b`. (PR #4)
 - **Neural text-to-speech** via Kokoro-82M (`kokoro-js ^1.2.1`,
-  q8 quantization, voice `af_heart`). Auto-downloads the ~92 MB ONNX
-  model to OPFS on first use; falls back to `speechSynthesis` if the
-  model load fails. Voice toggle in the chat modal — off by default;
-  reads each completed assistant response aloud. (PR #4)
+  default voice `af_heart` at `q8` quantization). Fetches the ~92 MB
+  ONNX model from HuggingFace on first use within a session; falls
+  back to `speechSynthesis` if the model load fails. Voice toggle
+  in the chat modal — off by default; reads each completed
+  assistant response aloud. (PR #4)
 - **Assistant persona for the chat modal**: full `--system-prompt`
   override drops the default Claude Code coding-agent framing.
   `WebSearch` and `WebFetch` are pre-allowed; file/shell tools
@@ -85,6 +86,21 @@ original author Gabriel "Squared" SAILLARD — see the README
   past an empty slot. Default `true` makes `Ctrl+Tab` from a fresh
   boot open tab 1, tab 2, etc., matching the behavior most users
   expect. Set to `false` for the legacy skip-empty behavior. (PR #5)
+- **`ttsVoice` and `ttsDtype` settings** for the Claude Chat neural
+  TTS. `ttsVoice` (default `af_heart`) picks one of Kokoro-82M's 28
+  voices — voice grades from kokoro-js's own index are shown in the
+  dropdown labels (e.g. `af_heart (A, US/F, ❤️)`, `am_adam (F+, US/M)`).
+  Switching voices is free since they all share one model file.
+  `ttsDtype` (default `q8`, ~92 MB) chooses the quantization tier:
+  `q8`, `fp16` (~163 MB), `fp32` (~326 MB), `q4f16` (~155 MB), or
+  `q4` (~50 MB, low). Each dtype is fetched from HuggingFace on
+  demand on first use — never bundled in the binary. The active
+  `voice / dtype` is shown in the chat modal header. Closes #20.
+- **TTS model download progress bar** with rolling speed readout
+  (`<file> — 47% (15.3 MB / 32.5 MB) — 8.2 MB/s`). Hidden when no
+  download is in flight; switches to an indeterminate sweep
+  animation for instant cache hits so the user always sees the
+  load happen.
 - **`Ctrl+Shift+E` shortcut** (`FS_OPEN`) to open the new filesystem
   modal. (PR #7)
 - **README "About this fork" + "Acknowledgments" sections** that
@@ -149,6 +165,10 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Fixed
 
+- **EPIPE no longer pops the "nDEX-UI crashed" dialog**: the main
+  process's `uncaughtException` handler now skips the dialog for
+  `e.code === "EPIPE"`, which is benign collateral when killing the
+  app or when an IPC subprocess closes its stdin mid-write.
 - **Terminal frame is no longer clipped in fullscreen mode**: switched
   the fullscreen-mode sizing from percentage-based (`calc(100% - …)`)
   to explicit viewport units (`calc(100vw - …)` / `calc(100vh - …)`)

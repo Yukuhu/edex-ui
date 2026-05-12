@@ -92,6 +92,7 @@ if (!fs.existsSync(settingsFile)) {
         excludeThreadsFromToplist: true,
         hideDotfiles: false,
         fsListView: false,
+        spawnOnTabCycle: true,
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

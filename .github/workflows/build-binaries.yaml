@@ -122,8 +122,16 @@ jobs:
         run: npm run build-darwin
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Split per-arch so each artifact downloads as a single .dmg
+      # rather than a zip containing both — matches the per-arch
+      # naming used for the Linux AppImages above.
       - uses: actions/upload-artifact@v4
         with:
-          name: MacOS-Image
-          path: dist/*.dmg
+          name: MacOS-dmg-x64
+          path: dist/nDEX-UI-macOS-x64.dmg
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacOS-dmg-arm64
+          path: dist/nDEX-UI-macOS-arm64.dmg
           if-no-files-found: error

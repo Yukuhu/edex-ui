@@ -15,6 +15,19 @@ class ClaudeChat {
     static TTS_DTYPE = "q8";
     static TTS_VOICE = "af_heart";
 
+    // URL safety helper — only http(s) URLs are allowed to reach
+    // shell.openExternal. `javascript:` or `file:` schemes can execute
+    // arbitrary code via the OS handler, so we hard-reject them.
+    static _isHttpUrl(s) {
+        if (typeof s !== "string" || s.length === 0) return false;
+        try {
+            const u = new URL(s);
+            return u.protocol === "http:" || u.protocol === "https:";
+        } catch (_) {
+            return false;
+        }
+    }
+
     static open() {
         if (window.modals && Object.values(window.modals).some(m => m && m._isClaudeChat)) {
             return; // already open
@@ -397,6 +410,11 @@ class ClaudeChat {
 
         const pushUrl = (url, label) => {
             const trimmed = url.replace(/[.,;:!?)\]]+$/, "");
+            // Defence-in-depth: never collect anything that isn't http/https.
+            // The regexes that feed this already require https?:// at the
+            // start, but an explicit URL parse rejects malformed inputs and
+            // makes the safety story easy to audit.
+            if (!ClaudeChat._isHttpUrl(trimmed)) return;
             sources.push({ url: trimmed, label: label || trimmed });
         };
 
@@ -478,6 +496,15 @@ class ClaudeChat {
             modalEl.querySelectorAll(".claudeChat_sourceLink").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const url = btn.getAttribute("data-url");
+                    // Re-check the scheme at the call site too — the URL
+                    // ultimately originates from model-generated text, so
+                    // don't trust that nothing tampered with the DOM
+                    // attribute. shell.openExternal will happily launch a
+                    // file:// or javascript: handler, so we gate it here.
+                    if (!ClaudeChat._isHttpUrl(url)) {
+                        console.warn("Refusing to open non-http(s) URL:", url);
+                        return;
+                    }
                     try { require("electron").shell.openExternal(url); }
                     catch (err) { console.warn("Failed to open URL:", err); }
                 });

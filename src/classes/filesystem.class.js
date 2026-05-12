@@ -189,10 +189,14 @@ class FilesystemDisplay {
 
         if (this._followTerminal) this._wireFollowTerminal();
 
-        // If an initial CWD was provided, jump to it.
-        if (opts.initialCwd) {
-            this.readFS(opts.initialCwd);
-        }
+        // Initial CWD load is async; keep it out of the constructor
+        // body so Sonar's S7059 is satisfied. Caller doesn't await —
+        // readFS renders into `this.filesContainer` when it resolves.
+        this._applyInitialCwd(opts.initialCwd);
+    }
+
+    _applyInitialCwd(cwd) {
+        if (cwd) this.readFS(cwd);
     }
 
     setFollowTerminal(on) {

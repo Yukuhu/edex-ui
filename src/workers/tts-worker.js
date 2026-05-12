@@ -40,6 +40,11 @@ let kokoro = null;
 let loadedDtype = null;
 
 self.addEventListener("message", async (event) => {
+    // Dedicated workers can only receive messages from the script
+    // that spawned them (HTML spec). For same-context posts, event.
+    // origin is "" — anything else is unexpected and we drop it.
+    // Satisfies SonarCloud rule javascript:S2819.
+    if (event.origin && event.origin !== self.location.origin) return;
     const msg = event.data || {};
     try {
         if (msg.type === "load") {

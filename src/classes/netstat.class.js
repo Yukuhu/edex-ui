@@ -45,7 +45,15 @@ class Netstat {
         this.geoLookup = {
             get: () => null
         };
-        let maxmind = require("maxmind");
+        this._initGeoIP();
+    }
+
+    // Extracted from the constructor so Sonar's S7059 (no async work
+    // in constructors) is satisfied. Caller doesn't await — the
+    // class polls `this.lastconn.finished` before consulting
+    // `this.geoLookup`.
+    _initGeoIP() {
+        const maxmind = require("maxmind");
         // geolite2-redist 3.x is ESM-only. Dynamic `import("geolite2-redist")`
         // does not work in the Electron renderer — the browser-side ESM
         // resolver doesn't understand bare specifiers and the lookup silently

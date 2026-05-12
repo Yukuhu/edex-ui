@@ -1,9 +1,5 @@
 /* Support for other screen ratios than 16:9 */
 @media (aspect-ratio: 16/10) {
-    section#filesystem > h3.title {
-        width: 43.5vw;
-    }
-
     div.keyboard_key {
         height: 2.5vw;
         min-width: 2.5vw;
@@ -87,10 +83,6 @@
 }
 
 @media (aspect-ratio: 5/4), (aspect-ratio: 4/3) {
-    section#filesystem {
-        display: none;
-    }
-
     div.keyboard_row#row_1 > div.keyboard_enter {
         height: 4.9vh;
         left: 0.1vh

@@ -366,9 +366,10 @@ async function initUI() {
     await _delay(700);
 
     document.getElementById("main_shell").setAttribute("style", "opacity: 0;");
+    // The legacy inline filesystem section used to live here. It's been
+    // retired — the new two-pane FilesystemDisplay lives in the FsModal
+    // popup, opened with Ctrl+Shift+E. The slot is intentionally empty.
     document.body.innerHTML += `
-    <section id="filesystem" style="width: 0px;" class="${window.settings.hideDotfiles ? "hideDotfiles" : ""} ${window.settings.fsListView ? "list-view" : ""}">
-    </section>
     <section id="keyboard" style="opacity:0;">
     </section>`;
     window.keyboard = new Keyboard({
@@ -394,7 +395,6 @@ async function initUI() {
 
     greeter.setAttribute("style", "opacity: 1;");
 
-    document.getElementById("filesystem").setAttribute("style", "");
     document.getElementById("keyboard").setAttribute("style", "");
     document.getElementById("keyboard").setAttribute("class", "animation_state_1");
     window.audioManager.keyboard.play();
@@ -491,15 +491,10 @@ async function initUI() {
 
     await _delay(100);
 
-    window.fsDisp = new FilesystemDisplay({
-        parentId: "filesystem"
-    });
-
-    await _delay(200);
-
-    document.getElementById("filesystem").setAttribute("style", "opacity: 1;");
-
-    // Resend terminal CWD to fsDisp if we're hot reloading
+    // The inline filesystem panel was retired in favor of the two-pane
+    // FsModal (Ctrl+Shift+E). The terminal still tracks its own CWD —
+    // resend it after a hot reload so anything else relying on
+    // term.cwd (e.g. fuzzyFinder) has fresh state.
     if (window.performance.navigation.type === 1) {
         window.term[window.currentTerm].resendCWD();
     }
@@ -544,8 +539,6 @@ window.focusShellTab = number => {
         window.term[number].fit();
         window.term[number].term.focus();
         window.term[number].resendCWD();
-
-        window.fsDisp.followTab();
     } else if (number > 0 && number <= 4 && window.term[number] !== null && typeof window.term[number] !== "object") {
         window.term[number] = null;
 
@@ -900,8 +893,9 @@ window.openShortcutsHelp = () => {
         "SETTINGS": "Open the settings editor.",
         "SHORTCUTS": "List and edit available keyboard shortcuts.",
         "FUZZY_SEARCH": "Search for entries in the current working directory.",
-        "FS_LIST_VIEW": "Toggle between list and grid view in the file browser.",
-        "FS_DOTFILES": "Toggle hidden files and directories in the file browser.",
+        "FS_OPEN": "Open the two-pane filesystem browser.",
+        "FS_LIST_VIEW": "Toggle list / grid view in the focused pane of the filesystem browser.",
+        "FS_DOTFILES": "Toggle hidden files in the focused pane of the filesystem browser.",
         "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
         "DEV_RELOAD": "Trigger front-end hot reload.",
@@ -1059,11 +1053,20 @@ window.useAppShortcut = action => {
         case "FUZZY_SEARCH":
             window.activeFuzzyFinder = new FuzzyFinder();
             return true;
+        case "FS_OPEN":
+            window.FsModal.open();
+            return true;
         case "FS_LIST_VIEW":
-            window.fsDisp.toggleListview();
+            // Applies to the focused pane inside the open FsModal;
+            // no-op when the modal isn't open.
+            if (window.FsModal && window.FsModal._instance && window.FsModal._instance.focusedPane) {
+                window.FsModal._instance.focusedPane.toggleListview();
+            }
             return true;
         case "FS_DOTFILES":
-            window.fsDisp.toggleHidedotfiles();
+            if (window.FsModal && window.FsModal._instance && window.FsModal._instance.focusedPane) {
+                window.FsModal._instance.focusedPane.toggleHidedotfiles();
+            }
             return true;
         case "KB_PASSMODE":
             window.keyboard.togglePasswordMode();

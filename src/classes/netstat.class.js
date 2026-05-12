@@ -46,8 +46,11 @@ class Netstat {
             get: () => null
         };
         let maxmind = require("maxmind");
-        // geolite2-redist 3.x is ESM-only — must use dynamic import from CJS.
-        import("geolite2-redist").then(mod => {
+        // geolite2-redist 3.x is ESM-only. Dynamic `import("geolite2-redist")`
+        // does not work in the Electron renderer — the browser-side ESM
+        // resolver doesn't understand bare specifiers and the lookup silently
+        // failed. Node 22+ supports require() of ESM, so use that instead.
+        Promise.resolve(require("geolite2-redist")).then(mod => {
             const geolite2 = mod.default || mod;
             return geolite2.open('GeoLite2-City', path => maxmind.open(path));
         }).then(reader => {

@@ -93,6 +93,7 @@ if (!fs.existsSync(settingsFile)) {
         hideDotfiles: false,
         fsListView: false,
         spawnOnTabCycle: true,
+        modalCloseButton: true,
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

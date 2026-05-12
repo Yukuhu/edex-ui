@@ -1,44 +1,45 @@
-section#filesystem {
+/* FilesystemDisplay pane styles.
+ *
+ * The pane root has class `fs_pane`. Inside it:
+ *   .fs_pane_container — icon grid (default) or list view
+ *   .fs_pane_space_bar — disk-usage strip at the bottom
+ *   .fs_pane_error     — failure message
+ *
+ * Two view modes are toggled via classes on the pane root: `list-view`
+ * for the list, default for grid. `hideDotfiles` hides .hidden items.
+ */
+
+.fs_pane {
     position: relative;
-    top: -0.925vh;
-    width: 43vw;
-    height: 30vh;
-    margin-right: 0.5vw;
-
-    opacity: 0;
-    transition: opacity .5s cubic-bezier(0.4, 0, 1, 1);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
-section#filesystem > h3.title {
-    width: 43vw;
-    padding-right: 0;
+.fs_pane.hideDotfiles .fs_pane_container > .hidden {
+    display: none;
 }
 
-section#filesystem.hideDotfiles > h3.title > p#fs_disp_title_dir::before {
-    content: "dotfiles hidden - ";
-}
-
-h2#fs_disp_error {
+.fs_pane_error {
     font-weight: bold;
     text-align: center;
     padding-top: 12vh;
 }
 
-div#fs_disp_container {
-    position: relative;
-    left: .35vw;
-    top: 1.5vh;
-    height: 25.5vh;
-    width: 43vw;
+div.fs_pane_container {
+    flex: 1 1 auto;
     overflow: auto;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(8.5vh, 1fr));
     grid-auto-rows: 8.5vh;
     grid-gap: 1vh;
     box-sizing: border-box;
+    padding: 1vh 0.5vh;
 }
 
-div#fs_disp_container > * {
+div.fs_pane_container > .fs_pane_item {
     overflow: hidden;
     width: 8.5vh;
     height: 8.5vh;
@@ -52,45 +53,41 @@ div#fs_disp_container > * {
     transition: opacity .2s linear;
 }
 
-div#fs_disp_container > *.animationWait {
+div.fs_pane_container > .fs_pane_item.animationWait {
     opacity: 0 !important;
 }
 
-div#fs_disp_container > *:active {
-    animation-name: blink;
+div.fs_pane_container > .fs_pane_item:active {
+    animation-name: fs_blink;
     animation-iteration-count: infinite;
     animation-duration: .1s;
 }
 
-@keyframes blink {
-    0% {background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.0);}
-    50% {background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 1);}
-    100% {background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.0);}
+@keyframes fs_blink {
+    0%   { background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.0); }
+    50%  { background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 1); }
+    100% { background-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.0); }
 }
 
-div#fs_disp_container > *.hidden {
+div.fs_pane_container > .fs_pane_item.hidden {
     opacity: 0.7;
 }
 
-section#filesystem.hideDotfiles > div#fs_disp_container > *.hidden {
-    display: none;
-}
-
-div#fs_disp_container > * > svg {
+div.fs_pane_container > .fs_pane_item > svg {
     width: 5vh;
 }
 
 /* Add padding around non-edex icons */
-div#fs_disp_container > * > svg:not([viewBox="0 0 24 24"]) {
+div.fs_pane_container > .fs_pane_item > svg:not([viewBox="0 0 24 24"]) {
     padding: 0.5vh;
     box-sizing: border-box;
 }
 
-div#fs_disp_container > * > h3 {
+div.fs_pane_container > .fs_pane_item > h3 {
     font-size: 1.3vh;
     max-width: 100%;
     max-height: 30%;
-    margin: 0px;
+    margin: 0;
     padding-top: .5vh;
     box-sizing: border-box;
     white-space: nowrap;
@@ -98,43 +95,43 @@ div#fs_disp_container > * > h3 {
     overflow: hidden;
 }
 
-section#filesystem:not(.list-view) > div#fs_disp_container > div > h4 {
+.fs_pane:not(.list-view) > div.fs_pane_container > .fs_pane_item > h4 {
     display: none;
 }
 
-div#fs_disp_container.disks > div > h4 {
-	  display: none;
+div.fs_pane_container.disks > .fs_pane_item > h4 {
+    display: none;
 }
 
-section#filesystem.list-view > div#fs_disp_container {
+.fs_pane.list-view > div.fs_pane_container {
     grid-template-columns: 1fr;
     grid-auto-rows: 2vh;
     grid-gap: 0.5vh;
     padding-right: 0.5vh;
 }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > * {
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item {
     width: auto;
     height: 2vh;
     flex-direction: row;
     justify-content: flex-start;
 }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > svg {
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > svg {
     height: 2vh;
     margin: 0;
     width: auto;
     margin-right: 2%;
 }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h3 {
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > h3 {
     max-height: unset;
     padding-top: .2vh;
     text-align: left;
     width: 32%;
 }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h4 {
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > h4 {
     font-size: 1.3vh;
     font-weight: normal;
     padding-top: .2vh;
@@ -142,25 +139,24 @@ section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h4 {
     overflow: hidden;
 }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h4:nth-of-type(1) { width: 15%; }
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > h4:nth-of-type(1) { width: 15%; }
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > h4:nth-of-type(2) { width: 10%; }
+.fs_pane.list-view > div.fs_pane_container:not(.disks) > .fs_pane_item > h4:nth-of-type(3) { width: 38%; }
 
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h4:nth-of-type(2) { width: 10%; }
-
-section#filesystem.list-view > div#fs_disp_container:not(.disks) > div > h4:nth-of-type(3) { width: 38%; }
-
-div#fs_disp_container.disks {
+div.fs_pane_container.disks {
     display: flex;
     align-items: center;
     justify-content: space-evenly;
     border: 0.4vh double rgba(var(--color_r), var(--color_g), var(--color_b), 0.8);
     flex-wrap: wrap;
 }
-div#fs_disp_container.disks > * {
+div.fs_pane_container.disks > .fs_pane_item {
     width: auto;
     max-width: 8vw;
 }
 
-section#filesystem:not(.list-view) div.fs_disp_showDisks > svg, section#filesystem:not(.list-view) div.fs_disp_up > svg {
+.fs_pane:not(.list-view) div.fs_disp_showDisks > svg,
+.fs_pane:not(.list-view) div.fs_disp_up > svg {
     width: 4vh !important;
     margin-bottom: 0.5vh;
     margin-top: 0.5vh;
@@ -177,21 +173,19 @@ div.fs_disp_other > h3 {
     font-style: italic;
 }
 
-div#fs_space_bar {
+/* Disk-usage strip — visible at the bottom of each pane */
+div.fs_pane_space_bar {
+    flex: 0 0 auto;
     position: relative;
-    top: 1.5vh;
-    left: .15vw;
+    padding: 0.5vh 0;
 }
 
-div#fs_space_bar > h1 {
+div.fs_pane_space_bar > h1 {
     display: none;
-
     background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
     height: 3.2vh;
     width: 100%;
     position: relative;
-    bottom: .7vh;
-    left: .3vh;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
@@ -201,68 +195,49 @@ div#fs_space_bar > h1 {
     font-weight: bold;
     font-size: 1.5vh;
     cursor: pointer;
+    margin: 0;
 }
 
-div#fs_disp_container.disks+div#fs_space_bar > h1 {
+div.fs_pane_container.disks + div.fs_pane_space_bar > h1 {
     display: flex;
 }
-div#fs_disp_container.disks+div#fs_space_bar > *:not(h1) {
+div.fs_pane_container.disks + div.fs_pane_space_bar > *:not(h1) {
     display: none;
 }
 
-div#fs_space_bar > h3 {
-    width: 30%;
+div.fs_pane_space_bar > h3 {
+    width: 60%;
     margin: 0;
     display: inline-block;
     font-size: 1.4vh;
     font-weight: normal;
     white-space: nowrap;
-    position: relative;
-    bottom: .4vh;
 }
 
-div#fs_space_bar > progress {
-    width: 70%;
-    height: 2.2vh;
-    padding-top: .5vh;
-    -webkit-appearance: none;
-}
-
-div#fs_space_bar > progress::after {
-    content: "";
-    position: absolute;
-    right: -.1vh;
-    top: .45vh;
-    width: .1vh;
+div.fs_pane_space_bar > progress {
+    width: 38%;
     height: 1.7vh;
-    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.8);
+    -webkit-appearance: none;
+    vertical-align: middle;
 }
 
-div#fs_space_bar > progress:not([value])::after {
-    animation: space_bar_working 1.7s ease-in-out alternate infinite;
-    background: rgba(var(--color_r), var(--color_g), var(--color_b), 1);
-}
-
-@keyframes space_bar_working {
-    0% { right: 0%; }
-    100% { right: 70%; }
-}
-
-div#fs_space_bar > progress::-webkit-progress-bar {
+div.fs_pane_space_bar > progress::-webkit-progress-bar {
     background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
     height: .7vh;
-    position: relative;
-    top: .7vh;
 }
 
-div#fs_space_bar > progress::-webkit-progress-value {
+div.fs_pane_space_bar > progress::-webkit-progress-value {
     background: rgb(var(--color_r), var(--color_g), var(--color_b));
     height: .7vh;
-    position: relative;
-    bottom: .7vh;
     transition: width .5s cubic-bezier(0.4, 0, 1, 1);
 }
 
+/* Drag-and-drop visual feedback */
+.fs_pane.dragover {
+    box-shadow: inset 0 0 0 0.25vh rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+/* Modals reused for opening media files keep .fsDisp_mediaDisp class */
 .pdf_container {
     text-align: center;
     background: var(--color_light_black);

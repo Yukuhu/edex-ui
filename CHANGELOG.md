@@ -45,8 +45,14 @@ original author Gabriel "Squared" SAILLARD — see the README
   (`src/workers/tts-worker.js`) — the renderer's JS thread stays
   unblocked during synthesis, and only handles audio playback. The
   pipeline is pre-warmed on voice toggle so the first sentence
-  doesn't pay model-load + ONNX-warmup latency. (PR #4, streaming
-  + worker added by PR closing #22)
+  doesn't pay model-load + ONNX-warmup latency. On macOS the worker
+  asks onnxruntime-node to try the **CoreML execution provider**
+  first (falling back to CPU for any ops CoreML can't compile) —
+  yields ~10% faster per-character synth on Apple Silicon. Each
+  turn also emits two `[PERF]` console.info lines (turn summary +
+  stage breakdown) for ongoing latency tuning; see
+  `docs/tts-perf.md`. (PR #4, streaming + worker added by PR
+  closing #22, CoreML EP + instrumentation by PR closing #24)
 - **Assistant persona for the chat modal**: full `--system-prompt`
   override drops the default Claude Code coding-agent framing.
   `WebSearch` and `WebFetch` are pre-allowed; file/shell tools

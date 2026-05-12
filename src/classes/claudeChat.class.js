@@ -298,6 +298,27 @@ class ClaudeChat {
         this._streamCarry = 0;          // sub-char accumulator across frames
         this._streamHorizonMs = 250;    // try to drain the pending buffer within ~250ms
 
+        // Perf: PerformanceObserver flags any main-thread task longer
+        // than 50ms (browser default for the "longtask" entry type).
+        // We feed the worst one per turn into the perf summary so we
+        // can see if the worker is actually keeping the UI thread free.
+        this._perf = null;
+        try {
+            if (typeof PerformanceObserver !== "undefined") {
+                this._longTaskObserver = new PerformanceObserver((list) => {
+                    if (!this._perf) return;
+                    for (const entry of list.getEntries()) {
+                        if (entry.duration > this._perf.longTaskMax) {
+                            this._perf.longTaskMax = entry.duration;
+                        }
+                    }
+                });
+                this._longTaskObserver.observe({ entryTypes: ["longtask"] });
+            }
+        } catch (_) {
+            // Not all environments support longtask. Skip silently.
+        }
+
         const detachKeyboard = (typeof window !== "undefined" && window.keyboard && window.keyboard.detach) ? () => window.keyboard.detach() : () => {};
         const attachKeyboard = (typeof window !== "undefined" && window.keyboard && window.keyboard.attach) ? () => window.keyboard.attach() : () => {};
         detachKeyboard();
@@ -374,6 +395,9 @@ class ClaudeChat {
         // IPC subscriptions — keep references so we can remove on close
         this._onDelta = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
+            if (this._perf && this._perf.firstDeltaT === null) {
+                this._perf.firstDeltaT = performance.now();
+            }
             this._appendAssistantText(payload.text || "");
             if (this.avatar && this.avatar.state === "thinking") {
                 this.avatar.setState("responding");
@@ -464,6 +488,26 @@ class ClaudeChat {
         // playing audio and the streaming consumer.
         this._cancelSpeech();
 
+        // Perf instrumentation. The chat modal records a few timestamps
+        // per turn so we can log T-first-audio (submit → audio.onplay
+        // of sentence 1), queue-peak (max concurrent synthesized
+        // sentences ahead of playback), and the first-3-sentence per-
+        // char synth rate. Numbers feed docs/tts-perf.md. Behaviour-
+        // neutral.
+        this._perf = {
+            submitT: performance.now(),
+            ipcOutT: null,         // just before ipc.send("claude:send")
+            firstDeltaT: null,     // first claude:delta IPC received
+            firstBubbleCharT: null,// first char rendered into the bubble (RAF)
+            firstTtsYieldT: null,  // first sentence emitted by splitter
+            firstSynthDoneT: null, // first synth-result message resolved
+            firstAudioT: null,     // audio.onplay of sentence 1
+            firstSentenceSynthMs: [],
+            queuePeak: 0,
+            longTaskMax: 0,
+            cold: this._perf ? false : true
+        };
+
         this._appendUserBubble(prompt);
         this.input.value = "";
         this._beginAssistantBubble();
@@ -471,6 +515,7 @@ class ClaudeChat {
         this.pendingReqId = `req_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
         this.status.innerText = "Querying claude…";
         if (this.avatar) this.avatar.setState("thinking");
+        if (this._perf) this._perf.ipcOutT = performance.now();
         this.ipc.send("claude:send", {
             reqId: this.pendingReqId,
             sessionId: this.sessionId,
@@ -535,14 +580,27 @@ class ClaudeChat {
 
     // Lazily creates the TTS Worker and wires its message handler. The
     // worker outlives individual turns — we kill it on modal close.
+    //
+    // The WebGPU worker (`tts-worker-web.js`) is kept in tree but
+    // not used by default: in an Electron node-integrated worker
+    // kokoro.web.js's bundled transformers still detects Node and
+    // refuses `device: "webgpu"` ("Should be one of: cpu."). To
+    // actually run WebGPU we'd need a non-node-integrated worker
+    // context, which is a separate refactor. The default node-CPU
+    // worker now also tries the CoreML execution provider on macOS
+    // before falling back to CPU.
     _ensureWorker() {
         if (this._ttsWorker) return this._ttsWorker;
-        // `workers/tts-worker.js` is served via file:// alongside the
-        // renderer. CSP `default-src file:` covers it.
-        this._ttsWorker = new Worker("workers/tts-worker.js");
+        const forceBackend = window.settings && window.settings.ttsBackend;
+        const path = forceBackend === "webgpu"
+            ? "workers/tts-worker-web.js"
+            : "workers/tts-worker.js";
+        const workerOpts = path.endsWith("-web.js") ? { type: "module" } : undefined;
+        this._ttsBackendInUse = path.endsWith("-web.js") ? "webgpu" : "node-cpu";
+        this._ttsWorker = new Worker(path, workerOpts);
         this._ttsWorker.addEventListener("message", (ev) => this._onTtsWorkerMessage(ev));
         this._ttsWorker.addEventListener("error", (err) => {
-            console.warn("[TTS Worker] error:", err.message || err);
+            console.warn(`[TTS Worker:${this._ttsBackendInUse}] error:`, err.message || err);
             // Reject any in-flight promises so consumers don't hang.
             if (this._ttsLoadReject) {
                 this._ttsLoadReject(new Error(err.message || "Worker error"));
@@ -554,6 +612,23 @@ class ClaudeChat {
             this._ttsSynthPending.clear();
         });
         return this._ttsWorker;
+    }
+
+    // If the WebGPU worker's load fails, swap to the node-CPU worker
+    // and retry. Called from the load-error handler.
+    _fallbackToNodeWorker() {
+        if (this._ttsBackendInUse !== "webgpu") return;
+        console.warn("[TTS] WebGPU load failed; falling back to node-CPU worker");
+        try { this._ttsWorker.terminate(); } catch (_) {}
+        this._ttsWorker = null;
+        this._ttsWorkerLoadedDtype = null;
+        // Reset the pending-load tracking so _ensureWorkerLoaded can
+        // restart cleanly with the node worker.
+        this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
+        // Mark this so _ensureWorker uses the node path even though
+        // ttsBackend isn't set.
+        if (!window.settings) window.settings = {};
+        window.settings.ttsBackend = "node";
     }
 
     // Load (or reuse) the Kokoro pipeline in the worker for the given
@@ -595,13 +670,30 @@ class ClaudeChat {
         if (msg.type === "load-progress") {
             this._onTtsProgress(msg.event);
         } else if (msg.type === "load-ready") {
-            console.info(`[TTS] Worker load(${msg.dtype}) load=${msg.loadMs.toFixed(0)}ms warmup=${msg.warmMs.toFixed(0)}ms`);
+            const backend = msg.backend || this._ttsBackendInUse || "node-cpu";
+            console.info(`[TTS] Worker load(${msg.dtype}) backend=${backend} load=${msg.loadMs.toFixed(0)}ms warmup=${msg.warmMs.toFixed(0)}ms`);
             this._ttsWorkerLoadedDtype = msg.dtype;
             this._hideProgress();
-            this.status.innerText = `Kokoro ready (${msg.dtype}).`;
+            this.status.innerText = `Kokoro ready (${msg.dtype}, ${backend}).`;
             if (this._ttsLoadResolve) this._ttsLoadResolve();
             this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
         } else if (msg.type === "load-error") {
+            // If the WebGPU worker failed to load, fall back to the
+            // node-CPU worker transparently and retry the load.
+            if (this._ttsBackendInUse === "webgpu") {
+                console.warn(`[TTS] WebGPU worker load-error message: ${msg.message}`);
+                const pendingDtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+                this._fallbackToNodeWorker();
+                // _ensureWorkerLoaded will spin up the node worker on
+                // the next call. Defer to avoid recursion in the same
+                // message tick.
+                setTimeout(() => {
+                    this._ensureWorkerLoaded(pendingDtype).catch(err => {
+                        console.warn("Fallback worker load also failed:", err);
+                    });
+                }, 0);
+                return;
+            }
             this._hideProgress();
             if (this._ttsLoadReject) this._ttsLoadReject(new Error(msg.message));
             this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
@@ -611,6 +703,14 @@ class ClaudeChat {
             this._ttsSynthPending.delete(msg.id);
             const blob = new Blob([msg.wav], { type: "audio/wav" });
             console.info(`[TTS] sentence synth=${msg.synthMs.toFixed(0)}ms chars=${msg.chars}`);
+            // Perf: capture per-char synth rate for first 3 sentences
+            // of the current turn. Used by the turn-summary line.
+            if (this._perf && this._perf.firstSentenceSynthMs.length < 3 && msg.chars > 0) {
+                this._perf.firstSentenceSynthMs.push({
+                    chars: msg.chars,
+                    ms: msg.synthMs
+                });
+            }
             pending.resolve(blob);
         } else if (msg.type === "synth-error") {
             const pending = this._ttsSynthPending.get(msg.id);
@@ -815,14 +915,23 @@ class ClaudeChat {
                 if (!sentence || !sentence.trim()) continue;
                 if (firstSentenceTime === null) {
                     firstSentenceTime = performance.now() - turnStart;
+                    if (this._perf && this._perf.firstTtsYieldT === null) {
+                        this._perf.firstTtsYieldT = performance.now();
+                    }
                     console.info(`[TTS] First sentence yielded at +${firstSentenceTime.toFixed(0)}ms: ${sentence.slice(0, 50)}…`);
                 }
                 sentenceCount++;
                 const blob = await this._synthInWorker(sentence, voice);
+                if (this._perf && this._perf.firstSynthDoneT === null) {
+                    this._perf.firstSynthDoneT = performance.now();
+                }
                 if (this._ttsTurnKey !== turnKey) return;
                 const url = URL.createObjectURL(blob);
                 const el = new Audio(url);
                 this._ttsAudioQueue.push({ url, audio: el });
+                if (this._perf && this._ttsAudioQueue.length > this._perf.queuePeak) {
+                    this._perf.queuePeak = this._ttsAudioQueue.length;
+                }
                 this._ttsPumpQueue();
             }
         } catch (err) {
@@ -851,6 +960,8 @@ class ClaudeChat {
         this._ttsPlaying = true;
         if (this.avatar) this.avatar.setState("speaking");
         this.status.innerText = "Speaking.";
+        // Perf: track first audio of the turn.
+        const isFirstAudioOfTurn = this._perf && this._perf.firstAudioT === null;
         const cleanup = () => {
             try { URL.revokeObjectURL(next.url); } catch (_) {}
             this._ttsPlaying = false;
@@ -861,12 +972,52 @@ class ClaudeChat {
                 // Stream is closed and queue is empty — turn is done.
                 this.avatar.setState("idle");
                 this.status.innerText = "Ready.";
+                this._emitTurnPerfSummary();
             }
         };
+        if (isFirstAudioOfTurn) {
+            next.audio.addEventListener("playing", () => {
+                if (this._perf && this._perf.firstAudioT === null) {
+                    this._perf.firstAudioT = performance.now();
+                }
+            }, { once: true });
+        }
         next.audio.onended = cleanup;
         next.audio.onerror = cleanup;
         this.currentAudio = next.audio;
         next.audio.play().catch(cleanup);
+    }
+
+    // Emit one line per turn with the headline perf numbers. Goes to
+    // console.info so the user can copy the numbers into
+    // docs/tts-perf.md.
+    _emitTurnPerfSummary() {
+        if (!this._perf) return;
+        const p = this._perf;
+        const tFirst = p.firstAudioT !== null
+            ? (p.firstAudioT - p.submitT).toFixed(0)
+            : "n/a";
+        const rates = p.firstSentenceSynthMs
+            .map(s => `${(s.ms / s.chars).toFixed(1)}`)
+            .join("/");
+        const longTask = p.longTaskMax > 0 ? p.longTaskMax.toFixed(0) : "0";
+        console.info(
+            `[PERF] turn ${p.cold ? "cold" : "warm"} | T-first-audio=${tFirst}ms | synth-ms/char=${rates || "n/a"} | queue-peak=${p.queuePeak} | UI-block-max=${longTask}ms`
+        );
+        // Variant 3a: stage breakdown of the first-audio latency
+        // budget. Each segment is rounded to ms and labelled so we
+        // can see at a glance which stage is the long pole. "n/a" if
+        // the previous stage's timestamp wasn't recorded (e.g. on
+        // error paths).
+        const dt = (a, b) => (a !== null && b !== null) ? (b - a).toFixed(0) + "ms" : "n/a";
+        console.info(
+            `[PERF] stages | submit→ipc=${dt(p.submitT, p.ipcOutT)}` +
+            ` ipc→delta=${dt(p.ipcOutT, p.firstDeltaT)}` +
+            ` delta→bubble=${dt(p.firstDeltaT, p.firstBubbleCharT)}` +
+            ` delta→yield=${dt(p.firstDeltaT, p.firstTtsYieldT)}` +
+            ` yield→synth=${dt(p.firstTtsYieldT, p.firstSynthDoneT)}` +
+            ` synth→audio=${dt(p.firstSynthDoneT, p.firstAudioT)}`
+        );
     }
 
     // HuggingFace transformers.js progress callback. Emits per-file
@@ -1021,6 +1172,9 @@ class ClaudeChat {
                 this.activeAssistantBuf += chunk;
                 this.activeAssistantBubble.querySelector("pre").textContent = this.activeAssistantBuf;
                 this._scrollToBottom();
+                if (this._perf && this._perf.firstBubbleCharT === null) {
+                    this._perf.firstBubbleCharT = performance.now();
+                }
             }
             if (this._pendingChars.length > 0) {
                 this._streamRaf = requestAnimationFrame(tick);
@@ -1204,6 +1358,10 @@ class ClaudeChat {
             this._ttsWorker = null;
             this._ttsWorkerLoadedDtype = null;
             this._ttsSynthPending.clear();
+        }
+        if (this._longTaskObserver) {
+            try { this._longTaskObserver.disconnect(); } catch (_) {}
+            this._longTaskObserver = null;
         }
         if (this.avatar) {
             this.avatar.destroy();

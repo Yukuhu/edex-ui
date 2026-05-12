@@ -27,7 +27,7 @@ jobs:
         run: ./node_modules/.bin/electron-builder build -l --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Linux-AppImage-x64
           path: dist/*.AppImage
@@ -70,7 +70,7 @@ jobs:
             bash -c "npm install && ./node_modules/.bin/electron-builder build -l --arm64"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Linux-AppImage-arm64
           path: dist/*.AppImage
@@ -96,7 +96,7 @@ jobs:
         run: npm run build-windows
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Windows-Installer
           path: dist/*.exe
@@ -125,12 +125,12 @@ jobs:
       # Split per-arch so each artifact downloads as a single .dmg
       # rather than a zip containing both — matches the per-arch
       # naming used for the Linux AppImages above.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: MacOS-dmg-x64
           path: dist/nDEX-UI-macOS-x64.dmg
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: MacOS-dmg-arm64
           path: dist/nDEX-UI-macOS-arm64.dmg

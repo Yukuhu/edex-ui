@@ -104,7 +104,7 @@
     "clean-css": "^5.3.3",
     "electron": "^42.0.0",
     "electron-builder": "^26.0.0",
-    "mime-types": "^2.1.35",
+    "mime-types": "^3.0.2",
     "node-json-minify": "1.0.0",
     "terser": "^5.31.0"
   },

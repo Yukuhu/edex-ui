@@ -58,9 +58,16 @@ jobs:
           node prebuild-minify.js
           rm -rf node_modules
       - name: Build for arm64
-        uses: docker://arm64v8/node:22-bookworm
-        with:
-          args: bash -c "npm install && ./node_modules/.bin/electron-builder build -l --arm64"
+        # `uses: docker://...` doesn't tell Docker which platform to
+        # pull, so it defaults to linux/amd64 and fails on an
+        # arm64v8/ image. An explicit `docker run --platform linux/arm64`
+        # uses the QEMU emulation registered above.
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD":/work -w /work \
+            -e GH_TOKEN \
+            arm64v8/node:22-bookworm \
+            bash -c "npm install && ./node_modules/.bin/electron-builder build -l --arm64"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4

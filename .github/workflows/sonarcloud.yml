@@ -1,0 +1,35 @@
+name: SonarCloud
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  scan:
+    name: Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Shallow clones disable blame info, which Sonar uses to
+          # attribute issues to authors and to compute the "new code"
+          # baseline. Full history is cheap on this repo.
+          fetch-depth: 0
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          # Block until the quality gate is computed and fail the job
+          # if it doesn't pass. Branch protection can then require this
+          # check, the same way it requires CodeQL.
+          args: >
+            -Dsonar.qualitygate.wait=true

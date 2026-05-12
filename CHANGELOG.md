@@ -135,6 +135,12 @@ original author Gabriel "Squared" SAILLARD — see the README
 - **README "About this fork" + "Acknowledgments" sections** that
   credit Gabriel "Squared" SAILLARD as the original eDEX-UI author
   with a link back to `GitSquared/edex-ui`. (PR #2)
+- **SonarCloud static analysis** runs on every push to `master` and
+  every PR via `.github/workflows/sonarcloud.yml`. Blocks on the
+  quality gate so a failing gate marks the check red and branch
+  protection can require it, mirroring CodeQL. Project key
+  `Yukuhu_edex-ui`; vendored assets / fonts / audio are excluded so
+  the analyser only sees first-party code. (Closes #33)
 
 ### Changed
 

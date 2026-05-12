@@ -7,6 +7,15 @@ section#keyboard {
     top: -0.925vh;
 }
 
+/* Ctrl+Shift+B toggles `body.keyboardHidden`. When set, the on-screen
+ * keyboard collapses and the terminal grows to fill the freed space. */
+body.keyboardHidden section#keyboard {
+    display: none;
+}
+body.keyboardHidden section#main_shell {
+    height: 92%;
+}
+
 section#keyboard[data-password-mode="true"] {
     opacity: 0.5 !important;
     cursor: none !important;

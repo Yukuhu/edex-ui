@@ -1,7 +1,28 @@
 window.modals = {};
 
 class Modal {
+    // Insertion-ordered stack of open modals — last entry is the topmost
+    // and is what Esc closes. close() splices the modal out.
+    static _stack = [];
+
+    // Global Esc → close topmost. Wired once on first Modal construction.
+    // Stops propagation so per-modal Esc handlers (e.g. ClaudeChat input)
+    // don't double-fire.
+    static _ensureGlobalEsc() {
+        if (Modal._escWired) return;
+        Modal._escWired = true;
+        document.addEventListener("keydown", e => {
+            if (e.key !== "Escape") return;
+            const top = Modal._stack[Modal._stack.length - 1];
+            if (!top) return;
+            e.preventDefault();
+            e.stopPropagation();
+            try { top.close(); } catch (_) {}
+        }, true); // capture phase so we beat input-level handlers
+    }
+
     constructor(options, onclose) {
+        Modal._ensureGlobalEsc();
         if (!options || !options.type) throw "Missing parameters";
 
         this.type = options.type;
@@ -37,7 +58,13 @@ class Modal {
                 this.classes += " info custom";
                 zindex = 500;
                 buttons = options.buttons || [];
-                buttons.push({label:"Close", action:"window.modals['"+this.id+"'].close();"});
+                // The auto-added Close button can be hidden via the
+                // modalCloseButton setting (default true). Esc still
+                // closes the modal regardless — Modal._ensureGlobalEsc
+                // is always wired.
+                if (!window.settings || window.settings.modalCloseButton !== false) {
+                    buttons.push({label:"Close", action:"window.modals['"+this.id+"'].close();"});
+                }
                 augs.push("tr-clip", "bl-clip");
                 break;
             default:
@@ -59,13 +86,22 @@ class Modal {
         </div>`;
 
         this.close = () => {
+            // Remove from the stack first so a quick second Esc closes
+            // the next one down even during the close animation.
+            const stackIdx = Modal._stack.indexOf(this);
+            if (stackIdx !== -1) Modal._stack.splice(stackIdx, 1);
+
             let modalElement = document.getElementById("modal_"+this.id);
-            modalElement.setAttribute("class", "modal_popup "+this.type+" blink");
-            window.audioManager.denied.play();
-            setTimeout(() => {
-                modalElement.remove();
+            if (modalElement) {
+                modalElement.setAttribute("class", "modal_popup "+this.type+" blink");
+                window.audioManager.denied.play();
+                setTimeout(() => {
+                    modalElement.remove();
+                    delete window.modals[this.id];
+                }, 100);
+            } else {
                 delete window.modals[this.id];
-            }, 100);
+            }
 
             if (typeof this.onclose === "function") {
                 this.onclose();
@@ -109,6 +145,7 @@ class Modal {
                 break;
         }
         window.modals[this.id] = this;
+        Modal._stack.push(this);
         document.body.appendChild(element);
         this.focus();
 

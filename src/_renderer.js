@@ -788,6 +788,14 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>modalCloseButton</td>
+                        <td>Show the &quot;Close&quot; button at the bottom of modal popups. When false, modals are closed via Esc only (Esc is wired globally and works for every modal regardless of this setting).</td>
+                        <td><select id="settingsEditor-modalCloseButton">
+                            <option>${window.settings.modalCloseButton !== false}</option>
+                            <option>${window.settings.modalCloseButton === false}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>experimentalGlobeFeatures</td>
                         <td>Toggle experimental features for the network globe</td>
                         <td><select id="settingsEditor-experimentalGlobeFeatures">
@@ -854,6 +862,7 @@ window.writeSettingsFile = () => {
         hideDotfiles: (document.getElementById("settingsEditor-hideDotfiles").value === "true"),
         fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
         spawnOnTabCycle: (document.getElementById("settingsEditor-spawnOnTabCycle").value === "true"),
+        modalCloseButton: (document.getElementById("settingsEditor-modalCloseButton").value === "true"),
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };

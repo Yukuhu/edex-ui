@@ -125,10 +125,7 @@ class ClaudeChat {
                 this._submit();
                 return;
             }
-            if (e.key === "Escape") {
-                e.preventDefault();
-                window.modals[this.modal.id].close();
-            }
+            // Esc is handled globally by Modal._ensureGlobalEsc().
         });
 
         // IPC subscriptions — keep references so we can remove on close

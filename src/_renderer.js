@@ -139,6 +139,30 @@ window._loadTheme = theme => {
     window.theme.b = theme.colors.b;
 };
 
+// Hot-swap helpers invoked from the Control Menu's Style submenu.
+window._hotSwitchTheme = (name) => {
+    try {
+        _loadTheme(require(path.join(themesDir, name + ".json")));
+        window.settings.theme = name;
+    } catch (e) {
+        console.warn("Theme hot-swap failed:", e);
+    }
+};
+window._hotSwitchKeyboard = (name) => {
+    // Live re-instantiating the on-screen keyboard layout is out of
+    // scope; persist the choice and ask the user to reload.
+    try {
+        window.settings.keyboard = name;
+        fs.writeFileSync(settingsFile, JSON.stringify(window.settings, "", 4));
+        new Modal({
+            type: "warning",
+            message: `Keyboard layout set to "${name}". Reload UI (Ctrl+Shift+F5) to apply.`
+        });
+    } catch (e) {
+        console.warn("Keyboard hot-swap failed:", e);
+    }
+};
+
 function initGraphicalErrorHandling() {
     window.edexErrorsModals = [];
     window.onerror = (msg, path, line, col, error) => {
@@ -865,6 +889,11 @@ window.openSettings = async () => {
     });
 };
 
+window.openControlMenu = () => {
+    if (document.getElementById("controlMenu") || document.getElementById("settingsEditor")) return;
+    window.activeControlMenu = new ControlMenu();
+};
+
 window.writeFile = (path) => {
     fs.writeFile(path, document.getElementById("fileEdit").value, "utf-8", () => {
         document.getElementById("fedit-status").innerHTML = "<i>File saved.</i>";
@@ -946,7 +975,8 @@ window.openShortcutsHelp = () => {
         "PANELS_TOGGLE": "Show / hide the left + right side panels (system / network widgets). Hiding them grows the terminal horizontally.",
         "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
         "DEV_RELOAD": "Trigger front-end hot reload.",
-        "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI)."
+        "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI).",
+        "CONTROL_MENU": "Open the central control / launcher menu."
     };
 
     let appList = "";
@@ -1145,6 +1175,9 @@ window.useAppShortcut = action => {
             return true;
         case "CLAUDE_CHAT":
             window.ClaudeChat.open();
+            return true;
+        case "CONTROL_MENU":
+            window.openControlMenu();
             return true;
         default:
             console.warn(`Unknown "${action}" app shortcut action`);

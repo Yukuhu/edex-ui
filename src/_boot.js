@@ -126,11 +126,35 @@ if (!fs.existsSync(shortcutsFile)) {
         { type: "app", trigger: "Ctrl+Shift+B", action: "KB_TOGGLE", enabled: true },
         { type: "app", trigger: "Ctrl+Shift+M", action: "PANELS_TOGGLE", enabled: true },
         { type: "app", trigger: "Ctrl+Shift+A", action: "CLAUDE_CHAT", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+O", action: "CONTROL_MENU", enabled: true },
         { type: "app", trigger: "Ctrl+Shift+I", action: "DEV_DEBUG", enabled: false },
         { type: "app", trigger: "Ctrl+Shift+F5", action: "DEV_RELOAD", enabled: true },
         { type: "shell", trigger: "Ctrl+Shift+Alt+Space", action: "neofetch", linebreak: true, enabled: false }
     ], "", 4));
     signale.info(`Default keymap written to ${shortcutsFile}`);
+} else {
+    // Backfill new bindings for users with a pre-existing shortcuts.json
+    // so they don't have to delete the file to discover new launchers.
+    try {
+        const cur = JSON.parse(fs.readFileSync(shortcutsFile, "utf-8"));
+        let changed = false;
+        const existing = cur.find(s => s.action === "CONTROL_MENU");
+        if (!existing) {
+            cur.push({ type: "app", trigger: "Ctrl+Shift+O", action: "CONTROL_MENU", enabled: true });
+            changed = true;
+            signale.info("Backfilled CONTROL_MENU shortcut into existing shortcuts.json");
+        } else if (existing.trigger === "Ctrl+Shift+Space") {
+            // Migrate the original CONTROL_MENU trigger off Ctrl+Shift+Space,
+            // which is claimed by IBus / fcitx on most Linux desktops and
+            // therefore never reaches Electron.
+            existing.trigger = "Ctrl+Shift+O";
+            changed = true;
+            signale.info("Migrated CONTROL_MENU shortcut from Ctrl+Shift+Space to Ctrl+Shift+O");
+        }
+        if (changed) fs.writeFileSync(shortcutsFile, JSON.stringify(cur, "", 4));
+    } catch (e) {
+        signale.warn("CONTROL_MENU shortcut backfill failed:", e);
+    }
 }
 //Create default window state file
 if(!fs.existsSync(lastWindowStateFile)) {

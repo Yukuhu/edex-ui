@@ -1009,6 +1009,9 @@ window._renderWebAppManageRows = (apps) => {
 };
 
 window.openManageWebApps = () => {
+    // Single-instance guard — #webappManageTable is created below.
+    // Without this, rapid clicks on "Manage..." stack copies (#52).
+    if (document.getElementById("webappManageTable")) return;
     window.keyboard.detach();
     const rows = window._renderWebAppManageRows(window.webapps || []);
     new Modal({
@@ -1119,7 +1122,10 @@ window.toggleFullScreen = () => {
 
 // Display available keyboard shortcuts and custom shortcuts helper
 window.openShortcutsHelp = () => {
-    if (document.getElementById("settingsEditor")) return;
+    // Also guard on this modal's own DOM (#shortcutsHelpAccordeon1
+    // is created below) so rapid Ctrl+Shift+K presses don't stack
+    // copies — same hazard as #50.
+    if (document.getElementById("settingsEditor") || document.getElementById("shortcutsHelpAccordeon1")) return;
 
     const shortcutsDefinition = {
         "COPY": "Copy selected buffer from the terminal.",

@@ -60,9 +60,9 @@ class AIAvatar {
 
     _themeColor(alpha = 1) {
         const root = getComputedStyle(document.documentElement);
-        const r = parseInt(root.getPropertyValue("--color_r")) || 170;
-        const g = parseInt(root.getPropertyValue("--color_g")) || 207;
-        const b = parseInt(root.getPropertyValue("--color_b")) || 209;
+        const r = Number.parseInt(root.getPropertyValue("--color_r")) || 170;
+        const g = Number.parseInt(root.getPropertyValue("--color_g")) || 207;
+        const b = Number.parseInt(root.getPropertyValue("--color_b")) || 209;
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 

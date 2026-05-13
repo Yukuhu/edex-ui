@@ -34,7 +34,7 @@ class FilesystemDisplay {
             if (0 == a) return "0 Bytes";
             const c = 1024, d = b || 2, e = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
             const f = Math.floor(Math.log(a) / Math.log(c));
-            return parseFloat((a / Math.pow(c, f)).toFixed(d)) + " " + e[f];
+            return Number.parseFloat((a / Math.pow(c, f)).toFixed(d)) + " " + e[f];
         };
         this.fileIconsMatcher = require("./assets/misc/file-icons-match.js");
         this.icons = require("./assets/icons/file-icons.json");
@@ -124,8 +124,8 @@ class FilesystemDisplay {
         this.filesContainer.addEventListener("click", e => {
             const item = e.target.closest(".fs_pane_item");
             if (!item) return;
-            const idx = parseInt(item.dataset.idx, 10);
-            if (isNaN(idx)) return;
+            const idx = Number.parseInt(item.dataset.idx, 10);
+            if (Number.isNaN(idx)) return;
             this._handleItemClick(idx, e);
         });
 
@@ -134,8 +134,8 @@ class FilesystemDisplay {
         this.filesContainer.addEventListener("dragstart", e => {
             const item = e.target.closest(".fs_pane_item[draggable='true']");
             if (!item) return;
-            const idx = parseInt(item.dataset.idx, 10);
-            if (isNaN(idx)) return;
+            const idx = Number.parseInt(item.dataset.idx, 10);
+            if (Number.isNaN(idx)) return;
             const entry = this.cwd[idx];
             if (!entry || !entry.path) { e.preventDefault(); return; }
             e.dataTransfer.effectAllowed = "copyMove";
@@ -513,7 +513,7 @@ class FilesystemDisplay {
         if (entry.type === "disk" || entry.type === "rom" || entry.type === "usb") {
             if (this._followTerminal && !this._noTracking) {
                 if (process.platform === "win32") {
-                    window.term[window.currentTerm].writelr(entry.path.replace(/\\/g, ""));
+                    window.term[window.currentTerm].writelr(entry.path.replaceAll("\\", ""));
                 } else {
                     window.term[window.currentTerm].writelr('cd "' + entry.path + '"');
                 }

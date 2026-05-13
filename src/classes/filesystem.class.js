@@ -475,64 +475,94 @@ class FilesystemDisplay {
         const entry = this.cwd[idx];
         if (!entry) return;
 
-        // Preserve legacy "ctrl-held = open in OS", "shift-held = write
-        // quoted path to terminal" behavior (works for physical kbd via
-        // event modifiers and for on-screen kbd via dataset flags).
+        const { ctrl, shift } = this._getClickModifiers(ev);
+        if (ctrl && entry.path)  { this._openInOS(entry); return; }
+        if (shift && entry.path) { this._writeQuotedPath(entry.path); return; }
+
+        const pseudo = entry.category || entry.type;
+        if (pseudo === "showDisks") { this.readDevices(); return; }
+        if (pseudo === "up")        { this.readFS(this.pathLib.resolve(this.dirpath, "..")); return; }
+
+        if (this._isDirectoryEntry(entry)) { this._enterDirectory(entry); return; }
+        if (this._isDiskEntry(entry))      { this._enterDisk(entry); return; }
+
+        this._handleEntryType(idx, entry);
+    }
+
+    // Returns ctrl/shift state for a click event, consulting both the real
+    // event modifiers (physical keyboard) and the on-screen keyboard's
+    // dataset flags so virtual-modifier clicks behave the same.
+    _getClickModifiers(ev) {
         const kbContainer = window.keyboard?.container;
-        const ctrlOn = ev.ctrlKey || ev.metaKey || kbContainer?.dataset.isCtrlOn === "true";
-        const shiftOn = ev.shiftKey || kbContainer?.dataset.isShiftOn === "true";
+        return {
+            ctrl:  ev.ctrlKey  || ev.metaKey || kbContainer?.dataset.isCtrlOn  === "true",
+            shift: ev.shiftKey               || kbContainer?.dataset.isShiftOn === "true",
+        };
+    }
 
-        if (ctrlOn && entry.path) {
-            electron.shell.openPath(entry.path);
-            try { remote.getCurrentWindow().minimize(); } catch (_) {}
+    // Legacy ctrl-click: open the entry through the OS handler and
+    // minimize the window so the OS-opened app gets focus.
+    _openInOS(entry) {
+        electron.shell.openPath(entry.path);
+        try { remote.getCurrentWindow().minimize(); } catch (_) {}
+    }
+
+    // Legacy shift-click: stage a quoted path on the active terminal so
+    // the user can compose a command around it.
+    _writeQuotedPath(p) {
+        window.term[window.currentTerm].write('"' + p + '"');
+    }
+
+    _isDirectoryEntry(entry) {
+        return entry.type === "dir" || entry.type?.endsWith?.("Dir");
+    }
+
+    // Directory click — if this pane is terminal-tracking, drive the
+    // terminal (so the shell's cwd stays in sync); otherwise navigate
+    // the pane directly.
+    _enterDirectory(entry) {
+        if (this._followTerminal && !this._noTracking) {
+            window.term[window.currentTerm].writelr('cd "' + entry.name + '"');
+        } else {
+            this.readFS(entry.path);
+        }
+    }
+
+    _isDiskEntry(entry) {
+        return entry.type === "disk" || entry.type === "rom" || entry.type === "usb";
+    }
+
+    // Mounted-block-device click. Same follow-terminal split as a
+    // directory, with one Windows quirk: switching drives is `C:` not
+    // `cd C:`, so the path is stripped of backslashes and written raw.
+    _enterDisk(entry) {
+        if (!(this._followTerminal && !this._noTracking)) {
+            this.readFS(entry.path);
             return;
         }
-        if (shiftOn && entry.path) {
-            window.term[window.currentTerm].write('"' + entry.path + '"');
-            return;
+        if (process.platform === "win32") {
+            window.term[window.currentTerm].writelr(entry.path.replaceAll("\\", ""));
+        } else {
+            window.term[window.currentTerm].writelr('cd "' + entry.path + '"');
         }
+    }
 
-        switch (entry.category || entry.type) {
-            case "showDisks": this.readDevices(); return;
-            case "up":        this.readFS(this.pathLib.resolve(this.dirpath, "..")); return;
-        }
-
-        // Directory navigation: if we're inside a terminal-tracking pane,
-        // drive the terminal so the terminal stays in sync. Otherwise
-        // navigate the pane directly.
-        if (entry.type === "dir" || entry.type?.endsWith?.("Dir")) {
-            if (this._followTerminal && !this._noTracking) {
-                window.term[window.currentTerm].writelr('cd "' + entry.name + '"');
-            } else {
-                this.readFS(entry.path);
-            }
-            return;
-        }
-
-        // Mounted block devices.
-        if (entry.type === "disk" || entry.type === "rom" || entry.type === "usb") {
-            if (this._followTerminal && !this._noTracking) {
-                if (process.platform === "win32") {
-                    window.term[window.currentTerm].writelr(entry.path.replaceAll("\\", ""));
-                } else {
-                    window.term[window.currentTerm].writelr('cd "' + entry.path + '"');
-                }
-            } else {
-                this.readFS(entry.path);
-            }
-            return;
-        }
-
-        // Files and friends.
-        if (entry.type === "file") { this.openFile(idx); return; }
-        if (entry.type === "video" || entry.type === "audio" || entry.type === "image") { this.openMedia(idx); return; }
-        if (entry.type === "edex-theme")     { window.themeChanger(entry.name.slice(0, -5)); return; }
-        if (entry.type === "edex-kblayout")  { window.remakeKeyboard(entry.name.slice(0, -5)); return; }
-        if (entry.type === "edex-settings")  { window.openSettings(); return; }
-        if (entry.type === "edex-shortcuts") { window.openShortcutsHelp(); return; }
-        if (entry.type === "symlink" || entry.type === "other") {
-            // Generic file: write the path so the user can hit Enter.
-            if (entry.path) window.term[window.currentTerm].write('"' + entry.path + '"');
+    // Final dispatcher for type-keyed actions. Anything not matched here
+    // is a no-op.
+    _handleEntryType(idx, entry) {
+        switch (entry.type) {
+            case "file":            this.openFile(idx); return;
+            case "video":
+            case "audio":
+            case "image":           this.openMedia(idx); return;
+            case "edex-theme":      window.themeChanger(entry.name.slice(0, -5)); return;
+            case "edex-kblayout":   window.remakeKeyboard(entry.name.slice(0, -5)); return;
+            case "edex-settings":   window.openSettings(); return;
+            case "edex-shortcuts":  window.openShortcutsHelp(); return;
+            case "symlink":
+            case "other":
+                if (entry.path) this._writeQuotedPath(entry.path);
+                return;
         }
     }
 

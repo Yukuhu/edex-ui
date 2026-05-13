@@ -318,38 +318,11 @@ class FilesystemDisplay {
         await new Promise((resolve, reject) => {
             if (content.length === 0) resolve();
             content.forEach(async (file, i) => {
-                let fstat;
                 try {
-                    fstat = await this._asyncFSwrapper.lstat(this.pathLib.join(tcwd, file));
+                    this.cwd.push(await this._buildEntry(tcwd, file));
                 } catch (e) {
-                    if (!String(e.message || "").includes("EPERM") && !String(e.message || "").includes("EBUSY")) {
-                        return reject(e);
-                    }
+                    reject(e); return;
                 }
-                const e = {
-                    name: window._escapeHtml(file),
-                    path: this.pathLib.resolve(tcwd, file),
-                    type: "other",
-                    category: "other",
-                    hidden: false
-                };
-                if (typeof fstat !== "undefined") {
-                    e.lastAccessed = fstat.mtime.getTime();
-                    if (fstat.isDirectory()) { e.category = "dir"; e.type = "dir"; }
-                    if (e.category === "dir" && tcwd === settingsDir && file === "themes") e.type = "edex-themesDir";
-                    if (e.category === "dir" && tcwd === settingsDir && file === "keyboards") e.type = "edex-kblayoutsDir";
-                    if (fstat.isSymbolicLink()) { e.category = "symlink"; e.type = "symlink"; }
-                    if (fstat.isFile()) { e.category = "file"; e.type = "file"; e.size = fstat.size; }
-                } else {
-                    e.type = "system";
-                    e.hidden = true;
-                }
-                if (e.category === "file" && tcwd === themesDir && file.endsWith(".json")) e.type = "edex-theme";
-                if (e.category === "file" && tcwd === keyboardsDir && file.endsWith(".json")) e.type = "edex-kblayout";
-                if (e.category === "file" && tcwd === settingsDir && file === "settings.json") e.type = "edex-settings";
-                if (e.category === "file" && tcwd === settingsDir && file === "shortcuts.json") e.type = "edex-shortcuts";
-                if (file.startsWith(".")) e.hidden = true;
-                this.cwd.push(e);
                 if (i === content.length - 1) resolve();
             });
         }).catch(() => { this.setFailedState(); });
@@ -371,6 +344,69 @@ class FilesystemDisplay {
             detail: { pane: this, cwd: tcwd }
         }));
         return true;
+    }
+
+    // Categorise a single directory entry. Tolerates EPERM/EBUSY on lstat
+    // (returns a "system" placeholder); rethrows anything else so the
+    // surrounding Promise in readFS rejects.
+    async _buildEntry(tcwd, file) {
+        let fstat;
+        try {
+            fstat = await this._asyncFSwrapper.lstat(this.pathLib.join(tcwd, file));
+        } catch (e) {
+            if (!this._isBenignLstatError(e)) throw e;
+        }
+
+        const entry = {
+            name: window._escapeHtml(file),
+            path: this.pathLib.resolve(tcwd, file),
+            type: "other",
+            category: "other",
+            hidden: file.startsWith("."),
+        };
+
+        if (fstat === undefined) {
+            entry.type = "system";
+            entry.hidden = true;
+            return entry;
+        }
+
+        entry.lastAccessed = fstat.mtime.getTime();
+        this._classifyFromStat(entry, fstat);
+        this._applyEdexSpecialType(entry, tcwd, file);
+        return entry;
+    }
+
+    _isBenignLstatError(e) {
+        const msg = String(e.message || "");
+        return msg.includes("EPERM") || msg.includes("EBUSY");
+    }
+
+    _classifyFromStat(entry, fstat) {
+        if (fstat.isDirectory())    { entry.category = "dir";     entry.type = "dir"; }
+        if (fstat.isSymbolicLink()) { entry.category = "symlink"; entry.type = "symlink"; }
+        if (fstat.isFile())         { entry.category = "file";    entry.type = "file"; entry.size = fstat.size; }
+    }
+
+    // Reapply special edex-* types for entries that live inside the
+    // user-data dirs hosting themes / keyboards / settings.
+    _applyEdexSpecialType(entry, tcwd, file) {
+        if (entry.category === "dir")  this._applyEdexDirType(entry, tcwd, file);
+        else if (entry.category === "file") this._applyEdexFileType(entry, tcwd, file);
+    }
+
+    _applyEdexDirType(entry, tcwd, file) {
+        if (tcwd !== settingsDir) return;
+        if (file === "themes")    entry.type = "edex-themesDir";
+        if (file === "keyboards") entry.type = "edex-kblayoutsDir";
+    }
+
+    _applyEdexFileType(entry, tcwd, file) {
+        if (tcwd === themesDir    && file.endsWith(".json")) { entry.type = "edex-theme";    return; }
+        if (tcwd === keyboardsDir && file.endsWith(".json")) { entry.type = "edex-kblayout"; return; }
+        if (tcwd !== settingsDir) return;
+        if (file === "settings.json")  entry.type = "edex-settings";
+        if (file === "shortcuts.json") entry.type = "edex-shortcuts";
     }
 
     async readDevices() {

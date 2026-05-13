@@ -166,8 +166,9 @@ class AIAvatar {
         // Thinking — head tilts a few degrees and nods slowly.
         const tilt = this.state === "thinking" ? Math.sin(elapsed * 1.8) * 0.06 : 0;
         // Responding/speaking — slight bob.
+        const bobSpeed = this.state === "speaking" ? 6 : 4;
         const bob = (this.state === "responding" || this.state === "speaking")
-            ? Math.sin(elapsed * (this.state === "speaking" ? 6 : 4)) * 1.2
+            ? Math.sin(elapsed * bobSpeed) * 1.2
             : 0;
 
         const hw = r * 0.62;

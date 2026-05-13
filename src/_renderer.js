@@ -281,6 +281,12 @@ function initSystemInformationProxy() {
 // Init audio
 window.audioManager = new AudioManager();
 
+// Init shared TTS engine — singleton consumed by both ClaudeChat
+// (streaming sentence-by-sentence) and any Modal that opted into a
+// SPEAK toggle via `ttsSource`. The Kokoro worker is loaded lazily on
+// first use, so creating the instance here is cheap.
+window.ttsEngine = new TtsEngine();
+
 // See #223
 remote.app.focus();
 

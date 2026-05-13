@@ -66,6 +66,27 @@ div.modal_popup > h1 i {
     font-style: normal;
 }
 
+div.modal_popup > h1 button.modal_ttsToggle {
+    float: right;
+    cursor: pointer;
+    font-size: 1.85vh;
+    font-weight: bold;
+    padding: 0.3vh 0.9vh;
+    margin: 0.5vh 0 0 1.5vh;
+    background: transparent;
+    border: 0.19vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.7);
+    border-radius: 0.278vh;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+div.modal_popup > h1 button.modal_ttsToggle:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+}
+
+div.modal_popup > h1 button.modal_ttsToggle[aria-pressed="true"] {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.35);
+}
+
 div.modal_popup > h5 {
     font-size: 2vh;
     font-weight: normal;

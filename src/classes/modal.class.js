@@ -75,8 +75,18 @@ class Modal {
                 break;
         }
 
+        // Optional SPEAK toggle in the title bar. Modals that pass a
+        // `ttsSource` — a literal string, or a `() => string` callback
+        // re-resolved on each click — get a button next to the title
+        // that reads the source aloud via window.ttsEngine. Wiring
+        // happens after the modal is appended to the DOM; see below.
+        this._ttsSource = options.ttsSource || null;
+        const ttsBtnHtml = this._ttsSource && window.ttsEngine
+            ? `<button class="modal_ttsToggle" id="modal_tts_${this.id}" type="button" aria-label="Speak document" aria-pressed="false">▶ SPEAK</button>`
+            : "";
+
         let DOMstring = `<div id="modal_${this.id}" class="${this.classes}" style="z-index:${zindex+Object.keys(window.modals).length};" augmented-ui="${augs.join(" ")} exe">
-            <h1>${this.title}</h1>
+            <h1>${this.title}${ttsBtnHtml}</h1>
             ${this.type === "custom" ? options.html : "<h5>"+this.message+"</h5>"}
             <div>`;
             buttons.forEach(b => {
@@ -90,6 +100,15 @@ class Modal {
             // the next one down even during the close animation.
             const stackIdx = Modal._stack.indexOf(this);
             if (stackIdx !== -1) Modal._stack.splice(stackIdx, 1);
+
+            // If this modal initiated a TTS speech, stop it so audio
+            // doesn't outlive the modal. Speech belonging to other
+            // consumers (e.g. an ongoing Claude Chat response) is
+            // left alone.
+            if (window.ttsEngine) {
+                if (this._onTtsEnd) window.ttsEngine.removeEventListener("speakend", this._onTtsEnd);
+                if (this._iAmSpeaker) window.ttsEngine.cancel();
+            }
 
             let modalElement = document.getElementById("modal_"+this.id);
             if (modalElement) {
@@ -148,6 +167,47 @@ class Modal {
         Modal._stack.push(this);
         document.body.appendChild(element);
         this.focus();
+
+        // Wire up the SPEAK toggle if this modal opted in. The button
+        // lives inside <h1>, which is also the drag handle — swallow
+        // mousedown/touchstart so a click on SPEAK doesn't start a
+        // drag. Click goes through engine.speak / engine.cancel, with
+        // engine speakend flipping the button label back when the turn
+        // (ours, owned via _iAmSpeaker) ends from any cause.
+        if (this._ttsSource && window.ttsEngine) {
+            this._iAmSpeaker = false;
+            const ttsBtn = document.getElementById("modal_tts_" + this.id);
+            const resolveTtsSource = () => {
+                const s = this._ttsSource;
+                if (typeof s === "function") return s() || "";
+                return String(s || "");
+            };
+            this._onTtsEnd = () => {
+                if (!this._iAmSpeaker) return;
+                this._iAmSpeaker = false;
+                ttsBtn.textContent = "▶ SPEAK";
+                ttsBtn.setAttribute("aria-pressed", "false");
+            };
+            window.ttsEngine.addEventListener("speakend", this._onTtsEnd);
+            ttsBtn.addEventListener("mousedown", e => e.stopPropagation());
+            ttsBtn.addEventListener("touchstart", e => e.stopPropagation());
+            ttsBtn.addEventListener("click", () => {
+                if (Modal._stack.at(-1) !== this) return;
+                if (this._iAmSpeaker) {
+                    window.ttsEngine.cancel();
+                    return;
+                }
+                const text = resolveTtsSource();
+                if (!text?.trim()) return;
+                // engine.speak() cancels any prior speech internally; the
+                // ensuing speakend fires while _iAmSpeaker is still false,
+                // so the listener stays a no-op for that older turn.
+                window.ttsEngine.speak(text);
+                this._iAmSpeaker = true;
+                ttsBtn.textContent = "■ STOP";
+                ttsBtn.setAttribute("aria-pressed", "true");
+            });
+        }
 
         // Allow dragging the modal around
         let draggedModal = document.getElementById(`modal_${this.id}`);

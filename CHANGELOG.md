@@ -17,6 +17,18 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **Reusable TTS infrastructure for text-document modals**: the
+  Kokoro/ONNX worker, sentence splitter, audio queue and
+  `speechSynthesis` fallback that powered Claude Chat have been
+  extracted into a new `TtsEngine` class (singleton on
+  `window.ttsEngine`). The `Modal` class now accepts an opt-in
+  `ttsSource` option — a literal string, a `() => string` callback, or
+  a `{selector: "#id"}` reference — and renders a SPEAK toggle in the
+  modal header that reads the source aloud through the engine. Claude
+  Chat continues to use the same pipeline via the engine; its avatar,
+  voice toggle and `[PERF]` console line are unchanged. No existing
+  modal opts in yet — file viewers / PDF reader / shortcuts help will
+  follow in their own changes. (Closes #81)
 - **WebApps launcher**: install and open web-first tools (YouTube,
   Reddit, Hacker News, GitHub all seeded by default) as in-app
   launchers without leaving nDEX. Reachable via

@@ -963,16 +963,16 @@ window.openControlMenu = () => {
 window.openWebApp = (id) => {
     const app = (window.webapps || []).find(a => a.id === id);
     if (!app) {
-        new Modal({ type: "warning", message: `WebApp "${window._escapeHtml(id)}" not found.` });
+        Modal.show({ type: "warning", message: `WebApp "${window._escapeHtml(id)}" not found.` });
         return;
     }
-    new WebApp(app);
+    WebApp.show(app);
 };
 
 window.openAddWebApp = () => {
     if (document.getElementById("webappAddName")) return;
     window.keyboard.detach();
-    new Modal({
+    Modal.show({
         type: "custom",
         title: "Add WebApp",
         html: `<div style="min-width:50vw">
@@ -1012,27 +1012,27 @@ window.writeWebAppEntry = () => {
     const url = urlEl.value.trim();
     const icon = (iconEl && iconEl.value.trim()) || null;
     if (!name) {
-        new Modal({ type: "warning", message: "Name is required." });
+        Modal.show({ type: "warning", message: "Name is required." });
         return;
     }
     if (!/^https?:\/\//i.test(url)) {
-        new Modal({ type: "warning", message: "URL must start with <code>http://</code> or <code>https://</code>." });
+        Modal.show({ type: "warning", message: "URL must start with <code>http://</code> or <code>https://</code>." });
         return;
     }
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!id) {
-        new Modal({ type: "warning", message: "Name must contain at least one letter or digit." });
+        Modal.show({ type: "warning", message: "Name must contain at least one letter or digit." });
         return;
     }
     if ((window.webapps || []).some(a => a.id === id)) {
-        new Modal({ type: "warning", message: `A WebApp with id "${window._escapeHtml(id)}" already exists. Pick a different name or remove the existing one first.` });
+        Modal.show({ type: "warning", message: `A WebApp with id "${window._escapeHtml(id)}" already exists. Pick a different name or remove the existing one first.` });
         return;
     }
     window.webapps.push({ id, name, url, icon });
     try {
         fs.writeFileSync(webappsFile, JSON.stringify(window.webapps, "", 4));
     } catch (e) {
-        new Modal({ type: "error", title: "WebApp save failed", message: String(e) });
+        Modal.show({ type: "error", title: "WebApp save failed", message: String(e) });
         return;
     }
     // Drop the cached webapps submenu so the next Control Menu open
@@ -1076,7 +1076,7 @@ window.openManageWebApps = () => {
     if (document.getElementById("webappManageTable")) return;
     window.keyboard.detach();
     const rows = window._renderWebAppManageRows(window.webapps || []);
-    new Modal({
+    Modal.show({
         type: "custom",
         title: "Manage WebApps",
         html: `<div style="min-width:55vw">
@@ -1108,7 +1108,7 @@ window.removeWebApp = (id) => {
     try {
         fs.writeFileSync(webappsFile, JSON.stringify(window.webapps, "", 4));
     } catch (e) {
-        new Modal({ type: "error", title: "WebApp save failed", message: String(e) });
+        Modal.show({ type: "error", title: "WebApp save failed", message: String(e) });
         return;
     }
     if (window.activeControlMenu && window.activeControlMenu._cache) {

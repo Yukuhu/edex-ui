@@ -89,6 +89,10 @@ class DocReader {
             this.renderPage(pageNum);
         });
     }
+
+    static show(opts) {
+        return new DocReader(opts);
+    }
 }
 
 module.exports = {

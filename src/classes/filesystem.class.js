@@ -589,19 +589,19 @@ class FilesystemDisplay {
                     <div class="pdf_container fsDisp_mediaDisp"><canvas class="pdf_canvas" /></div>
                 </div>`;
                 const newModal = new Modal({ type: "custom", title: _escapeHtml(name), html });
-                new DocReader({ modalId: newModal.id, path: block.path });
+                DocReader.show({ modalId: newModal.id, path: block.path });
                 break;
             }
             default:
                 if (mime.charset(filetype) === "UTF-8") {
                     this.fsLib.readFile(block.path, "utf-8", (err, data) => {
                         if (err) {
-                            new Modal({ type: "info", title: "Failed to load file: " + block.path, html: String(err) });
+                            Modal.show({ type: "info", title: "Failed to load file: " + block.path, html: String(err) });
                             console.log(err);
                             return;
                         }
                         window.keyboard.detach();
-                        new Modal({
+                        Modal.show({
                             type: "custom",
                             title: _escapeHtml(name),
                             html: `<textarea id="fileEdit" rows="40" cols="150" spellcheck="false">${data}</textarea><p id="fedit-status"></p>`,
@@ -654,7 +654,7 @@ class FilesystemDisplay {
         }
         const newModal = new Modal({ type: "custom", title: _escapeHtml(name), html });
         if (block.type === "audio" || block.type === "video") {
-            new MediaPlayer({ modalId: newModal.id, path: block.path, type: block.type });
+            MediaPlayer.show({ modalId: newModal.id, path: block.path, type: block.type });
         }
     }
 }

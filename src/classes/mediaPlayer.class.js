@@ -175,6 +175,10 @@ class MediaPlayer {
             }
         });
     }
+
+    static show(opts) {
+        return new MediaPlayer(opts);
+    }
 }
 
 module.exports = {

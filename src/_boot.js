@@ -6,7 +6,7 @@ process.on("uncaughtException", e => {
     // to a process that closed its read end, or when an IPC subprocess
     // dies mid-write during shutdown. Skip both the fatal log and the
     // user-facing crash dialog for it.
-    if (e && e.code === "EPIPE") {
+    if (e?.code === "EPIPE") {
         return;
     }
     signale.fatal(e);

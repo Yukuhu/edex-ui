@@ -122,9 +122,9 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             }
 
             // Partial-message stream: deltas arrive on `stream_event` blocks.
-            if (ev.type === "stream_event" && ev.event && ev.event.type === "content_block_delta") {
+            if (ev.type === "stream_event" && ev.event?.type === "content_block_delta") {
                 const d = ev.event.delta;
-                if (d && d.type === "text_delta" && typeof d.text === "string" && d.text.length > 0) {
+                if (d?.type === "text_delta" && typeof d.text === "string" && d.text.length > 0) {
                     sender.send("claude:delta", { reqId, text: d.text });
                     lastEmittedText += d.text;
                 }

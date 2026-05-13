@@ -109,30 +109,30 @@
         // see brand "Chromium" without "Google Chrome" here, the
         // contextIsolation toggle on the webview/popup regressed.
         console.log(PREFIX, "fingerprint spoof applied; brands=" +
-            (navigator.userAgentData && navigator.userAgentData.brands || []).map(b => b.brand).join(","));
+            (navigator.userAgentData?.brands || []).map(b => b.brand).join(","));
     } catch (e) {
-        console.log(PREFIX, "userAgentData spoof failed", e && e.message);
+        console.log(PREFIX, "userAgentData spoof failed", e?.message);
     }
 
     function describeEl(el) {
-        if (!el || el.nodeType !== 1) return String(el);
+        if (el?.nodeType !== 1) return String(el);
         const parts = [el.tagName.toLowerCase()];
         if (el.id) parts.push("#" + el.id);
         if (el.className && typeof el.className === "string") {
             const cls = el.className.split(/\s+/).filter(Boolean).slice(0, 3).join(".");
             if (cls) parts.push("." + cls);
         }
-        const href = el.getAttribute && el.getAttribute("href");
+        const href = el.getAttribute?.("href");
         if (href) parts.push(`href="${href}"`);
-        const aria = el.getAttribute && el.getAttribute("aria-label");
+        const aria = el.getAttribute?.("aria-label");
         if (aria) parts.push(`aria="${aria}"`);
         return parts.join("");
     }
 
     function logPointerEvent(name, e) {
         const targetAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-        const closestLink = (e.target && e.target.closest && e.target.closest("a, button")) ||
-                            (targetAtPoint && targetAtPoint.closest && targetAtPoint.closest("a, button"));
+        const closestLink = e.target?.closest?.("a, button") ||
+                            targetAtPoint?.closest?.("a, button");
         console.log(
             PREFIX,
             name,
@@ -180,7 +180,7 @@
 
         let lastHover = null;
         document.addEventListener("mouseover", e => {
-            const closestLink = e.target && e.target.closest && e.target.closest("a, button, [role='button']");
+            const closestLink = e.target?.closest?.("a, button, [role='button']");
             if (closestLink && closestLink !== lastHover) {
                 lastHover = closestLink;
                 const cursor = getComputedStyle(closestLink).cursor;

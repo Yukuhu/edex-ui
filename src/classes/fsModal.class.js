@@ -237,7 +237,7 @@ class FsModal {
     }
 
     _info(message) {
-        new Modal({ type: "info", title: "Filesystem", message });
+        Modal.show({ type: "info", title: "Filesystem", message });
     }
 }
 

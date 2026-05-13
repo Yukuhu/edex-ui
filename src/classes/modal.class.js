@@ -216,6 +216,15 @@ class Modal {
 
         return this.id;
     }
+
+    // Fire-and-forget factory. Constructor side-effects (DOM insertion,
+    // stack registration) are the actual "work"; this wrapper exists so
+    // callers don't have to write `new Modal(...)` at statement level
+    // (which trips Sonar S1848). Returns the instance for the rare
+    // caller that does want a handle.
+    static show(options, onclose) {
+        return new Modal(options, onclose);
+    }
 }
 
 module.exports = {

@@ -109,7 +109,7 @@ class WebApp {
             this.webview.addEventListener("did-fail-load", (e) => {
                 if (e.isMainFrame) {
                     console.warn(`[WebApp:${app.id}] did-fail-load ${e.errorCode} ${e.errorDescription} → ${e.validatedURL}`);
-                    new Modal({
+                    Modal.show({
                         type: "warning",
                         message: `Could not load <code>${window._escapeHtml(e.validatedURL)}</code><br>${window._escapeHtml(e.errorDescription || "")} (${e.errorCode})`
                     });
@@ -117,7 +117,7 @@ class WebApp {
             });
             this.webview.addEventListener("render-process-gone", (e) => {
                 console.warn(`[WebApp:${app.id}] render-process-gone reason=${e.reason} exitCode=${e.exitCode}`);
-                new Modal({
+                Modal.show({
                     type: "error",
                     title: "WebApp crashed",
                     message: `The embedded renderer for <code>${window._escapeHtml(app.name)}</code> exited (reason: <code>${window._escapeHtml(e.reason || "unknown")}</code>). Reopen the app from the launcher to retry.`
@@ -227,7 +227,7 @@ class WebApp {
     }
 
     tabIntegrateStub() {
-        new Modal({
+        Modal.show({
             type: "warning",
             message: "Tab integration is still on the roadmap — tracked in <a href=\"#\" onclick=\"require('@electron/remote').shell.openExternal('https://github.com/Yukuhu/edex-ui/issues/29');return false;\">issue #29</a>."
         });
@@ -235,6 +235,10 @@ class WebApp {
 
     close() {
         if (this.disp) this.disp.close();
+    }
+
+    static show(app) {
+        return new WebApp(app);
     }
 }
 

@@ -58,6 +58,30 @@ class Toplist {
     }
 
     processList(){
+        // Per-column comparators for the Active-Processes modal. The original
+        // 8-case switch had CC 50 (S3776); collapsing each case into a small
+        // arrow brings the sort callback to CC ~2. Behaviour is preserved
+        // exactly, including the pre-existing inverted `ascending` for the
+        // string columns Name/User (where ascending=true sorts Z→A — a
+        // latent bug, untouched here).
+        const stringCmp = (a, b) => {
+            if (a < b) return -1;
+            if (a > b) return 1;
+            return 0;
+        };
+        const COMPARATORS = {
+            PID:     (a, b, asc) => asc ? a.pid - b.pid : b.pid - a.pid,
+            Name:    (a, b, asc) => asc ? -stringCmp(a.name, b.name) : stringCmp(a.name, b.name),
+            User:    (a, b, asc) => asc ? -stringCmp(a.user, b.user) : stringCmp(a.user, b.user),
+            CPU:     (a, b, asc) => asc ? a.cpu - b.cpu : b.cpu - a.cpu,
+            Memory:  (a, b, asc) => asc ? a.mem - b.mem : b.mem - a.mem,
+            State:   (a, b)      => stringCmp(a.state, b.state),
+            Started: (a, b, asc) => asc
+                ? Date.parse(a.started) - Date.parse(b.started)
+                : Date.parse(b.started) - Date.parse(a.started),
+            Runtime: (a, b, asc) => asc ? a.runtime - b.runtime : b.runtime - a.runtime,
+        };
+
         let sortKey;
         let ascending = false;
         let removed = false;
@@ -121,52 +145,10 @@ class Toplist {
 
                 currentlyUpdating = false;
                 let list = data.list.sort((a, b) => {
-                    switch (sortKey) {
-                        case "PID":
-                            if (ascending) return a.pid - b.pid;
-                            else return b.pid - a.pid;
-                        case "Name":
-                            if (ascending) {
-                                if (a.name > b.name) return -1;
-                                if (a.name < b.name) return 1;
-                                return 0;
-                            }
-                            else {
-                                if (a.name < b.name) return -1;
-                                if (a.name > b.name) return 1;
-                                return 0;
-                            }
-                        case "User":
-                            if (ascending) {
-                                if (a.user > b.user) return -1;
-                                if (a.user < b.user) return 1;
-                                return 0;
-                            }
-                            else {
-                                if (a.user < b.user) return -1;
-                                if (a.user > b.user) return 1;
-                                return 0;
-                            }
-                        case "CPU":
-                            if (ascending) return a.cpu - b.cpu;
-                            else return b.cpu - a.cpu;
-                        case "Memory":
-                            if (ascending) return a.mem - b.mem;
-                            else return b.mem - a.mem;
-                        case "State":
-                            if (a.state < b.state) return -1;
-                            if (a.state > b.state) return 1;
-                            return 0;
-                        case "Started":
-                            if (ascending) return Date.parse(a.started) - Date.parse(b.started);
-                            else return Date.parse(b.started) - Date.parse(a.started);
-                        case "Runtime":
-                            if (ascending) return a.runtime - b.runtime;
-                            else return b.runtime - a.runtime;
-                        default:
-                            // default to the same sorting as the toplist
-                            return ((b.cpu - a.cpu) * 100 + b.mem - a.mem);
-                    }
+                    const cmp = COMPARATORS[sortKey];
+                    if (cmp) return cmp(a, b, ascending);
+                    // Default — same priority as the always-on Toplist panel.
+                    return ((b.cpu - a.cpu) * 100 + b.mem - a.mem);
                 });
 
                 if (removed) clearInterval(updateInterval);

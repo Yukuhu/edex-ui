@@ -90,11 +90,8 @@ class EagerSentenceSplitter {
         if (!this._firstYielded && this._buf.length >= this._earlyYieldMinChars) {
             let softCut = -1;
             const softRe = /[,;:][\s)\]}」』]|—|–/g;
-            let sm;
-            while ((sm = softRe.exec(this._buf)) !== null) {
-                softCut = sm.index + 1; // include the comma/semicolon
-                break;
-            }
+            const sm = softRe.exec(this._buf);
+            if (sm !== null) softCut = sm.index + 1;
             if (softCut === -1 && this._buf.length >= this._earlyYieldMaxChars) {
                 // Force-split on the last space within the cap.
                 const tail = this._buf.slice(0, this._earlyYieldMaxChars);
@@ -636,10 +633,10 @@ class ClaudeChat {
     // flight; resolves immediately if already loaded with the same dtype.
     _ensureWorkerLoaded(dtype) {
         this._ensureWorker();
-        if (this._ttsWorkerLoadedDtype === dtype && !this._ttsLoadPromise) {
+        if (this._ttsWorkerLoadedDtype === dtype && this._ttsLoadPromise === null) {
             return Promise.resolve();
         }
-        if (this._ttsLoadPromise) return this._ttsLoadPromise;
+        if (this._ttsLoadPromise !== null) return this._ttsLoadPromise;
 
         this.status.innerText = `Loading Kokoro TTS (${dtype})…`;
         this._showProgress(`Loading model (${dtype})…`);

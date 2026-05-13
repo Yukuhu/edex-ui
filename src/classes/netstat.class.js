@@ -30,7 +30,7 @@ class Netstat {
         this.failedAttempts = {};
         this.runsBeforeGeoIPUpdate = 0;
 
-        this._httpsAgent = new require("https").Agent({
+        this._httpsAgent = new (require("https").Agent)({
             keepAlive: false,
             maxSockets: 10
         });
@@ -167,7 +167,7 @@ class Netstat {
     }
     ping(target, port, local) {
         return new Promise((resolve, reject) => {
-            let s = new require("net").Socket();
+            let s = new (require("net").Socket)();
             let start = process.hrtime();
 
             s.connect({

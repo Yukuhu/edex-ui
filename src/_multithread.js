@@ -26,7 +26,7 @@ if (cluster.isMaster) {
 
     signale.success("Multithreaded controller ready");
 
-    var lastID = 0;
+    let lastID = 0;
 
     function dispatch(type, id, arg) {
         let selectedID = lastID+1;
@@ -41,7 +41,7 @@ if (cluster.isMaster) {
         lastID = selectedID;
     }
 
-    var queue = {};
+    const queue = {};
     ipc.on("systeminformation-call", (e, type, id, ...args) => {
         if (!si[type]) {
             signale.warn("Illegal request for systeminformation");

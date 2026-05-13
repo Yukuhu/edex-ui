@@ -59,7 +59,7 @@ ipc.on("log", (e, type, content) => {
     signale[type](content);
 });
 
-var win, tty, extraTtys;
+let win, tty, extraTtys;
 const settingsFile = path.join(electron.app.getPath("userData"), "settings.json");
 const shortcutsFile = path.join(electron.app.getPath("userData"), "shortcuts.json");
 const webappsFile = path.join(electron.app.getPath("userData"), "webapps.json");
@@ -233,8 +233,8 @@ fs.readdirSync(innerFontsDir).forEach(e => {
 
 // Version history logging
 const versionHistoryPath = path.join(electron.app.getPath("userData"), "versions_log.json");
-var versionHistory = fs.existsSync(versionHistoryPath) ? require(versionHistoryPath) : {};
-var version = app.getVersion();
+const versionHistory = fs.existsSync(versionHistoryPath) ? require(versionHistoryPath) : {};
+const version = app.getVersion();
 if (typeof versionHistory[version] === "undefined") {
 	versionHistory[version] = {
 		firstSeen: Date.now(),

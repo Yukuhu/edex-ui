@@ -62,7 +62,7 @@ class Modal {
                 // modalCloseButton setting (default true). Esc still
                 // closes the modal regardless — Modal._ensureGlobalEsc
                 // is always wired.
-                if (!window.settings || window.settings.modalCloseButton !== false) {
+                if (window.settings?.modalCloseButton !== false) {
                     buttons.push({label:"Close", action:"window.modals['"+this.id+"'].close();"});
                 }
                 augs.push("tr-clip", "bl-clip");

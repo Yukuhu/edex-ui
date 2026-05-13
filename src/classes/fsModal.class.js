@@ -19,7 +19,7 @@ class FsModal {
     static open() {
         if (FsModal._instance) {
             // Already open — pull it to the top.
-            try { FsModal._instance.modal && window.modals[FsModal._instance.modal.id] && window.modals[FsModal._instance.modal.id].focus(); } catch (_) {}
+            try { FsModal._instance.modal && window.modals[FsModal._instance.modal.id]?.focus(); } catch (_) {}
             return FsModal._instance;
         }
         return new FsModal();
@@ -37,8 +37,8 @@ class FsModal {
         this.rightPane = null;
         this.focusedPane = null; // becomes either pane on first mousedown
 
-        const detachKeyboard = (window.keyboard && window.keyboard.detach) ? () => window.keyboard.detach() : () => {};
-        const attachKeyboard = (window.keyboard && window.keyboard.attach) ? () => window.keyboard.attach() : () => {};
+        const detachKeyboard = window.keyboard?.detach ? () => window.keyboard.detach() : () => {};
+        const attachKeyboard = window.keyboard?.attach ? () => window.keyboard.attach() : () => {};
         detachKeyboard();
 
         const html = `<div class="fs_modal_root">
@@ -92,7 +92,7 @@ class FsModal {
             }
         });
         this.modal._isFsModal = true;
-        if (window.modals && window.modals[this.modal.id]) window.modals[this.modal.id]._isFsModal = true;
+        if (window.modals?.[this.modal.id]) window.modals[this.modal.id]._isFsModal = true;
 
         // Resolve the modal DOM root after Modal mounts it.
         this.root = document.getElementById("modal_" + this.modal.id);
@@ -152,9 +152,9 @@ class FsModal {
             case "up":       pane.readFS(this.pathLib.resolve(pane.dirpath || this.osLib.homedir(), "..")); break;
             case "home":     pane.readFS(this.osLib.homedir()); break;
             case "termcwd": {
-                if (!window.term || !window.term[window.currentTerm]) break;
+                if (!window.term?.[window.currentTerm]) break;
                 let cwd = window.term[window.currentTerm].cwd || window.settings.cwd;
-                if (cwd && cwd.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
+                if (cwd?.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
                 if (cwd) pane.readFS(cwd);
                 break;
             }
@@ -196,7 +196,7 @@ class FsModal {
                 try {
                     await this.fsLib.promises.rename(srcPath, dstPath);
                 } catch (err) {
-                    if (err && err.code === "EXDEV") {
+                    if (err?.code === "EXDEV") {
                         // Cross-device — fall back to copy + delete.
                         await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: true, dereference: false });
                         await this.fsLib.promises.rm(srcPath, { recursive: true, force: true });
@@ -206,7 +206,7 @@ class FsModal {
                 await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: !!exists, dereference: false });
             }
         } catch (err) {
-            this._info(`${move ? "Move" : "Copy"} failed: ${err && err.message ? err.message : String(err)}`);
+            this._info(`${move ? "Move" : "Copy"} failed: ${err?.message ? err.message : String(err)}`);
             return;
         }
 

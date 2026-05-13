@@ -67,7 +67,7 @@ class ControlMenu {
         this.crumb = document.getElementById("controlMenuBreadcrumb");
 
         this.input.addEventListener('input', e => {
-            if ((e.inputType && e.inputType.startsWith("delete")) || (e.detail && typeof e.detail === "string" && e.detail.startsWith("delete"))) {
+            if (e.inputType?.startsWith("delete") || (e.detail && typeof e.detail === "string" && e.detail.startsWith("delete"))) {
                 this.input.value = "";
                 this.filter = "";
             } else {

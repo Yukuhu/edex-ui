@@ -82,9 +82,9 @@ class FuzzyFinder {
            // retired in favor of the FsModal (Ctrl+Shift+E), so the
            // terminal is now the single source of truth.
            const fs = require("fs");
-           const term = window.term && window.term[window.currentTerm];
-           let cwd = (term && term.cwd) || (window.settings && window.settings.cwd);
-           if (cwd && cwd.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
+           const term = window.term?.[window.currentTerm];
+           let cwd = term?.cwd || window.settings?.cwd;
+           if (cwd?.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
            this._currentCwd = cwd;
            let files;
            try {

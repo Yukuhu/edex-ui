@@ -237,7 +237,7 @@ class ClaudeChat {
     }
 
     static open() {
-        if (window.modals && Object.values(window.modals).some(m => m && m._isClaudeChat)) {
+        if (window.modals && Object.values(window.modals).some(m => m?._isClaudeChat)) {
             return; // already open
         }
         return new ClaudeChat();
@@ -316,8 +316,8 @@ class ClaudeChat {
             // Not all environments support longtask. Skip silently.
         }
 
-        const detachKeyboard = (typeof window !== "undefined" && window.keyboard && window.keyboard.detach) ? () => window.keyboard.detach() : () => {};
-        const attachKeyboard = (typeof window !== "undefined" && window.keyboard && window.keyboard.attach) ? () => window.keyboard.attach() : () => {};
+        const detachKeyboard = (typeof window !== "undefined" && window.keyboard?.detach) ? () => window.keyboard.detach() : () => {};
+        const attachKeyboard = (typeof window !== "undefined" && window.keyboard?.attach) ? () => window.keyboard.attach() : () => {};
         detachKeyboard();
 
         this.modal = new Modal({
@@ -392,11 +392,11 @@ class ClaudeChat {
         // IPC subscriptions — keep references so we can remove on close
         this._onDelta = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
-            if (this._perf && this._perf.firstDeltaT === null) {
+            if (this._perf?.firstDeltaT === null) {
                 this._perf.firstDeltaT = performance.now();
             }
             this._appendAssistantText(payload.text || "");
-            if (this.avatar && this.avatar.state === "thinking") {
+            if (this.avatar?.state === "thinking") {
                 this.avatar.setState("responding");
             }
             // Streaming TTS — kick off (idempotent) on the first delta
@@ -443,7 +443,7 @@ class ClaudeChat {
         this._onError = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
             this._drainPending();
-            const msg = (payload && payload.message) ? payload.message : "Unknown error";
+            const msg = payload?.message ? payload.message : "Unknown error";
             this._appendErrorLine(msg);
             this._finalizeAssistant();
             this.status.innerText = "Error.";
@@ -540,7 +540,7 @@ class ClaudeChat {
             // (usually) ready by the time the user submits, so streaming
             // can start synthesizing as soon as the first sentence
             // boundary arrives instead of waiting for the model.
-            const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+            const dtype = window.settings?.ttsDtype || ClaudeChat.TTS_DTYPE;
             this._ensureWorkerLoaded(dtype).catch(err => {
                 console.warn("Kokoro pre-warm failed:", err);
             });
@@ -589,7 +589,7 @@ class ClaudeChat {
     // before falling back to CPU.
     _ensureWorker() {
         if (this._ttsWorker) return this._ttsWorker;
-        const forceBackend = window.settings && window.settings.ttsBackend;
+        const forceBackend = window.settings?.ttsBackend;
         const path = forceBackend === "webgpu"
             ? "workers/tts-worker-web.js"
             : "workers/tts-worker.js";
@@ -680,7 +680,7 @@ class ClaudeChat {
             // node-CPU worker transparently and retry the load.
             if (this._ttsBackendInUse === "webgpu") {
                 console.warn(`[TTS] WebGPU worker load-error message: ${msg.message}`);
-                const pendingDtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+                const pendingDtype = window.settings?.ttsDtype || ClaudeChat.TTS_DTYPE;
                 this._fallbackToNodeWorker();
                 // _ensureWorkerLoaded will spin up the node worker on
                 // the next call. Defer to avoid recursion in the same
@@ -723,8 +723,8 @@ class ClaudeChat {
         const opId = `tts_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
         this.currentTtsReq = opId;
         if (this.avatar) this.avatar.setState("speaking");
-        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
-        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+        const voice = window.settings?.ttsVoice || ClaudeChat.TTS_VOICE;
+        const dtype = window.settings?.ttsDtype || ClaudeChat.TTS_DTYPE;
         this._refreshTtsConfigDisplay();
         try {
             await this._ensureWorkerLoaded(dtype);
@@ -762,7 +762,7 @@ class ClaudeChat {
             // switching back to a known-good dtype would work. Let the
             // next call retry from_pretrained.
             console.warn("Kokoro TTS failed, falling back to speechSynthesis:", err);
-            this.status.innerText = `Kokoro failed (${err && err.message ? err.message : err}); using system voice.`;
+            this.status.innerText = `Kokoro failed (${err?.message ? err.message : err}); using system voice.`;
             this._hideProgress();
             if (this.currentTtsReq === opId) this.currentTtsReq = null;
             this._speakSystem(text);
@@ -787,8 +787,8 @@ class ClaudeChat {
         if (this._ttsStream || this._ttsLoadingTurnKey) return;
         if (!this.voiceEnabled || !this.neuralTtsAvailable) return;
 
-        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
-        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
+        const dtype = window.settings?.ttsDtype || ClaudeChat.TTS_DTYPE;
+        const voice = window.settings?.ttsVoice || ClaudeChat.TTS_VOICE;
 
         this._ttsTurnKey++;
         const turnKey = this._ttsTurnKey;
@@ -935,7 +935,7 @@ class ClaudeChat {
         try {
             for await (const rawSentence of this._ttsStream) {
                 if (this._ttsTurnKey !== turnKey) return;
-                if (!rawSentence || !rawSentence.trim()) continue;
+                if (!rawSentence?.trim()) continue;
                 // Safety-net scrub — the per-tail strip in
                 // _ttsPushTail misses markers that straddle a
                 // streaming delta boundary (#54). At this point the
@@ -943,17 +943,17 @@ class ClaudeChat {
                 // regexes and orphan-marker passes both see complete
                 // context.
                 const sentence = this._stripMarkdownForTts(rawSentence);
-                if (!sentence || !sentence.trim()) continue;
+                if (!sentence?.trim()) continue;
                 if (firstSentenceTime === null) {
                     firstSentenceTime = performance.now() - turnStart;
-                    if (this._perf && this._perf.firstTtsYieldT === null) {
+                    if (this._perf?.firstTtsYieldT === null) {
                         this._perf.firstTtsYieldT = performance.now();
                     }
                     console.info(`[TTS] First sentence yielded at +${firstSentenceTime.toFixed(0)}ms: ${sentence.slice(0, 50)}…`);
                 }
                 sentenceCount++;
                 const blob = await this._synthInWorker(sentence, voice);
-                if (this._perf && this._perf.firstSynthDoneT === null) {
+                if (this._perf?.firstSynthDoneT === null) {
                     this._perf.firstSynthDoneT = performance.now();
                 }
                 if (this._ttsTurnKey !== turnKey) return;
@@ -992,7 +992,7 @@ class ClaudeChat {
         if (this.avatar) this.avatar.setState("speaking");
         this.status.innerText = "Speaking.";
         // Perf: track first audio of the turn.
-        const isFirstAudioOfTurn = this._perf && this._perf.firstAudioT === null;
+        const isFirstAudioOfTurn = this._perf?.firstAudioT === null;
         const cleanup = () => {
             try { URL.revokeObjectURL(next.url); } catch (_) {}
             this._ttsPlaying = false;
@@ -1008,7 +1008,7 @@ class ClaudeChat {
         };
         if (isFirstAudioOfTurn) {
             next.audio.addEventListener("playing", () => {
-                if (this._perf && this._perf.firstAudioT === null) {
+                if (this._perf?.firstAudioT === null) {
                     this._perf.firstAudioT = performance.now();
                 }
             }, { once: true });
@@ -1121,8 +1121,8 @@ class ClaudeChat {
 
     _refreshTtsConfigDisplay() {
         if (!this.ttsConfigEl) return;
-        const voice = (window.settings && window.settings.ttsVoice) || ClaudeChat.TTS_VOICE;
-        const dtype = (window.settings && window.settings.ttsDtype) || ClaudeChat.TTS_DTYPE;
+        const voice = window.settings?.ttsVoice || ClaudeChat.TTS_VOICE;
+        const dtype = window.settings?.ttsDtype || ClaudeChat.TTS_DTYPE;
         this.ttsConfigEl.innerText = `${voice} / ${dtype}`;
     }
 
@@ -1203,7 +1203,7 @@ class ClaudeChat {
                 this.activeAssistantBuf += chunk;
                 this.activeAssistantBubble.querySelector("pre").textContent = this.activeAssistantBuf;
                 this._scrollToBottom();
-                if (this._perf && this._perf.firstBubbleCharT === null) {
+                if (this._perf?.firstBubbleCharT === null) {
                     this._perf.firstBubbleCharT = performance.now();
                 }
             }

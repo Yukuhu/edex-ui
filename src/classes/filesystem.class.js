@@ -67,8 +67,8 @@ class FilesystemDisplay {
 
         // Mark the root so cross-pane drop targets can find each other.
         this.container.classList.add("fs_pane");
-        if (window.settings && window.settings.hideDotfiles) this.container.classList.add("hideDotfiles");
-        if (window.settings && window.settings.fsListView) this.container.classList.add("list-view");
+        if (window.settings?.hideDotfiles) this.container.classList.add("hideDotfiles");
+        if (window.settings?.fsListView) this.container.classList.add("list-view");
 
         this.container.innerHTML = `
             <div class="fs_pane_container"></div>
@@ -137,7 +137,7 @@ class FilesystemDisplay {
             const idx = Number.parseInt(item.dataset.idx, 10);
             if (Number.isNaN(idx)) return;
             const entry = this.cwd[idx];
-            if (!entry || !entry.path) { e.preventDefault(); return; }
+            if (!entry?.path) { e.preventDefault(); return; }
             e.dataTransfer.effectAllowed = "copyMove";
             e.dataTransfer.setData("application/x-ndex-fs", JSON.stringify({
                 path: entry.path,
@@ -209,7 +209,7 @@ class FilesystemDisplay {
         // Defer to next tick so window.term is available even if the
         // pane was constructed during boot.
         setTimeout(() => {
-            if (!window.term || !window.term[window.currentTerm]) return;
+            if (!window.term?.[window.currentTerm]) return;
             const num = window.currentTerm;
             const term = window.term[num];
             // Snap to the terminal's current CWD if we have one.
@@ -282,7 +282,7 @@ class FilesystemDisplay {
         // Drop terminal hook so the pane isn't a ghost listener.
         if (this._followTerminal && window.term && window.currentTerm !== undefined) {
             const term = window.term[window.currentTerm];
-            if (term && term.oncwdchange) term.oncwdchange = () => {};
+            if (term?.oncwdchange) term.oncwdchange = () => {};
         }
     }
 
@@ -478,9 +478,9 @@ class FilesystemDisplay {
         // Preserve legacy "ctrl-held = open in OS", "shift-held = write
         // quoted path to terminal" behavior (works for physical kbd via
         // event modifiers and for on-screen kbd via dataset flags).
-        const kbContainer = window.keyboard && window.keyboard.container;
-        const ctrlOn = ev.ctrlKey || ev.metaKey || (kbContainer && kbContainer.dataset.isCtrlOn === "true");
-        const shiftOn = ev.shiftKey || (kbContainer && kbContainer.dataset.isShiftOn === "true");
+        const kbContainer = window.keyboard?.container;
+        const ctrlOn = ev.ctrlKey || ev.metaKey || kbContainer?.dataset.isCtrlOn === "true";
+        const shiftOn = ev.shiftKey || kbContainer?.dataset.isShiftOn === "true";
 
         if (ctrlOn && entry.path) {
             electron.shell.openPath(entry.path);
@@ -500,7 +500,7 @@ class FilesystemDisplay {
         // Directory navigation: if we're inside a terminal-tracking pane,
         // drive the terminal so the terminal stays in sync. Otherwise
         // navigate the pane directly.
-        if (entry.type === "dir" || (entry.type && entry.type.endsWith && entry.type.endsWith("Dir"))) {
+        if (entry.type === "dir" || entry.type?.endsWith?.("Dir")) {
             if (this._followTerminal && !this._noTracking) {
                 window.term[window.currentTerm].writelr('cd "' + entry.name + '"');
             } else {

@@ -51,7 +51,7 @@ self.addEventListener("message", async (event) => {
         self.postMessage({
             type: msg.type === "synthesize" ? "synth-error" : "load-error",
             id: msg.id,
-            message: (err && err.message) ? err.message : String(err)
+            message: err?.message ? err.message : String(err)
         });
     }
 });

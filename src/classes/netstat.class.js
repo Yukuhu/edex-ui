@@ -24,6 +24,15 @@ class Netstat {
             </div>
         </div>`;
 
+        // Cache references to the three value cells. The DOM nodes are
+        // created once above and never replaced, so re-querying them on
+        // every 2s tick is pure waste.
+        this.inameEl = document.getElementById("mod_netstat_iname");
+        const cells = this.parent.querySelectorAll("#mod_netstat_innercontainer > div > h2");
+        this.stateEl = cells[0];
+        this.ipEl    = cells[1];
+        this.pingEl  = cells[2];
+
         this.offline = false;
         this.lastconn = {finished: false}; // Prevent geoip lookup attempt until maxminddb is loaded
         this.iface = null;
@@ -96,12 +105,9 @@ class Netstat {
                     } else {
                         // No external connection!
                         this.iface = null;
-                        document.getElementById("mod_netstat_iname").innerText = "Interface: (offline)";
-
+                        this.inameEl.innerText = "Interface: (offline)";
                         this.offline = true;
-                        document.querySelector("#mod_netstat_innercontainer > div:first-child > h2").innerHTML = "OFFLINE";
-                        document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerHTML = "--.--.--.--";
-                        document.querySelector("#mod_netstat_innercontainer > div:nth-child(3) > h2").innerHTML = "--ms";
+                        this._renderOffline();
                         break;
                     }
                 }
@@ -111,7 +117,7 @@ class Netstat {
 
             this.iface = net.iface;
             this.internalIPv4 = net.ip4;
-            document.getElementById("mod_netstat_iname").innerText = "Interface: "+net.iface;
+            this.inameEl.innerText = "Interface: "+net.iface;
 
             if (net.ip4 === "127.0.0.1") {
                 offline = true;
@@ -130,8 +136,7 @@ class Netstat {
                                     geo: this.geoLookup.get(data.ip).location
                                 };
 
-                                let ip = this.ipinfo.ip;
-                                document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerHTML = window._escapeHtml(ip);
+                                this.ipEl.innerHTML = window._escapeHtml(this.ipinfo.ip);
 
                                 this.runsBeforeGeoIPUpdate = 10;
                             } catch(e) {
@@ -155,16 +160,22 @@ class Netstat {
 
                 this.offline = offline;
                 if (offline) {
-                    document.querySelector("#mod_netstat_innercontainer > div:first-child > h2").innerHTML = "OFFLINE";
-                    document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerHTML = "--.--.--.--";
-                    document.querySelector("#mod_netstat_innercontainer > div:nth-child(3) > h2").innerHTML = "--ms";
+                    this._renderOffline();
                 } else {
-                    document.querySelector("#mod_netstat_innercontainer > div:first-child > h2").innerHTML = "ONLINE";
-                    document.querySelector("#mod_netstat_innercontainer > div:nth-child(3) > h2").innerHTML = Math.round(p)+"ms";
+                    this.stateEl.innerHTML = "ONLINE";
+                    this.pingEl.innerHTML = Math.round(p)+"ms";
                 }
             }
         });
     }
+
+    // Reset the three status cells to their offline placeholder values.
+    _renderOffline() {
+        this.stateEl.innerHTML = "OFFLINE";
+        this.ipEl.innerHTML    = "--.--.--.--";
+        this.pingEl.innerHTML  = "--ms";
+    }
+
     ping(target, port, local) {
         return new Promise((resolve, reject) => {
             let s = new (require("net").Socket)();

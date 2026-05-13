@@ -20,7 +20,7 @@
 
 class FilesystemDisplay {
     constructor(opts) {
-        if (!opts || (!opts.container && !opts.parentId)) throw "Missing options";
+        if (!opts || (!opts.container && !opts.parentId)) throw new Error("Missing options");
 
         const fs = require("fs");
         const path = require("path");
@@ -63,7 +63,7 @@ class FilesystemDisplay {
 
         // Resolve the container DOM element.
         this.container = opts.container || document.getElementById(opts.parentId);
-        if (!this.container) throw "FilesystemDisplay: container not found";
+        if (!this.container) throw new Error("FilesystemDisplay: container not found");
 
         // Mark the root so cross-pane drop targets can find each other.
         this.container.classList.add("fs_pane");

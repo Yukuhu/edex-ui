@@ -524,8 +524,9 @@ class ClaudeChat {
 
     _toggleVoice() {
         this.voiceEnabled = !this.voiceEnabled;
+        const kokoroSuffix = this.neuralTtsAvailable ? " (KOKORO)" : "";
         this.voiceToggle.textContent = this.voiceEnabled
-            ? `VOICE: ON${this.neuralTtsAvailable ? " (KOKORO)" : ""}`
+            ? `VOICE: ON${kokoroSuffix}`
             : "VOICE: OFF";
         this.voiceToggle.classList.toggle("on", this.voiceEnabled);
         this._refreshTtsConfigDisplay();
@@ -603,7 +604,7 @@ class ClaudeChat {
                 this._ttsLoadReject(new Error(err.message || "Worker error"));
                 this._ttsLoadResolve = this._ttsLoadReject = this._ttsLoadPromise = null;
             }
-            for (const [id, p] of this._ttsSynthPending) {
+            for (const p of this._ttsSynthPending.values()) {
                 p.reject(new Error(err.message || "Worker error"));
             }
             this._ttsSynthPending.clear();
@@ -872,7 +873,7 @@ class ClaudeChat {
         text = text.replace(/\*\*([^*\n]+?)\*\*/g, "$1");                  // **bold**
         text = text.replace(/(?<![*])\*([^*\n]+?)\*(?![*])/g, "$1");       // *italic*
         text = text.replace(/__([^_\n]+?)__/g, "$1");                      // __bold__
-        text = text.replace(/(?<![_\w])_([^_\n]+?)_(?![_\w])/g, "$1");     // _italic_
+        text = text.replace(/(?<!\w)_([^_\n]+?)_(?!\w)/g, "$1");           // _italic_
         // Orphan markers from cross-delta or cross-sentence splits.
         // Multi-char runs are always safe to nuke once their balanced
         // pairs have been consumed above.
@@ -886,7 +887,7 @@ class ClaudeChat {
         text = text.replace(/_(?=\w)|(?<=\w)_/g, "");
         // Line-leading bullet markers — otherwise kokoro reads each
         // list item as "asterisk item one, asterisk item two."
-        text = text.replace(/^\s*[*+\-]\s+/gm, "");
+        text = text.replace(/^\s*[*+-]\s+/gm, "");
         return text;
     }
 
@@ -1314,7 +1315,7 @@ class ClaudeChat {
             if (!modalEl) return;
             modalEl.querySelectorAll(".claudeChat_sourceLink").forEach(btn => {
                 btn.addEventListener("click", () => {
-                    const url = btn.getAttribute("data-url");
+                    const url = btn.dataset.url;
                     // Re-check the scheme at the call site too — the URL
                     // ultimately originates from model-generated text, so
                     // don't trust that nothing tampered with the DOM

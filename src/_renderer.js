@@ -81,7 +81,8 @@ window._delay = ms => {
 
 // Initiate basic error handling
 window.onerror = (msg, path, line, col, error) => {
-    document.getElementById("boot_screen").innerHTML += `${error} :  ${msg}<br/>==> at ${path}  ${line}:${col}`;
+    const safeMsg = typeof msg === "string" ? msg : JSON.stringify(msg);
+    document.getElementById("boot_screen").innerHTML += `${error} :  ${safeMsg}<br/>==> at ${path}  ${line}:${col}`;
 };
 
 const path = require("path");
@@ -218,14 +219,15 @@ window._hotSwitchKeyboard = (name) => {
 function initGraphicalErrorHandling() {
     window.edexErrorsModals = [];
     window.onerror = (msg, path, line, col, error) => {
+        const safeMsg = typeof msg === "string" ? msg : JSON.stringify(msg);
         let errorModal = new Modal({
             type: "error",
             title: error,
-            message: `${msg}<br/>        at ${path}  ${line}:${col}`
+            message: `${safeMsg}<br/>        at ${path}  ${line}:${col}`
         });
         window.edexErrorsModals.push(errorModal);
 
-        ipc.send("log", "error", `${error}: ${msg}`);
+        ipc.send("log", "error", `${error}: ${safeMsg}`);
         ipc.send("log", "debug", `at ${path} ${line}:${col}`);
     };
 }
@@ -259,13 +261,13 @@ function initSystemInformationProxy() {
         set: () => {throw new Error("Cannot set a property on the sysinfo proxy")},
         get: (target, prop, receiver) => {
             return function(...args) {
-                let callback = (typeof args[args.length - 1] === "function") ? true : false;
+                let callback = typeof args.at(-1) === "function";
 
                 return new Promise((resolve, reject) => {
                     let id = nanoid();
                     ipc.once("systeminformation-reply-"+id, (e, res) => {
                         if (callback) {
-                            args[args.length - 1](res);
+                            args.at(-1)(res);
                         }
                         resolve(res);
                     });
@@ -565,7 +567,7 @@ async function initUI() {
     window.onmouseup = e => {
         if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
     };
-    window.term[0].term.writeln("\033[1m"+`Welcome to nDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
+    globalThis.term[0].term.writeln("\u001b[1m"+`Welcome to nDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\u001b[0m");
 
     await _delay(100);
 
@@ -582,7 +584,7 @@ async function initUI() {
     // FsModal (Ctrl+Shift+E). The terminal still tracks its own CWD —
     // resend it after a hot reload so anything else relying on
     // term.cwd (e.g. fuzzyFinder) has fresh state.
-    if (window.performance.navigation.type === 1) {
+    if (globalThis.performance.getEntriesByType("navigation")[0]?.type === "reload") {
         window.term[window.currentTerm].resendCWD();
     }
 
@@ -1010,7 +1012,7 @@ window.writeWebAppEntry = () => {
     if (!nameEl || !urlEl) return;
     const name = nameEl.value.trim();
     const url = urlEl.value.trim();
-    const icon = (iconEl && iconEl.value.trim()) || null;
+    const icon = iconEl?.value.trim() || null;
     if (!name) {
         Modal.show({ type: "warning", message: "Name is required." });
         return;
@@ -1037,7 +1039,7 @@ window.writeWebAppEntry = () => {
     }
     // Drop the cached webapps submenu so the next Control Menu open
     // reflects the new entry.
-    if (window.activeControlMenu && window.activeControlMenu._cache) {
+    if (globalThis.activeControlMenu?._cache) {
         delete window.activeControlMenu._cache.webapps;
     }
     // Close the Add modal — find by the topmost custom modal.
@@ -1111,7 +1113,7 @@ window.removeWebApp = (id) => {
         Modal.show({ type: "error", title: "WebApp save failed", message: String(e) });
         return;
     }
-    if (window.activeControlMenu && window.activeControlMenu._cache) {
+    if (globalThis.activeControlMenu?._cache) {
         delete window.activeControlMenu._cache.webapps;
     }
     // The tbody's delegated click handler stays attached across this
@@ -1369,12 +1371,12 @@ window.useAppShortcut = action => {
         case "FS_LIST_VIEW":
             // Applies to the focused pane inside the open FsModal;
             // no-op when the modal isn't open.
-            if (window.FsModal && window.FsModal._instance && window.FsModal._instance.focusedPane) {
+            if (globalThis.FsModal?._instance?.focusedPane) {
                 window.FsModal._instance.focusedPane.toggleListview();
             }
             return true;
         case "FS_DOTFILES":
-            if (window.FsModal && window.FsModal._instance && window.FsModal._instance.focusedPane) {
+            if (globalThis.FsModal?._instance?.focusedPane) {
                 window.FsModal._instance.focusedPane.toggleHidedotfiles();
             }
             return true;
@@ -1385,7 +1387,7 @@ window.useAppShortcut = action => {
             document.body.classList.toggle("keyboardHidden");
             // Re-fit xterm after the CSS height transition settles.
             setTimeout(() => {
-                if (window.term && window.term[window.currentTerm]) {
+                if (globalThis.term?.[globalThis.currentTerm]) {
                     try { window.term[window.currentTerm].fit(); } catch (_) {}
                 }
             }, 550);
@@ -1395,7 +1397,7 @@ window.useAppShortcut = action => {
             // Re-fit xterm after the CSS width transition settles
             // (main_shell already transitions width over 0.5s).
             setTimeout(() => {
-                if (window.term && window.term[window.currentTerm]) {
+                if (globalThis.term?.[globalThis.currentTerm]) {
                     try { window.term[window.currentTerm].fit(); } catch (_) {}
                 }
             }, 550);

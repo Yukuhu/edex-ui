@@ -338,7 +338,7 @@ class Terminal {
                             });
                             break;
                         default:
-                            reject("Unsupported OS");
+                            reject(new Error("Unsupported OS"));
                     }
                 });
             };
@@ -357,7 +357,7 @@ class Terminal {
                             });
                             break;
                         default:
-                            reject("Unsupported OS");
+                            reject(new Error("Unsupported OS"));
                     }
                 });
             };

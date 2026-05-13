@@ -237,7 +237,7 @@ class Toplist {
         updateProcessList();
         window.keyboard.attach();
         window.term[window.currentTerm].term.focus();
-        var updateInterval = setInterval(updateProcessList, 1000);
+        const updateInterval = setInterval(updateProcessList, 1000);
     }
 }
 

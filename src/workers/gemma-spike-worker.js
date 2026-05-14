@@ -32,6 +32,10 @@
 // The real backend (#85) will need an equivalent build step. The bundle
 // is committed here only because the whole spike is throwaway.
 
+// Must come first: sets globalThis[Symbol.for("onnxruntime")] to the
+// web ORT before the transformers bundle's onnx backend evaluates, so
+// it doesn't fall through to the stubbed onnxruntime-node. See the file.
+import "./gemma-ort-preload.js";
 import { pipeline, TextStreamer, env } from "./gemma-transformers.bundle.js";
 
 // Point onnxruntime-web at the local ort-wasm files — the default is a

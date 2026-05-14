@@ -67,11 +67,31 @@
         console.info("[gemma-spike]", text);
     }
 
+    // Loud terminal-state banner so it's unmistakable whether the run is
+    // still going, finished, or failed — and the panel border colour
+    // changes to match (amber = running, green = done, red = failed).
+    function setState(state) {
+        const panel = document.getElementById(PANEL_ID);
+        const colour = state === "done" ? "#8ae234"
+            : state === "failed" ? "#ef2929"
+            : "#f0c674";
+        if (panel) panel.style.borderColor = colour;
+        if (state === "done") {
+            logLine("");
+            logLine("★★★  SPIKE COMPLETE — safe to copy / run TTS  ★★★");
+        } else if (state === "failed") {
+            logLine("");
+            logLine("✗✗✗  SPIKE FAILED — copy the ERROR line above  ✗✗✗");
+        }
+    }
+
     function runGemma() {
         const btn = document.getElementById(GEMMA_BTN_ID);
         if (btn) btn.disabled = true;
         getLog().textContent = "";
-        logLine("Spawning module worker…");
+        setState("running");
+        logLine("Spawning module worker… (multi-GB download — wait for the");
+        logLine("green ★ COMPLETE banner or red ✗ FAILED banner before copying)");
 
         let worker;
         try {
@@ -118,10 +138,12 @@
                     logLine("tokens/sec:      " + msg.metrics.tokensPerSec);
                     logLine("Also record: download size (DevTools Network) + VRAM (Activity Monitor / GPU report).");
                     finish();
+                    setState("done");
                     break;
                 case "error":
                     logLine("ERROR: " + msg.message);
                     finish();
+                    setState("failed");
                     break;
             }
         });
@@ -135,10 +157,12 @@
             if (!parts.length) parts.push("bare " + err.type + " event (module worker likely failed to load — check DevTools console for the import error)");
             logLine("WORKER ERROR: " + parts.join(" "));
             finish();
+            setState("failed");
         });
         worker.addEventListener("messageerror", (e) => {
             logLine("WORKER MESSAGEERROR: " + (e && e.type));
             finish();
+            setState("failed");
         });
 
         worker.postMessage({ type: "run" });

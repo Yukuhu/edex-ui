@@ -32,10 +32,11 @@
 // The real backend (#85) will need an equivalent build step. The bundle
 // is committed here only because the whole spike is throwaway.
 
-// Must come first: sets globalThis[Symbol.for("onnxruntime")] to the
-// web ORT before the transformers bundle's onnx backend evaluates, so
-// it doesn't fall through to the stubbed onnxruntime-node. See the file.
-import "./gemma-ort-preload.js";
+// Must come first: neutralises process.release.name === "node" before
+// the transformers bundle computes IS_NODE_ENV, so it takes the
+// web-worker onnx branch (which registers the webgpu device) instead of
+// the stubbed onnxruntime-node branch. See the file.
+import { ortEnvProbe } from "./gemma-ort-preload.js";
 import { pipeline, TextStreamer, env } from "./gemma-transformers.bundle.js";
 
 // Point onnxruntime-web at the local ort-wasm files — the default is a
@@ -87,7 +88,7 @@ async function handleRun(prompt) {
     if (!adapter) {
         throw new Error("WebGPU requestAdapter() returned null");
     }
-    status(`WebGPU adapter OK. Loading ${MODEL_ID} (dtype q4f16)…`);
+    status(`WebGPU adapter OK (process.release.name=${ortEnvProbe.nodeNameAfterPatch}). Loading ${MODEL_ID} (dtype q4f16)…`);
 
     // --- Load: text-generation pipeline, WebGPU device ---
     // Progress logging has to cope with HuggingFace serving the big

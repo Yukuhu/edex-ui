@@ -1,22 +1,50 @@
 // ⚠️ THROWAWAY SPIKE — issue #84 (part of #83). NOT production code.
 //
 // SPIKE FINDING: the worker runs with `nodeIntegrationInWorker: true`,
-// so transformers.js's `apis.IS_NODE_ENV` is true and its onnx backend
-// picks `onnxruntime-node` — which esbuild stubbed to an empty `{}`
-// when we bundled the *web* build, so `ONNX.InferenceSession` came back
-// undefined and ONNX session creation threw "Cannot read properties of
-// undefined (reading 'create')".
+// which leaves `process.release.name === "node"`. transformers.js
+// computes `IS_NODE_ENV` from exactly that, then its onnx backend:
 //
-// transformers.js checks `globalThis[Symbol.for("onnxruntime")]` FIRST,
-// before the node/web branches — that's its documented override hook.
+//   if (Symbol.for("onnxruntime") in globalThis) ONNX = that   // sets no devices
+//   else if (IS_NODE_ENV)  ONNX = onnxruntime-node             // empty stub here
+//   else                   ONNX = onnxruntime-web + push webgpu/wasm
+//
+// We want the third branch: it both wires the (rewired) web ORT *and*
+// populates `supportedDevices` with "webgpu". The Symbol override only
+// did the first half — hence "Unsupported device: webgpu. Should be one
+// of: ." So instead of overriding the symbol, neutralise the single
+// signal that misfires: make `process.release.name` not be "node".
+// IS_WEBWORKER_ENV stays true, so transformers.js cleanly treats this
+// as the web worker it actually is.
+//
 // This module must be imported *before* the transformers bundle so the
-// symbol is set by the time the bundle's onnx backend module evaluates.
-// ESM evaluates imports depth-first in source order, so a bare
-// `import "./gemma-ort-preload.js"` ahead of the bundle import is enough.
+// patch lands before the bundle computes IS_NODE_ENV at module-eval.
 //
-// The real backend (#85) will need the same override (or to run the
-// worker without node integration).
+// The real backend (#85) faces the same nodeIntegrationInWorker tension
+// and will need an equivalent shim (or a non-node-integrated worker).
 
-import * as ORT_WEB from "../node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs";
+let nodeNameAfterPatch = "(no process)";
+try {
+    const p = globalThis.process;
+    if (p && p.release && p.release.name === "node") {
+        // Try increasingly forceful overrides — `process.release` may be
+        // a plain writable object, a frozen one, or a non-writable prop.
+        try { p.release.name = "electron"; } catch (_) {}
+        if (p.release.name === "node") {
+            try { p.release = Object.assign({}, p.release, { name: "electron" }); } catch (_) {}
+        }
+        if (p.release.name === "node") {
+            try {
+                Object.defineProperty(p, "release", {
+                    value: Object.assign({}, p.release, { name: "electron" }),
+                    configurable: true, writable: true
+                });
+            } catch (_) {}
+        }
+    }
+    nodeNameAfterPatch = p && p.release ? p.release.name : "(no process.release)";
+} catch (e) {
+    nodeNameAfterPatch = "(patch threw: " + (e && e.message) + ")";
+}
 
-globalThis[Symbol.for("onnxruntime")] = ORT_WEB;
+// Exported so the worker can log whether the patch actually took.
+export const ortEnvProbe = { nodeNameAfterPatch };

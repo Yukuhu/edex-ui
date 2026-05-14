@@ -17,12 +17,16 @@
 
 import { pipeline, TextStreamer, env } from "../node_modules/@huggingface/transformers/dist/transformers.web.js";
 
-// Point onnxruntime-web at the local ort-wasm files shipped next to
-// transformers.js — the default is a CDN URL the renderer's CSP blocks.
-// Same trick as tts-worker-web.js, but resolved against v4's own dist so
-// the spike never touches kokoro-js's nested v3 copy.
+// Point onnxruntime-web at the local ort-wasm files — the default is a
+// CDN URL the renderer's CSP blocks. NOTE (spike finding #84): unlike
+// transformers.js v3 (which co-located ort-wasm-*.jsep.{mjs,wasm} in its
+// own dist/, see tts-worker-web.js), v4 ships ONLY the .jsep.mjs loader
+// there — the .jsep.wasm binary lives in the hoisted onnxruntime-web
+// package. So wasmPaths must point at onnxruntime-web/dist/, which holds
+// both files. kokoro-js keeps its own nested onnxruntime-web@1.22, so
+// this never touches the v3 path.
 try {
-    const wasmDir = new URL("../node_modules/@huggingface/transformers/dist/", import.meta.url).href;
+    const wasmDir = new URL("../node_modules/onnxruntime-web/dist/", import.meta.url).href;
     env.backends.onnx.wasm.wasmPaths = wasmDir;
 } catch (_) {
     // Fall back to defaults if URL resolution somehow fails.

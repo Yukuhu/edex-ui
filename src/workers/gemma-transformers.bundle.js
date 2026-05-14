@@ -1,4681 +1,15 @@
+// node_modules/@huggingface/transformers/dist/transformers.web.js
+// SPIKE (#84): the two bare specifiers below were left external by
+// esbuild and rewritten to relative paths so this bundle can be loaded
+// by a module worker. onnxruntime-web/webgpu and onnxruntime-common are
+// NOT re-bundled — esbuild's lazy __esm wrapper corrupts onnxruntime's
+// InferenceSession init — we point at onnxruntime's own working bundles.
+import * as ONNX_WEB from "../node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs";
+import { Tensor } from "../node_modules/onnxruntime-common/dist/esm/index.js";
 var __defProp = Object.defineProperty;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs
-var ort_webgpu_bundle_min_exports = {};
-__export(ort_webgpu_bundle_min_exports, {
-  InferenceSession: () => qf,
-  TRACE: () => Ga,
-  TRACE_EVENT_BEGIN: () => $e,
-  TRACE_EVENT_END: () => ze,
-  TRACE_FUNC_BEGIN: () => tt,
-  TRACE_FUNC_END: () => rt,
-  Tensor: () => Le,
-  default: () => gl,
-  env: () => K,
-  registerBackend: () => Ke
-});
-var jr = Object.defineProperty;
-var zf = Object.getOwnPropertyDescriptor;
-var Vf = Object.getOwnPropertyNames;
-var jf = Object.prototype.hasOwnProperty;
-var Hr = ((a) => typeof __require < "u" ? __require : typeof Proxy < "u" ? new Proxy(a, { get: (r, s) => (typeof __require < "u" ? __require : r)[s] }) : a)(function(a) {
-  if (typeof __require < "u") return __require.apply(this, arguments);
-  throw Error('Dynamic require of "' + a + '" is not supported');
-});
-var k = (a, r) => () => (a && (r = a(a = 0)), r);
-var At = (a, r) => {
-  for (var s in r) jr(a, s, { get: r[s], enumerable: true });
-};
-var Hf = (a, r, s, f) => {
-  if (r && typeof r == "object" || typeof r == "function") for (let i of Vf(r)) !jf.call(a, i) && i !== s && jr(a, i, { get: () => r[i], enumerable: !(f = zf(r, i)) || f.enumerable });
-  return a;
-};
-var $t = (a) => Hf(jr({}, "__esModule", { value: true }), a);
-var zt;
-var Ze;
-var Ke;
-var Yf;
-var Ta;
-var Yr = k(() => {
-  "use strict";
-  zt = /* @__PURE__ */ new Map(), Ze = [], Ke = (a, r, s) => {
-    if (r && typeof r.init == "function" && typeof r.createInferenceSessionHandler == "function") {
-      let f = zt.get(a);
-      if (f === void 0) zt.set(a, { backend: r, priority: s });
-      else {
-        if (f.priority > s) return;
-        if (f.priority === s && f.backend !== r) throw new Error(`cannot register backend "${a}" using priority ${s}`);
-      }
-      if (s >= 0) {
-        let i = Ze.indexOf(a);
-        i !== -1 && Ze.splice(i, 1);
-        for (let d = 0; d < Ze.length; d++) if (zt.get(Ze[d]).priority <= s) {
-          Ze.splice(d, 0, a);
-          return;
-        }
-        Ze.push(a);
-      }
-      return;
-    }
-    throw new TypeError("not a valid backend");
-  }, Yf = async (a) => {
-    let r = zt.get(a);
-    if (!r) return "backend not found.";
-    if (r.initialized) return r.backend;
-    if (r.aborted) return r.error;
-    {
-      let s = !!r.initPromise;
-      try {
-        return s || (r.initPromise = r.backend.init(a)), await r.initPromise, r.initialized = true, r.backend;
-      } catch (f) {
-        return s || (r.error = `${f}`, r.aborted = true), r.error;
-      } finally {
-        delete r.initPromise;
-      }
-    }
-  }, Ta = async (a) => {
-    let r = a.executionProviders || [], s = r.map((y) => typeof y == "string" ? y : y.name), f = s.length === 0 ? Ze : s, i, d = [], l = /* @__PURE__ */ new Set();
-    for (let y of f) {
-      let w = await Yf(y);
-      typeof w == "string" ? d.push({ name: y, err: w }) : (i || (i = w), i === w && l.add(y));
-    }
-    if (!i) throw new Error(`no available backend found. ERR: ${d.map((y) => `[${y.name}] ${y.err}`).join(", ")}`);
-    for (let { name: y, err: w } of d) s.includes(y) && console.warn(`removing requested execution provider "${y}" from session options because it is not available: ${w}`);
-    let m = r.filter((y) => l.has(typeof y == "string" ? y : y.name));
-    return [i, new Proxy(a, { get: (y, w) => w === "executionProviders" ? m : Reflect.get(y, w) })];
-  };
-});
-var va = k(() => {
-  "use strict";
-  Yr();
-});
-var Ea;
-var Sa = k(() => {
-  "use strict";
-  Ea = "1.24.0-dev.20251116-b39e144322";
-});
-var Aa;
-var ie;
-var qr = k(() => {
-  "use strict";
-  Sa();
-  Aa = "warning", ie = { wasm: {}, webgl: {}, webgpu: {}, versions: { common: Ea }, set logLevel(a) {
-    if (a !== void 0) {
-      if (typeof a != "string" || ["verbose", "info", "warning", "error", "fatal"].indexOf(a) === -1) throw new Error(`Unsupported logging level: ${a}`);
-      Aa = a;
-    }
-  }, get logLevel() {
-    return Aa;
-  } };
-  Object.defineProperty(ie, "logLevel", { enumerable: true });
-});
-var K;
-var Ia = k(() => {
-  "use strict";
-  qr();
-  K = ie;
-});
-var xa;
-var La;
-var Oa = k(() => {
-  "use strict";
-  xa = (a, r) => {
-    let s = typeof document < "u" ? document.createElement("canvas") : new OffscreenCanvas(1, 1);
-    s.width = a.dims[3], s.height = a.dims[2];
-    let f = s.getContext("2d");
-    if (f != null) {
-      let i, d;
-      r?.tensorLayout !== void 0 && r.tensorLayout === "NHWC" ? (i = a.dims[2], d = a.dims[3]) : (i = a.dims[3], d = a.dims[2]);
-      let l = r?.format !== void 0 ? r.format : "RGB", m = r?.norm, y, w;
-      m === void 0 || m.mean === void 0 ? y = [255, 255, 255, 255] : typeof m.mean == "number" ? y = [m.mean, m.mean, m.mean, m.mean] : (y = [m.mean[0], m.mean[1], m.mean[2], 0], m.mean[3] !== void 0 && (y[3] = m.mean[3])), m === void 0 || m.bias === void 0 ? w = [0, 0, 0, 0] : typeof m.bias == "number" ? w = [m.bias, m.bias, m.bias, m.bias] : (w = [m.bias[0], m.bias[1], m.bias[2], 0], m.bias[3] !== void 0 && (w[3] = m.bias[3]));
-      let T = d * i, g = 0, v = T, S = T * 2, C = -1;
-      l === "RGBA" ? (g = 0, v = T, S = T * 2, C = T * 3) : l === "RGB" ? (g = 0, v = T, S = T * 2) : l === "RBG" && (g = 0, S = T, v = T * 2);
-      for (let R = 0; R < d; R++) for (let H = 0; H < i; H++) {
-        let U = (a.data[g++] - w[0]) * y[0], M = (a.data[v++] - w[1]) * y[1], Y = (a.data[S++] - w[2]) * y[2], O = C === -1 ? 255 : (a.data[C++] - w[3]) * y[3];
-        f.fillStyle = "rgba(" + U + "," + M + "," + Y + "," + O + ")", f.fillRect(H, R, 1, 1);
-      }
-      if ("toDataURL" in s) return s.toDataURL();
-      throw new Error("toDataURL is not supported");
-    } else throw new Error("Can not access image data");
-  }, La = (a, r) => {
-    let s = typeof document < "u" ? document.createElement("canvas").getContext("2d") : new OffscreenCanvas(1, 1).getContext("2d"), f;
-    if (s != null) {
-      let i, d, l;
-      r?.tensorLayout !== void 0 && r.tensorLayout === "NHWC" ? (i = a.dims[2], d = a.dims[1], l = a.dims[3]) : (i = a.dims[3], d = a.dims[2], l = a.dims[1]);
-      let m = r !== void 0 && r.format !== void 0 ? r.format : "RGB", y = r?.norm, w, T;
-      y === void 0 || y.mean === void 0 ? w = [255, 255, 255, 255] : typeof y.mean == "number" ? w = [y.mean, y.mean, y.mean, y.mean] : (w = [y.mean[0], y.mean[1], y.mean[2], 255], y.mean[3] !== void 0 && (w[3] = y.mean[3])), y === void 0 || y.bias === void 0 ? T = [0, 0, 0, 0] : typeof y.bias == "number" ? T = [y.bias, y.bias, y.bias, y.bias] : (T = [y.bias[0], y.bias[1], y.bias[2], 0], y.bias[3] !== void 0 && (T[3] = y.bias[3]));
-      let g = d * i;
-      if (r !== void 0 && (r.format !== void 0 && l === 4 && r.format !== "RGBA" || l === 3 && r.format !== "RGB" && r.format !== "BGR")) throw new Error("Tensor format doesn't match input tensor dims");
-      let v = 4, S = 0, C = 1, R = 2, H = 3, U = 0, M = g, Y = g * 2, O = -1;
-      m === "RGBA" ? (U = 0, M = g, Y = g * 2, O = g * 3) : m === "RGB" ? (U = 0, M = g, Y = g * 2) : m === "RBG" && (U = 0, Y = g, M = g * 2), f = s.createImageData(i, d);
-      for (let W = 0; W < d * i; S += v, C += v, R += v, H += v, W++) f.data[S] = (a.data[U++] - T[0]) * w[0], f.data[C] = (a.data[M++] - T[1]) * w[1], f.data[R] = (a.data[Y++] - T[2]) * w[2], f.data[H] = O === -1 ? 255 : (a.data[O++] - T[3]) * w[3];
-    } else throw new Error("Can not access image data");
-    return f;
-  };
-});
-var Jr;
-var Ba;
-var Ma;
-var Ca;
-var Ua;
-var Da;
-var Pa = k(() => {
-  "use strict";
-  Vt();
-  Jr = (a, r) => {
-    if (a === void 0) throw new Error("Image buffer must be defined");
-    if (r.height === void 0 || r.width === void 0) throw new Error("Image height and width must be defined");
-    if (r.tensorLayout === "NHWC") throw new Error("NHWC Tensor layout is not supported yet");
-    let { height: s, width: f } = r, i = r.norm ?? { mean: 255, bias: 0 }, d, l;
-    typeof i.mean == "number" ? d = [i.mean, i.mean, i.mean, i.mean] : d = [i.mean[0], i.mean[1], i.mean[2], i.mean[3] ?? 255], typeof i.bias == "number" ? l = [i.bias, i.bias, i.bias, i.bias] : l = [i.bias[0], i.bias[1], i.bias[2], i.bias[3] ?? 0];
-    let m = r.format !== void 0 ? r.format : "RGBA", y = r.tensorFormat !== void 0 && r.tensorFormat !== void 0 ? r.tensorFormat : "RGB", w = s * f, T = y === "RGBA" ? new Float32Array(w * 4) : new Float32Array(w * 3), g = 4, v = 0, S = 1, C = 2, R = 3, H = 0, U = w, M = w * 2, Y = -1;
-    m === "RGB" && (g = 3, v = 0, S = 1, C = 2, R = -1), y === "RGBA" ? Y = w * 3 : y === "RBG" ? (H = 0, M = w, U = w * 2) : y === "BGR" && (M = 0, U = w, H = w * 2);
-    for (let W = 0; W < w; W++, v += g, C += g, S += g, R += g) T[H++] = (a[v] + l[0]) / d[0], T[U++] = (a[S] + l[1]) / d[1], T[M++] = (a[C] + l[2]) / d[2], Y !== -1 && R !== -1 && (T[Y++] = (a[R] + l[3]) / d[3]);
-    return y === "RGBA" ? new le("float32", T, [1, 4, s, f]) : new le("float32", T, [1, 3, s, f]);
-  }, Ba = async (a, r) => {
-    let s = typeof HTMLImageElement < "u" && a instanceof HTMLImageElement, f = typeof ImageData < "u" && a instanceof ImageData, i = typeof ImageBitmap < "u" && a instanceof ImageBitmap, d = typeof a == "string", l, m = r ?? {}, y = () => {
-      if (typeof document < "u") return document.createElement("canvas");
-      if (typeof OffscreenCanvas < "u") return new OffscreenCanvas(1, 1);
-      throw new Error("Canvas is not supported");
-    }, w = (T) => typeof HTMLCanvasElement < "u" && T instanceof HTMLCanvasElement || T instanceof OffscreenCanvas ? T.getContext("2d") : null;
-    if (s) {
-      let T = y();
-      T.width = a.width, T.height = a.height;
-      let g = w(T);
-      if (g != null) {
-        let v = a.height, S = a.width;
-        if (r !== void 0 && r.resizedHeight !== void 0 && r.resizedWidth !== void 0 && (v = r.resizedHeight, S = r.resizedWidth), r !== void 0) {
-          if (m = r, r.tensorFormat !== void 0) throw new Error("Image input config format must be RGBA for HTMLImageElement");
-          m.tensorFormat = "RGBA", m.height = v, m.width = S;
-        } else m.tensorFormat = "RGBA", m.height = v, m.width = S;
-        g.drawImage(a, 0, 0), l = g.getImageData(0, 0, S, v).data;
-      } else throw new Error("Can not access image data");
-    } else if (f) {
-      let T, g;
-      if (r !== void 0 && r.resizedWidth !== void 0 && r.resizedHeight !== void 0 ? (T = r.resizedHeight, g = r.resizedWidth) : (T = a.height, g = a.width), r !== void 0 && (m = r), m.format = "RGBA", m.height = T, m.width = g, r !== void 0) {
-        let v = y();
-        v.width = g, v.height = T;
-        let S = w(v);
-        if (S != null) S.putImageData(a, 0, 0), l = S.getImageData(0, 0, g, T).data;
-        else throw new Error("Can not access image data");
-      } else l = a.data;
-    } else if (i) {
-      if (r === void 0) throw new Error("Please provide image config with format for Imagebitmap");
-      let T = y();
-      T.width = a.width, T.height = a.height;
-      let g = w(T);
-      if (g != null) {
-        let v = a.height, S = a.width;
-        return g.drawImage(a, 0, 0, S, v), l = g.getImageData(0, 0, S, v).data, m.height = v, m.width = S, Jr(l, m);
-      } else throw new Error("Can not access image data");
-    } else {
-      if (d) return new Promise((T, g) => {
-        let v = y(), S = w(v);
-        if (!a || !S) return g();
-        let C = new Image();
-        C.crossOrigin = "Anonymous", C.src = a, C.onload = () => {
-          v.width = C.width, v.height = C.height, S.drawImage(C, 0, 0, v.width, v.height);
-          let R = S.getImageData(0, 0, v.width, v.height);
-          m.height = v.height, m.width = v.width, T(Jr(R.data, m));
-        };
-      });
-      throw new Error("Input data provided is not supported - aborted tensor creation");
-    }
-    if (l !== void 0) return Jr(l, m);
-    throw new Error("Input data provided is not supported - aborted tensor creation");
-  }, Ma = (a, r) => {
-    let { width: s, height: f, download: i, dispose: d } = r, l = [1, f, s, 4];
-    return new le({ location: "texture", type: "float32", texture: a, dims: l, download: i, dispose: d });
-  }, Ca = (a, r) => {
-    let { dataType: s, dims: f, download: i, dispose: d } = r;
-    return new le({ location: "gpu-buffer", type: s ?? "float32", gpuBuffer: a, dims: f, download: i, dispose: d });
-  }, Ua = (a, r) => {
-    let { dataType: s, dims: f, download: i, dispose: d } = r;
-    return new le({ location: "ml-tensor", type: s ?? "float32", mlTensor: a, dims: f, download: i, dispose: d });
-  }, Da = (a, r, s) => new le({ location: "cpu-pinned", type: a, data: r, dims: s ?? [r.length] });
-});
-var et;
-var It;
-var _a;
-var Ra;
-var Na = k(() => {
-  "use strict";
-  et = /* @__PURE__ */ new Map([["float32", Float32Array], ["uint8", Uint8Array], ["int8", Int8Array], ["uint16", Uint16Array], ["int16", Int16Array], ["int32", Int32Array], ["bool", Uint8Array], ["float64", Float64Array], ["uint32", Uint32Array], ["int4", Uint8Array], ["uint4", Uint8Array]]), It = /* @__PURE__ */ new Map([[Float32Array, "float32"], [Uint8Array, "uint8"], [Int8Array, "int8"], [Uint16Array, "uint16"], [Int16Array, "int16"], [Int32Array, "int32"], [Float64Array, "float64"], [Uint32Array, "uint32"]]), _a = false, Ra = () => {
-    if (!_a) {
-      _a = true;
-      let a = typeof BigInt64Array < "u" && BigInt64Array.from, r = typeof BigUint64Array < "u" && BigUint64Array.from, s = globalThis.Float16Array, f = typeof s < "u" && s.from;
-      a && (et.set("int64", BigInt64Array), It.set(BigInt64Array, "int64")), r && (et.set("uint64", BigUint64Array), It.set(BigUint64Array, "uint64")), f ? (et.set("float16", s), It.set(s, "float16")) : et.set("float16", Uint16Array);
-    }
-  };
-});
-var ka;
-var Wa;
-var Fa = k(() => {
-  "use strict";
-  Vt();
-  ka = (a) => {
-    let r = 1;
-    for (let s = 0; s < a.length; s++) {
-      let f = a[s];
-      if (typeof f != "number" || !Number.isSafeInteger(f)) throw new TypeError(`dims[${s}] must be an integer, got: ${f}`);
-      if (f < 0) throw new RangeError(`dims[${s}] must be a non-negative integer, got: ${f}`);
-      r *= f;
-    }
-    return r;
-  }, Wa = (a, r) => {
-    switch (a.location) {
-      case "cpu":
-        return new le(a.type, a.data, r);
-      case "cpu-pinned":
-        return new le({ location: "cpu-pinned", data: a.data, type: a.type, dims: r });
-      case "texture":
-        return new le({ location: "texture", texture: a.texture, type: a.type, dims: r });
-      case "gpu-buffer":
-        return new le({ location: "gpu-buffer", gpuBuffer: a.gpuBuffer, type: a.type, dims: r });
-      case "ml-tensor":
-        return new le({ location: "ml-tensor", mlTensor: a.mlTensor, type: a.type, dims: r });
-      default:
-        throw new Error(`tensorReshape: tensor location ${a.location} is not supported`);
-    }
-  };
-});
-var le;
-var Vt = k(() => {
-  "use strict";
-  Oa();
-  Pa();
-  Na();
-  Fa();
-  le = class {
-    constructor(r, s, f) {
-      Ra();
-      let i, d;
-      if (typeof r == "object" && "location" in r) switch (this.dataLocation = r.location, i = r.type, d = r.dims, r.location) {
-        case "cpu-pinned": {
-          let m = et.get(i);
-          if (!m) throw new TypeError(`unsupported type "${i}" to create tensor from pinned buffer`);
-          if (!(r.data instanceof m)) throw new TypeError(`buffer should be of type ${m.name}`);
-          this.cpuData = r.data;
-          break;
-        }
-        case "texture": {
-          if (i !== "float32") throw new TypeError(`unsupported type "${i}" to create tensor from texture`);
-          this.gpuTextureData = r.texture, this.downloader = r.download, this.disposer = r.dispose;
-          break;
-        }
-        case "gpu-buffer": {
-          if (i !== "float32" && i !== "float16" && i !== "int32" && i !== "int64" && i !== "uint32" && i !== "uint8" && i !== "bool" && i !== "uint4" && i !== "int4") throw new TypeError(`unsupported type "${i}" to create tensor from gpu buffer`);
-          this.gpuBufferData = r.gpuBuffer, this.downloader = r.download, this.disposer = r.dispose;
-          break;
-        }
-        case "ml-tensor": {
-          if (i !== "float32" && i !== "float16" && i !== "int32" && i !== "int64" && i !== "uint32" && i !== "uint64" && i !== "int8" && i !== "uint8" && i !== "bool" && i !== "uint4" && i !== "int4") throw new TypeError(`unsupported type "${i}" to create tensor from MLTensor`);
-          this.mlTensorData = r.mlTensor, this.downloader = r.download, this.disposer = r.dispose;
-          break;
-        }
-        default:
-          throw new Error(`Tensor constructor: unsupported location '${this.dataLocation}'`);
-      }
-      else {
-        let m, y;
-        if (typeof r == "string") if (i = r, y = f, r === "string") {
-          if (!Array.isArray(s)) throw new TypeError("A string tensor's data must be a string array.");
-          m = s;
-        } else {
-          let w = et.get(r);
-          if (w === void 0) throw new TypeError(`Unsupported tensor type: ${r}.`);
-          if (Array.isArray(s)) {
-            if (r === "float16" && w === Uint16Array || r === "uint4" || r === "int4") throw new TypeError(`Creating a ${r} tensor from number array is not supported. Please use ${w.name} as data.`);
-            r === "uint64" || r === "int64" ? m = w.from(s, BigInt) : m = w.from(s);
-          } else if (s instanceof w) m = s;
-          else if (s instanceof Uint8ClampedArray) if (r === "uint8") m = Uint8Array.from(s);
-          else throw new TypeError("A Uint8ClampedArray tensor's data must be type of uint8");
-          else if (r === "float16" && s instanceof Uint16Array && w !== Uint16Array) m = new globalThis.Float16Array(s.buffer, s.byteOffset, s.length);
-          else throw new TypeError(`A ${i} tensor's data must be type of ${w}`);
-        }
-        else if (y = s, Array.isArray(r)) {
-          if (r.length === 0) throw new TypeError("Tensor type cannot be inferred from an empty array.");
-          let w = typeof r[0];
-          if (w === "string") i = "string", m = r;
-          else if (w === "boolean") i = "bool", m = Uint8Array.from(r);
-          else throw new TypeError(`Invalid element type of data array: ${w}.`);
-        } else if (r instanceof Uint8ClampedArray) i = "uint8", m = Uint8Array.from(r);
-        else {
-          let w = It.get(r.constructor);
-          if (w === void 0) throw new TypeError(`Unsupported type for tensor data: ${r.constructor}.`);
-          i = w, m = r;
-        }
-        if (y === void 0) y = [m.length];
-        else if (!Array.isArray(y)) throw new TypeError("A tensor's dims must be a number array");
-        d = y, this.cpuData = m, this.dataLocation = "cpu";
-      }
-      let l = ka(d);
-      if (this.cpuData && l !== this.cpuData.length && !((i === "uint4" || i === "int4") && Math.ceil(l / 2) === this.cpuData.length)) throw new Error(`Tensor's size(${l}) does not match data length(${this.cpuData.length}).`);
-      this.type = i, this.dims = d, this.size = l;
-    }
-    static async fromImage(r, s) {
-      return Ba(r, s);
-    }
-    static fromTexture(r, s) {
-      return Ma(r, s);
-    }
-    static fromGpuBuffer(r, s) {
-      return Ca(r, s);
-    }
-    static fromMLTensor(r, s) {
-      return Ua(r, s);
-    }
-    static fromPinnedBuffer(r, s, f) {
-      return Da(r, s, f);
-    }
-    toDataURL(r) {
-      return xa(this, r);
-    }
-    toImageData(r) {
-      return La(this, r);
-    }
-    get data() {
-      if (this.ensureValid(), !this.cpuData) throw new Error("The data is not on CPU. Use `getData()` to download GPU data to CPU, or use `texture` or `gpuBuffer` property to access the GPU data directly.");
-      return this.cpuData;
-    }
-    get location() {
-      return this.dataLocation;
-    }
-    get texture() {
-      if (this.ensureValid(), !this.gpuTextureData) throw new Error("The data is not stored as a WebGL texture.");
-      return this.gpuTextureData;
-    }
-    get gpuBuffer() {
-      if (this.ensureValid(), !this.gpuBufferData) throw new Error("The data is not stored as a WebGPU buffer.");
-      return this.gpuBufferData;
-    }
-    get mlTensor() {
-      if (this.ensureValid(), !this.mlTensorData) throw new Error("The data is not stored as a WebNN MLTensor.");
-      return this.mlTensorData;
-    }
-    async getData(r) {
-      switch (this.ensureValid(), this.dataLocation) {
-        case "cpu":
-        case "cpu-pinned":
-          return this.data;
-        case "texture":
-        case "gpu-buffer":
-        case "ml-tensor": {
-          if (!this.downloader) throw new Error("The current tensor is not created with a specified data downloader.");
-          if (this.isDownloading) throw new Error("The current tensor is being downloaded.");
-          try {
-            this.isDownloading = true;
-            let s = await this.downloader();
-            return this.downloader = void 0, this.dataLocation = "cpu", this.cpuData = s, r && this.disposer && (this.disposer(), this.disposer = void 0), s;
-          } finally {
-            this.isDownloading = false;
-          }
-        }
-        default:
-          throw new Error(`cannot get data from location: ${this.dataLocation}`);
-      }
-    }
-    dispose() {
-      if (this.isDownloading) throw new Error("The current tensor is being downloaded.");
-      this.disposer && (this.disposer(), this.disposer = void 0), this.cpuData = void 0, this.gpuTextureData = void 0, this.gpuBufferData = void 0, this.mlTensorData = void 0, this.downloader = void 0, this.isDownloading = void 0, this.dataLocation = "none";
-    }
-    ensureValid() {
-      if (this.dataLocation === "none") throw new Error("The tensor is disposed.");
-    }
-    reshape(r) {
-      if (this.ensureValid(), this.downloader || this.disposer) throw new Error("Cannot reshape a tensor that owns GPU resource.");
-      return Wa(this, r);
-    }
-  };
-});
-var Le;
-var Xr = k(() => {
-  "use strict";
-  Vt();
-  Le = le;
-});
-var Ga;
-var $a;
-var tt;
-var rt;
-var $e;
-var ze;
-var Qr = k(() => {
-  "use strict";
-  qr();
-  Ga = (a, r) => {
-    (typeof ie.trace > "u" ? !ie.wasm.trace : !ie.trace) || console.timeStamp(`${a}::ORT::${r}`);
-  }, $a = (a, r) => {
-    let s = new Error().stack?.split(/\r\n|\r|\n/g) || [], f = false;
-    for (let i = 0; i < s.length; i++) {
-      if (f && !s[i].includes("TRACE_FUNC")) {
-        let d = `FUNC_${a}::${s[i].trim().split(" ")[1]}`;
-        r && (d += `::${r}`), Ga("CPU", d);
-        return;
-      }
-      s[i].includes("TRACE_FUNC") && (f = true);
-    }
-  }, tt = (a) => {
-    (typeof ie.trace > "u" ? !ie.wasm.trace : !ie.trace) || $a("BEGIN", a);
-  }, rt = (a) => {
-    (typeof ie.trace > "u" ? !ie.wasm.trace : !ie.trace) || $a("END", a);
-  }, $e = (a) => {
-    (typeof ie.trace > "u" ? !ie.wasm.trace : !ie.trace) || console.time(`ORT::${a}`);
-  }, ze = (a) => {
-    (typeof ie.trace > "u" ? !ie.wasm.trace : !ie.trace) || console.timeEnd(`ORT::${a}`);
-  };
-});
-var jt;
-var za = k(() => {
-  "use strict";
-  Yr();
-  Xr();
-  Qr();
-  jt = class a {
-    constructor(r) {
-      this.handler = r;
-    }
-    async run(r, s, f) {
-      tt(), $e("InferenceSession.run");
-      let i = {}, d = {};
-      if (typeof r != "object" || r === null || r instanceof Le || Array.isArray(r)) throw new TypeError("'feeds' must be an object that use input names as keys and OnnxValue as corresponding values.");
-      let l = true;
-      if (typeof s == "object") {
-        if (s === null) throw new TypeError("Unexpected argument[1]: cannot be null.");
-        if (s instanceof Le) throw new TypeError("'fetches' cannot be a Tensor");
-        if (Array.isArray(s)) {
-          if (s.length === 0) throw new TypeError("'fetches' cannot be an empty array.");
-          l = false;
-          for (let w of s) {
-            if (typeof w != "string") throw new TypeError("'fetches' must be a string array or an object.");
-            if (this.outputNames.indexOf(w) === -1) throw new RangeError(`'fetches' contains invalid output name: ${w}.`);
-            i[w] = null;
-          }
-          if (typeof f == "object" && f !== null) d = f;
-          else if (typeof f < "u") throw new TypeError("'options' must be an object.");
-        } else {
-          let w = false, T = Object.getOwnPropertyNames(s);
-          for (let g of this.outputNames) if (T.indexOf(g) !== -1) {
-            let v = s[g];
-            (v === null || v instanceof Le) && (w = true, l = false, i[g] = v);
-          }
-          if (w) {
-            if (typeof f == "object" && f !== null) d = f;
-            else if (typeof f < "u") throw new TypeError("'options' must be an object.");
-          } else d = s;
-        }
-      } else if (typeof s < "u") throw new TypeError("Unexpected argument[1]: must be 'fetches' or 'options'.");
-      for (let w of this.inputNames) if (typeof r[w] > "u") throw new Error(`input '${w}' is missing in 'feeds'.`);
-      if (l) for (let w of this.outputNames) i[w] = null;
-      let m = await this.handler.run(r, i, d), y = {};
-      for (let w in m) if (Object.hasOwnProperty.call(m, w)) {
-        let T = m[w];
-        T instanceof Le ? y[w] = T : y[w] = new Le(T.type, T.data, T.dims);
-      }
-      return ze("InferenceSession.run"), rt(), y;
-    }
-    async release() {
-      return this.handler.dispose();
-    }
-    static async create(r, s, f, i) {
-      tt(), $e("InferenceSession.create");
-      let d, l = {};
-      if (typeof r == "string") {
-        if (d = r, typeof s == "object" && s !== null) l = s;
-        else if (typeof s < "u") throw new TypeError("'options' must be an object.");
-      } else if (r instanceof Uint8Array) {
-        if (d = r, typeof s == "object" && s !== null) l = s;
-        else if (typeof s < "u") throw new TypeError("'options' must be an object.");
-      } else if (r instanceof ArrayBuffer || typeof SharedArrayBuffer < "u" && r instanceof SharedArrayBuffer) {
-        let T = r, g = 0, v = r.byteLength;
-        if (typeof s == "object" && s !== null) l = s;
-        else if (typeof s == "number") {
-          if (g = s, !Number.isSafeInteger(g)) throw new RangeError("'byteOffset' must be an integer.");
-          if (g < 0 || g >= T.byteLength) throw new RangeError(`'byteOffset' is out of range [0, ${T.byteLength}).`);
-          if (v = r.byteLength - g, typeof f == "number") {
-            if (v = f, !Number.isSafeInteger(v)) throw new RangeError("'byteLength' must be an integer.");
-            if (v <= 0 || g + v > T.byteLength) throw new RangeError(`'byteLength' is out of range (0, ${T.byteLength - g}].`);
-            if (typeof i == "object" && i !== null) l = i;
-            else if (typeof i < "u") throw new TypeError("'options' must be an object.");
-          } else if (typeof f < "u") throw new TypeError("'byteLength' must be a number.");
-        } else if (typeof s < "u") throw new TypeError("'options' must be an object.");
-        d = new Uint8Array(T, g, v);
-      } else throw new TypeError("Unexpected argument[0]: must be 'path' or 'buffer'.");
-      let [m, y] = await Ta(l), w = await m.createInferenceSessionHandler(d, y);
-      return ze("InferenceSession.create"), rt(), new a(w);
-    }
-    startProfiling() {
-      this.handler.startProfiling();
-    }
-    endProfiling() {
-      this.handler.endProfiling();
-    }
-    get inputNames() {
-      return this.handler.inputNames;
-    }
-    get outputNames() {
-      return this.handler.outputNames;
-    }
-    get inputMetadata() {
-      return this.handler.inputMetadata;
-    }
-    get outputMetadata() {
-      return this.handler.outputMetadata;
-    }
-  };
-});
-var qf;
-var Va = k(() => {
-  "use strict";
-  za();
-  qf = jt;
-});
-var ja = k(() => {
-  "use strict";
-});
-var Ha = k(() => {
-  "use strict";
-});
-var Ya = k(() => {
-  "use strict";
-});
-var qa = k(() => {
-  "use strict";
-});
-var Zr = {};
-At(Zr, { InferenceSession: () => qf, TRACE: () => Ga, TRACE_EVENT_BEGIN: () => $e, TRACE_EVENT_END: () => ze, TRACE_FUNC_BEGIN: () => tt, TRACE_FUNC_END: () => rt, Tensor: () => Le, env: () => K, registerBackend: () => Ke });
-var Ve = k(() => {
-  "use strict";
-  va();
-  Ia();
-  Va();
-  Xr();
-  ja();
-  Ha();
-  Qr();
-  Ya();
-  qa();
-});
-var Ht = k(() => {
-  "use strict";
-});
-var Za = {};
-At(Za, { default: () => Jf });
-var Xa;
-var Qa;
-var Jf;
-var Ka = k(() => {
-  "use strict";
-  Kr();
-  je();
-  Yt();
-  Xa = "ort-wasm-proxy-worker", Qa = globalThis.self?.name === Xa;
-  Qa && (self.onmessage = (a) => {
-    let { type: r, in: s } = a.data;
-    try {
-      switch (r) {
-        case "init-wasm":
-          qt(s.wasm).then(() => {
-            Jt(s).then(() => {
-              postMessage({ type: r });
-            }, (f) => {
-              postMessage({ type: r, err: f });
-            });
-          }, (f) => {
-            postMessage({ type: r, err: f });
-          });
-          break;
-        case "init-ep": {
-          let { epName: f, env: i } = s;
-          Xt(i, f).then(() => {
-            postMessage({ type: r });
-          }, (d) => {
-            postMessage({ type: r, err: d });
-          });
-          break;
-        }
-        case "copy-from": {
-          let { buffer: f } = s, i = xt(f);
-          postMessage({ type: r, out: i });
-          break;
-        }
-        case "create": {
-          let { model: f, options: i } = s;
-          Qt(f, i).then((d) => {
-            postMessage({ type: r, out: d });
-          }, (d) => {
-            postMessage({ type: r, err: d });
-          });
-          break;
-        }
-        case "release":
-          Zt(s), postMessage({ type: r });
-          break;
-        case "run": {
-          let { sessionId: f, inputIndices: i, inputs: d, outputIndices: l, options: m } = s;
-          Kt(f, i, d, l, new Array(l.length).fill(null), m).then((y) => {
-            y.some((w) => w[3] !== "cpu") ? postMessage({ type: r, err: "Proxy does not support non-cpu tensor location." }) : postMessage({ type: r, out: y }, tr([...d, ...y]));
-          }, (y) => {
-            postMessage({ type: r, err: y });
-          });
-          break;
-        }
-        case "end-profiling":
-          er(s), postMessage({ type: r });
-          break;
-        default:
-      }
-    } catch (f) {
-      postMessage({ type: r, err: f });
-    }
-  });
-  Jf = Qa ? null : (a) => new Worker(a ?? ge, { type: "module", name: Xa });
-});
-var ts = {};
-At(ts, { default: () => Xf });
-async function es(a = {}) {
-  var r = a, s = !!globalThis.window, f = !!globalThis.WorkerGlobalScope, i = f && self.name?.startsWith("em-pthread");
-  r.mountExternalData = (e, t) => {
-    e.startsWith("./") && (e = e.substring(2)), (r.Uc || (r.Uc = /* @__PURE__ */ new Map())).set(e, t);
-  }, r.unmountExternalData = () => {
-    delete r.Uc;
-  }, globalThis.SharedArrayBuffer ?? new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;
-  let d = () => {
-    let e = (t) => (...n) => {
-      let o = Me;
-      return n = t(...n), Me != o ? new Promise((u, c) => {
-        Lr = { resolve: u, reject: c };
-      }) : n;
-    };
-    (() => {
-      for (let t of ["_OrtAppendExecutionProvider", "_OrtCreateSession", "_OrtRun", "_OrtRunWithBinding", "_OrtBindInput"]) r[t] = e(r[t]);
-    })(), typeof jsepRunAsync < "u" && (r._OrtRun = jsepRunAsync(r._OrtRun), r._OrtRunWithBinding = jsepRunAsync(r._OrtRunWithBinding)), d = void 0;
-  };
-  r.asyncInit = () => {
-    d?.();
-  };
-  var l, m, y = (e, t) => {
-    throw t;
-  }, w = import.meta.url, T = "";
-  if (s || f) {
-    try {
-      T = new URL(".", w).href;
-    } catch {
-    }
-    f && (m = (e) => {
-      var t = new XMLHttpRequest();
-      return t.open("GET", e, false), t.responseType = "arraybuffer", t.send(null), new Uint8Array(t.response);
-    }), l = async (e) => {
-      if (oe(e)) return new Promise((n, o) => {
-        var u = new XMLHttpRequest();
-        u.open("GET", e, true), u.responseType = "arraybuffer", u.onload = () => {
-          u.status == 200 || u.status == 0 && u.response ? n(u.response) : o(u.status);
-        }, u.onerror = o, u.send(null);
-      });
-      var t = await fetch(e, { credentials: "same-origin" });
-      if (t.ok) return t.arrayBuffer();
-      throw Error(t.status + " : " + t.url);
-    };
-  }
-  var g, v, S, C, R, H, U = console.log.bind(console), M = console.error.bind(console), Y = U, O = M, W = false, oe = (e) => e.startsWith("file://");
-  function p() {
-    Fe.buffer != X.buffer && se();
-  }
-  if (i) {
-    let e = function(t) {
-      try {
-        var n = t.data, o = n.Oc;
-        if (o === "load") {
-          let u = [];
-          self.onmessage = (c) => u.push(c), H = () => {
-            postMessage({ Oc: "loaded" });
-            for (let c of u) e(c);
-            self.onmessage = e;
-          };
-          for (let c of n.ce) r[c] && !r[c].proxy || (r[c] = (...h) => {
-            postMessage({ Oc: "callHandler", be: c, args: h });
-          }, c == "print" && (Y = r[c]), c == "printErr" && (O = r[c]));
-          Fe = n.ie, se(), v = n.je, bt(), Gt();
-        } else if (o === "run") {
-          (function(u) {
-            var c = (p(), A)[u + 52 >>> 2 >>> 0];
-            u = (p(), A)[u + 56 >>> 2 >>> 0], Co(c, c - u), D(c);
-          })(n.Nc), Wr(n.Nc, 0, 0, 1, 0, 0), bn(), Ar(n.Nc), ne || (po(), ne = true);
-          try {
-            $s(n.ge, n.Wc);
-          } catch (u) {
-            if (u != "unwind") throw u;
-          }
-        } else n.target !== "setimmediate" && (o === "checkMailbox" ? ne && Dt() : o && (O(`worker: received unknown command ${o}`), O(n)));
-      } catch (u) {
-        throw xo(), u;
-      }
-    };
-    var vc = e, ne = false;
-    self.onunhandledrejection = (t) => {
-      throw t.reason || t;
-    }, self.onmessage = e;
-  }
-  var X, J, Ue, Q, x, A, _, ae, me, q, we, re = false;
-  function se() {
-    var e = Fe.buffer;
-    r.HEAP8 = X = new Int8Array(e), Ue = new Int16Array(e), r.HEAPU8 = J = new Uint8Array(e), Q = new Uint16Array(e), r.HEAP32 = x = new Int32Array(e), r.HEAPU32 = A = new Uint32Array(e), _ = new Float32Array(e), ae = new Float64Array(e), me = new BigInt64Array(e), q = new BigUint64Array(e);
-  }
-  function hr() {
-    re = true, i ? H() : ke._b();
-  }
-  function Te(e) {
-    throw O(e = "Aborted(" + e + ")"), W = true, e = new WebAssembly.RuntimeError(e + ". Build with -sASSERTIONS for more info."), R?.(e), e;
-  }
-  function Ye() {
-    return { a: { f: zs, J: Vs, k: js, p: Hs, l: Ys, sa: qs, b: Js, ca: Xs, Ja: Sn, q: Qs, da: Ln, Za: On, Fa: Bn, Ha: Mn, _a: Cn, Xa: Un, Qa: Dn, Wa: Pn, oa: _n, Ga: Rn, Xb: Nn, Ya: kn, Yb: Wn, db: Zs, Da: ei, Sb: ti, Qb: ni, Ca: ai, M: si, I: ii, Rb: ui, ja: hi, Tb: yi, Ta: bi, Vb: gi, Ka: Ti, Ob: vi, ka: Ei, Sa: Ar, ab: Si, U: Li, n: Ui, c: Er, rb: Di, w: Pi, L: _i, z: Ri, j: Ni, o: Yn, sb: ki, G: Wi, T: Fi, h: Gi, u: $i, m: zi, i: Vi, Na: ji, Oa: Hi, Pa: Yi, La: Qn, Ma: Zn, Pb: Kn, eb: Ji, cb: Zi, Y: Ki, qb: eu, la: tu, bb: Xi, fb: ru, $a: nu, Wb: ou, N: qi, gb: au, X: su, Ub: iu, nb: yu, C: bu, ra: wu, qa: gu, pb: Tu, W: vu, v: Eu, mb: Su, lb: Au, kb: Iu, ob: xu, jb: Lu, ib: Ou, hb: Bu, Ua: ao, Va: so, Ia: br, V: io, na: uo, Ra: fo, ma: co, Cb: Ff, xa: Pf, Db: Wf, ya: Df, F: Ef, e: ff, s: sf, x: af, B: gf, Fb: Mf, ba: Bf, D: lf, za: Cf, $: _f, ga: Of, Gb: Lf, Hb: xf, Ba: Sf, Aa: If2, Ib: Af, wa: kf, aa: Uf, d: uf, A: df, r: cf, Bb: Gf, t: mf, y: Tf, H: pf, E: hf, K: vf, R: Rf, ia: wf, _: Nf, Jb: bf, Kb: yf, g: Cu, a: Fe, Nb: qe, Eb: Uu, ha: Du, O: Pu, pa: _u, Lb: Ru, ta: Nu, Q: ku, yb: Wu, zb: Fu, ua: Gu, ea: $u, P: zu, Ea: Vu, va: ju, Z: Hu, wb: Yu, Zb: qu, S: Ju, Ab: Xu, tb: Qu, ub: Ku, vb: ef, fa: tf, xb: rf, Mb: nf } };
-  }
-  async function bt() {
-    function e(o, u) {
-      var c = ke = o.exports;
-      o = {};
-      for (let [h, b] of Object.entries(c)) typeof b == "function" ? (c = Ai(b), o[h] = c) : o[h] = b;
-      return ke = o, ke = function() {
-        var h = ke, b = (I) => (F) => I(F) >>> 0, E = (I) => () => I() >>> 0;
-        return (h = Object.assign({}, h)).$b = b(h.$b), h.Cc = E(h.Cc), h.Ec = b(h.Ec), h.rd = /* @__PURE__ */ ((I) => (F, j) => I(F, j) >>> 0)(h.rd), h.wd = b(h.wd), h.xd = E(h.xd), h.Bd = b(h.Bd), h;
-      }(), hn.push(ke.id), lo = (o = ke).$b, po = o.ac, r._OrtInit = o.bc, r._OrtGetLastError = o.cc, r._OrtCreateSessionOptions = o.dc, r._OrtAppendExecutionProvider = o.ec, r._OrtAddFreeDimensionOverride = o.fc, r._OrtAddSessionConfigEntry = o.gc, r._OrtReleaseSessionOptions = o.hc, r._OrtCreateSession = o.ic, r._OrtReleaseSession = o.jc, r._OrtGetInputOutputCount = o.kc, r._OrtGetInputOutputMetadata = o.lc, r._OrtFree = o.mc, r._OrtCreateTensor = o.nc, r._OrtGetTensorData = o.oc, r._OrtReleaseTensor = o.pc, r._OrtCreateRunOptions = o.qc, r._OrtAddRunConfigEntry = o.rc, r._OrtReleaseRunOptions = o.sc, r._OrtCreateBinding = o.tc, r._OrtBindInput = o.uc, r._OrtBindOutput = o.vc, r._OrtClearBoundOutputs = o.wc, r._OrtReleaseBinding = o.xc, r._OrtRunWithBinding = o.yc, r._OrtRun = o.zc, r._OrtEndProfiling = o.Ac, Dr = r._OrtGetWebGpuDevice = o.Bc, Wt = o.Cc, xe = r._free = o.Dc, pt = r._malloc = o.Ec, mo = r._wgpuBufferRelease = o.Fc, ho = r._wgpuCreateInstance = o.Gc, yo = o.Hc, bo = o.Ic, wo = o.Jc, go = o.Kc, To = o.Lc, vo = o.Pc, Eo = o.Zc, So = o._c, Ao = o.$c, Pr = o.bd, _r = o.cd, Rr = o.dd, Nr = o.ed, Et = o.fd, kr = o.gd, Io = o.hd, Wr = o.kd, xo = o.ld, Lo = o.md, Oo = o.nd, Fr = o.od, Bo = o.pd, Mo = o.qd, Gr = o.rd, N = o.sd, St = o.td, Co = o.ud, D = o.vd, Ft = o.wd, P = o.xd, Uo = o.yd, $r = o.zd, Do = o.Ad, Po = o.Bd, _o = o.Cd, zr = o.Dd, Ro = o.Ed, No = o.Fd, ko = o.Gd, Wo = o.Hd, Fo = o.Id, Go = o.Jd, $o = o.Kd, zo = o.Ld, Vo = o.Md, jo = o.Nd, Ho = o.Od, Yo = o.Pd, qo = o.Qd, Jo = o.Rd, Xo = o.Td, Qo = o.Ud, Zo = o.Vd, Ko = o.Wd, ea = o.Yd, ta = o.Zd, ra = o._d, na = o.$d, oa = o.ae, aa = o.oe, sa = o.pe, ia = o.qe, ua = o.re, fa = o.se, ca = o.te, da = o.ue, la = o.ve, pa = o.we, ma = o.xe, ha = o.ye, ya = o.Ye, ba = o.Ze, wa = o._e, ga = o.$e, v = u, ke;
-    }
-    var t, n = Ye();
-    return r.instantiateWasm ? new Promise((o) => {
-      r.instantiateWasm(n, (u, c) => {
-        o(e(u, c));
-      });
-    }) : i ? e(new WebAssembly.Instance(v, Ye()), v) : (we ??= r.locateFile ? r.locateFile ? r.locateFile("ort-wasm-simd-threaded.asyncify.wasm", T) : T + "ort-wasm-simd-threaded.asyncify.wasm" : new URL("ort-wasm-simd-threaded.asyncify.wasm", import.meta.url).href, t = await async function(o) {
-      var u = we;
-      if (!g && !oe(u)) try {
-        var c = fetch(u, { credentials: "same-origin" });
-        return await WebAssembly.instantiateStreaming(c, o);
-      } catch (h) {
-        O(`wasm streaming compile failed: ${h}`), O("falling back to ArrayBuffer instantiation");
-      }
-      return async function(h, b) {
-        try {
-          var E = await async function(I) {
-            if (!g) try {
-              var F = await l(I);
-              return new Uint8Array(F);
-            } catch {
-            }
-            if (I == we && g) I = new Uint8Array(g);
-            else {
-              if (!m) throw "both async and sync fetching of the wasm failed";
-              I = m(I);
-            }
-            return I;
-          }(h);
-          return await WebAssembly.instantiate(E, b);
-        } catch (I) {
-          O(`failed to asynchronously prepare wasm: ${I}`), Te(I);
-        }
-      }(u, o);
-    }(n), e(t.instance, t.module));
-  }
-  class wt {
-    name = "ExitStatus";
-    constructor(t) {
-      this.message = `Program terminated with exit(${t})`, this.status = t;
-    }
-  }
-  var Se = (e) => {
-    e.terminate(), e.onmessage = () => {
-    };
-  }, Ae = [], Oe = 0, ee = null, Z = (e) => {
-    We.length == 0 && (gn(), wn(We[0]));
-    var t = We.pop();
-    if (!t) return 6;
-    gt.push(t), Je[e.Nc] = t, t.Nc = e.Nc;
-    var n = { Oc: "run", ge: e.fe, Wc: e.Wc, Nc: e.Nc };
-    return t.postMessage(n, e.Yc), 0;
-  }, G = 0, V = (e, t, ...n) => {
-    var o, u = 16 * n.length, c = P(), h = Ft(u), b = h >>> 3;
-    for (o of n) typeof o == "bigint" ? ((p(), me)[b++ >>> 0] = 1n, (p(), me)[b++ >>> 0] = o) : ((p(), me)[b++ >>> 0] = 0n, (p(), ae)[b++ >>> 0] = o);
-    return e = Lo(e, 0, u, h, t), D(c), e;
-  };
-  function qe(e) {
-    if (i) return V(0, 1, e);
-    if (S = e, !(0 < G)) {
-      for (var t of gt) Se(t);
-      for (t of We) Se(t);
-      We = [], gt = [], Je = {}, W = true;
-    }
-    y(0, new wt(e));
-  }
-  function yr(e) {
-    if (i) return V(1, 0, e);
-    br(e);
-  }
-  var br = (e) => {
-    if (S = e, i) throw yr(e), "unwind";
-    qe(e);
-  }, We = [], gt = [], hn = [], Je = {}, yn = (e) => {
-    var t = e.Nc;
-    delete Je[t], We.push(e), gt.splice(gt.indexOf(e), 1), e.Nc = 0, Oo(t);
-  };
-  function bn() {
-    hn.forEach((e) => e());
-  }
-  var wn = (e) => new Promise((t) => {
-    e.onmessage = (u) => {
-      var c = u.data;
-      if (u = c.Oc, c.Vc && c.Vc != Wt()) {
-        var h = Je[c.Vc];
-        h ? h.postMessage(c, c.Yc) : O(`Internal error! Worker sent a message "${u}" to target pthread ${c.Vc}, but that thread no longer exists!`);
-      } else u === "checkMailbox" ? Dt() : u === "spawnThread" ? Z(c) : u === "cleanupThread" ? he(() => {
-        yn(Je[c.he]);
-      }) : u === "loaded" ? (e.loaded = true, t(e)) : c.target === "setimmediate" ? e.postMessage(c) : u === "uncaughtException" ? e.onerror(c.error) : u === "callHandler" ? r[c.be](...c.args) : u && O(`worker sent an unknown command ${u}`);
-    }, e.onerror = (u) => {
-      throw O(`worker sent an error! ${u.filename}:${u.lineno}: ${u.message}`), u;
-    };
-    var n, o = [];
-    for (n of []) r.propertyIsEnumerable(n) && o.push(n);
-    e.postMessage({ Oc: "load", ce: o, ie: Fe, je: v });
-  });
-  function gn() {
-    var e = new Worker((() => {
-      let t = URL;
-      return import.meta.url > "file:" && import.meta.url < "file;" ? new t("ort.webgpu.bundle.min.mjs", import.meta.url) : new URL(import.meta.url);
-    })(), { type: "module", workerData: "em-pthread", name: "em-pthread" });
-    We.push(e);
-  }
-  var Fe, $s = (e, t) => {
-    G = 0, e = zr(e, t), 0 < G ? S = e : Fr(e);
-  }, Ct = [], Ut = 0, ce = (e) => -9007199254740992 > e || 9007199254740992 < e ? NaN : Number(e);
-  function zs(e) {
-    var t = new wr(e >>>= 0);
-    return (p(), X)[t.Qc + 12 >>> 0] == 0 && (Tn(t, true), Ut--), vn(t, false), Ct.push(t), Po(e);
-  }
-  var ft = 0, Vs = () => {
-    N(0, 0);
-    var e = Ct.pop();
-    Uo(e.Xc), ft = 0;
-  };
-  function Tn(e, t) {
-    t = t ? 1 : 0, (p(), X)[e.Qc + 12 >>> 0] = t;
-  }
-  function vn(e, t) {
-    t = t ? 1 : 0, (p(), X)[e.Qc + 13 >>> 0] = t;
-  }
-  class wr {
-    constructor(t) {
-      this.Xc = t, this.Qc = t - 24;
-    }
-  }
-  var gr = (e) => {
-    var t = ft;
-    if (!t) return St(0), 0;
-    var n = new wr(t);
-    (p(), A)[n.Qc + 16 >>> 2 >>> 0] = t;
-    var o = (p(), A)[n.Qc + 4 >>> 2 >>> 0];
-    if (!o) return St(0), t;
-    for (var u of e) {
-      if (u === 0 || u === o) break;
-      if (Do(u, o, n.Qc + 16)) return St(u), t;
-    }
-    return St(o), t;
-  };
-  function js() {
-    return gr([]);
-  }
-  function Hs(e) {
-    return gr([e >>> 0]);
-  }
-  function Ys(e, t, n, o) {
-    return gr([e >>> 0, t >>> 0, n >>> 0, o >>> 0]);
-  }
-  var qs = () => {
-    var e = Ct.pop();
-    e || Te("no exception to throw");
-    var t = e.Xc;
-    throw (p(), X)[e.Qc + 13 >>> 0] == 0 && (Ct.push(e), vn(e, true), Tn(e, false), Ut++), $r(t), ft = t;
-  };
-  function Js(e, t, n) {
-    var o = new wr(e >>>= 0);
-    throw t >>>= 0, n >>>= 0, (p(), A)[o.Qc + 16 >>> 2 >>> 0] = 0, (p(), A)[o.Qc + 4 >>> 2 >>> 0] = t, (p(), A)[o.Qc + 8 >>> 2 >>> 0] = n, $r(e), Ut++, ft = e;
-  }
-  var Xs = () => Ut;
-  function En(e, t, n, o) {
-    return i ? V(2, 1, e, t, n, o) : Sn(e, t, n, o);
-  }
-  function Sn(e, t, n, o) {
-    if (e >>>= 0, t >>>= 0, n >>>= 0, o >>>= 0, !globalThis.SharedArrayBuffer) return 6;
-    var u = [];
-    return i && u.length === 0 ? En(e, t, n, o) : (e = { fe: n, Nc: e, Wc: o, Yc: u }, i ? (e.Oc = "spawnThread", postMessage(e, u), 0) : Z(e));
-  }
-  function Qs(e) {
-    throw ft ||= e >>> 0, ft;
-  }
-  var An = globalThis.TextDecoder && new TextDecoder(), In = (e, t, n, o) => {
-    if (n = t + n, o) return n;
-    for (; e[t] && !(t >= n); ) ++t;
-    return t;
-  }, xn = (e, t = 0, n, o) => {
-    if (16 < (n = In(e, t >>>= 0, n, o)) - t && e.buffer && An) return An.decode(e.buffer instanceof ArrayBuffer ? e.subarray(t, n) : e.slice(t, n));
-    for (o = ""; t < n; ) {
-      var u = e[t++];
-      if (128 & u) {
-        var c = 63 & e[t++];
-        if ((224 & u) == 192) o += String.fromCharCode((31 & u) << 6 | c);
-        else {
-          var h = 63 & e[t++];
-          65536 > (u = (240 & u) == 224 ? (15 & u) << 12 | c << 6 | h : (7 & u) << 18 | c << 12 | h << 6 | 63 & e[t++]) ? o += String.fromCharCode(u) : (u -= 65536, o += String.fromCharCode(55296 | u >> 10, 56320 | 1023 & u));
-        }
-      } else o += String.fromCharCode(u);
-    }
-    return o;
-  }, ct = (e, t, n) => (e >>>= 0) ? xn((p(), J), e, t, n) : "";
-  function Ln(e, t, n) {
-    return i ? V(3, 1, e, t, n) : 0;
-  }
-  function On(e, t) {
-    if (i) return V(4, 1, e, t);
-  }
-  function Bn(e, t) {
-    if (i) return V(5, 1, e, t);
-  }
-  function Mn(e, t, n) {
-    if (i) return V(6, 1, e, t, n);
-  }
-  function Cn(e, t, n) {
-    return i ? V(7, 1, e, t, n) : 0;
-  }
-  function Un(e, t) {
-    if (i) return V(8, 1, e, t);
-  }
-  function Dn(e, t, n) {
-    if (i) return V(9, 1, e, t, n);
-  }
-  function Pn(e, t, n, o) {
-    if (i) return V(10, 1, e, t, n, o);
-  }
-  function _n(e, t, n, o) {
-    if (i) return V(11, 1, e, t, n, o);
-  }
-  function Rn(e, t, n, o) {
-    if (i) return V(12, 1, e, t, n, o);
-  }
-  function Nn(e) {
-    if (i) return V(13, 1, e);
-  }
-  function kn(e, t) {
-    if (i) return V(14, 1, e, t);
-  }
-  function Wn(e, t, n) {
-    if (i) return V(15, 1, e, t, n);
-  }
-  var Zs = () => Te(""), Be = (e) => {
-    e >>>= 0;
-    for (var t = ""; ; ) {
-      var n = (p(), J)[e++ >>> 0];
-      if (!n) return t;
-      t += String.fromCharCode(n);
-    }
-  }, Tr = {}, vr = {}, Ks = {}, dt = class extends Error {
-    constructor(e) {
-      super(e), this.name = "BindingError";
-    }
-  };
-  function De(e, t, n = {}) {
-    return function(o, u, c = {}) {
-      var h = u.name;
-      if (!o) throw new dt(`type "${h}" must have a positive integer typeid pointer`);
-      if (vr.hasOwnProperty(o)) {
-        if (c.de) return;
-        throw new dt(`Cannot register type '${h}' twice`);
-      }
-      vr[o] = u, delete Ks[o], Tr.hasOwnProperty(o) && (u = Tr[o], delete Tr[o], u.forEach((b) => b()));
-    }(e, t, n);
-  }
-  var Fn = (e, t, n) => {
-    switch (t) {
-      case 1:
-        return n ? (o) => (p(), X)[o >>> 0] : (o) => (p(), J)[o >>> 0];
-      case 2:
-        return n ? (o) => (p(), Ue)[o >>> 1 >>> 0] : (o) => (p(), Q)[o >>> 1 >>> 0];
-      case 4:
-        return n ? (o) => (p(), x)[o >>> 2 >>> 0] : (o) => (p(), A)[o >>> 2 >>> 0];
-      case 8:
-        return n ? (o) => (p(), me)[o >>> 3 >>> 0] : (o) => (p(), q)[o >>> 3 >>> 0];
-      default:
-        throw new TypeError(`invalid integer width (${t}): ${e}`);
-    }
-  };
-  function ei(e, t, n, o, u) {
-    e >>>= 0, n >>>= 0, t = Be(t >>> 0);
-    let c = (h) => h;
-    if (o = o === 0n) {
-      let h = 8 * n;
-      c = (b) => BigInt.asUintN(h, b), u = c(u);
-    }
-    De(e, { name: t, Mc: c, Sc: (h, b) => (typeof b == "number" && (b = BigInt(b)), b), Rc: Fn(t, n, !o), Tc: null });
-  }
-  function ti(e, t, n, o) {
-    De(e >>>= 0, { name: t = Be(t >>> 0), Mc: function(u) {
-      return !!u;
-    }, Sc: function(u, c) {
-      return c ? n : o;
-    }, Rc: function(u) {
-      return this.Mc((p(), J)[u >>> 0]);
-    }, Tc: null });
-  }
-  var Gn = [], Xe = [0, 1, , 1, null, 1, true, 1, false, 1];
-  function Er(e) {
-    9 < (e >>>= 0) && --Xe[e + 1] == 0 && (Xe[e] = void 0, Gn.push(e));
-  }
-  var ve = (e) => {
-    if (!e) throw new dt(`Cannot use deleted val. handle = ${e}`);
-    return Xe[e];
-  }, Ie = (e) => {
-    switch (e) {
-      case void 0:
-        return 2;
-      case null:
-        return 4;
-      case true:
-        return 6;
-      case false:
-        return 8;
-      default:
-        let t = Gn.pop() || Xe.length;
-        return Xe[t] = e, Xe[t + 1] = 1, t;
-    }
-  };
-  function Sr(e) {
-    return this.Mc((p(), A)[e >>> 2 >>> 0]);
-  }
-  var ri = { name: "emscripten::val", Mc: (e) => {
-    var t = ve(e);
-    return Er(e), t;
-  }, Sc: (e, t) => Ie(t), Rc: Sr, Tc: null };
-  function ni(e) {
-    return De(e >>> 0, ri);
-  }
-  var oi = (e, t) => {
-    switch (t) {
-      case 4:
-        return function(n) {
-          return this.Mc((p(), _)[n >>> 2 >>> 0]);
-        };
-      case 8:
-        return function(n) {
-          return this.Mc((p(), ae)[n >>> 3 >>> 0]);
-        };
-      default:
-        throw new TypeError(`invalid float width (${t}): ${e}`);
-    }
-  };
-  function ai(e, t, n) {
-    n >>>= 0, De(e >>>= 0, { name: t = Be(t >>> 0), Mc: (o) => o, Sc: (o, u) => u, Rc: oi(t, n), Tc: null });
-  }
-  function si(e, t, n, o, u) {
-    e >>>= 0, n >>>= 0, t = Be(t >>> 0);
-    let c = (b) => b;
-    if (o === 0) {
-      var h = 32 - 8 * n;
-      c = (b) => b << h >>> h, u = c(u);
-    }
-    De(e, { name: t, Mc: c, Sc: (b, E) => E, Rc: Fn(t, n, o !== 0), Tc: null });
-  }
-  function ii(e, t, n) {
-    function o(c) {
-      var h = (p(), A)[c >>> 2 >>> 0];
-      return c = (p(), A)[c + 4 >>> 2 >>> 0], new u((p(), X).buffer, c, h);
-    }
-    var u = [Int8Array, Uint8Array, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array][t];
-    De(e >>>= 0, { name: n = Be(n >>> 0), Mc: o, Rc: o }, { de: true });
-  }
-  var Pe = (e, t, n) => {
-    var o = (p(), J);
-    if (t >>>= 0, 0 < n) {
-      var u = t;
-      n = t + n - 1;
-      for (var c = 0; c < e.length; ++c) {
-        var h = e.codePointAt(c);
-        if (127 >= h) {
-          if (t >= n) break;
-          o[t++ >>> 0] = h;
-        } else if (2047 >= h) {
-          if (t + 1 >= n) break;
-          o[t++ >>> 0] = 192 | h >> 6, o[t++ >>> 0] = 128 | 63 & h;
-        } else if (65535 >= h) {
-          if (t + 2 >= n) break;
-          o[t++ >>> 0] = 224 | h >> 12, o[t++ >>> 0] = 128 | h >> 6 & 63, o[t++ >>> 0] = 128 | 63 & h;
-        } else {
-          if (t + 3 >= n) break;
-          o[t++ >>> 0] = 240 | h >> 18, o[t++ >>> 0] = 128 | h >> 12 & 63, o[t++ >>> 0] = 128 | h >> 6 & 63, o[t++ >>> 0] = 128 | 63 & h, c++;
-        }
-      }
-      o[t >>> 0] = 0, e = t - u;
-    } else e = 0;
-    return e;
-  }, _e = (e) => {
-    for (var t = 0, n = 0; n < e.length; ++n) {
-      var o = e.charCodeAt(n);
-      127 >= o ? t++ : 2047 >= o ? t += 2 : 55296 <= o && 57343 >= o ? (t += 4, ++n) : t += 3;
-    }
-    return t;
-  };
-  function ui(e, t) {
-    De(e >>>= 0, { name: t = Be(t >>> 0), Mc(n) {
-      var o = (p(), A)[n >>> 2 >>> 0];
-      return o = ct(n + 4, o, true), xe(n), o;
-    }, Sc(n, o) {
-      o instanceof ArrayBuffer && (o = new Uint8Array(o));
-      var u = typeof o == "string";
-      if (!(u || ArrayBuffer.isView(o) && o.BYTES_PER_ELEMENT == 1)) throw new dt("Cannot pass non-string to std::string");
-      var c = u ? _e(o) : o.length, h = pt(4 + c + 1), b = h + 4;
-      return (p(), A)[h >>> 2 >>> 0] = c, u ? Pe(o, b, c + 1) : (p(), J).set(o, b >>> 0), n !== null && n.push(xe, h), h;
-    }, Rc: Sr, Tc(n) {
-      xe(n);
-    } });
-  }
-  var $n = globalThis.TextDecoder ? new TextDecoder("utf-16le") : void 0, fi = (e, t, n) => {
-    if (e >>>= 1, 16 < (t = In((p(), Q), e, t / 2, n)) - e && $n) return $n.decode((p(), Q).slice(e, t));
-    for (n = ""; e < t; ++e) {
-      var o = (p(), Q)[e >>> 0];
-      n += String.fromCharCode(o);
-    }
-    return n;
-  }, ci = (e, t, n) => {
-    if (n ??= 2147483647, 2 > n) return 0;
-    var o = t;
-    n = (n -= 2) < 2 * e.length ? n / 2 : e.length;
-    for (var u = 0; u < n; ++u) {
-      var c = e.charCodeAt(u);
-      (p(), Ue)[t >>> 1 >>> 0] = c, t += 2;
-    }
-    return (p(), Ue)[t >>> 1 >>> 0] = 0, t - o;
-  }, di = (e) => 2 * e.length, li = (e, t, n) => {
-    var o = "";
-    e >>>= 2;
-    for (var u = 0; !(u >= t / 4); u++) {
-      var c = (p(), A)[e + u >>> 0];
-      if (!c && !n) break;
-      o += String.fromCodePoint(c);
-    }
-    return o;
-  }, pi = (e, t, n) => {
-    if (t >>>= 0, n ??= 2147483647, 4 > n) return 0;
-    var o = t;
-    n = o + n - 4;
-    for (var u = 0; u < e.length; ++u) {
-      var c = e.codePointAt(u);
-      if (65535 < c && u++, (p(), x)[t >>> 2 >>> 0] = c, (t += 4) + 4 > n) break;
-    }
-    return (p(), x)[t >>> 2 >>> 0] = 0, t - o;
-  }, mi = (e) => {
-    for (var t = 0, n = 0; n < e.length; ++n) 65535 < e.codePointAt(n) && n++, t += 4;
-    return t;
-  };
-  function hi(e, t, n) {
-    if (e >>>= 0, t >>>= 0, n = Be(n >>>= 0), t === 2) var o = fi, u = ci, c = di;
-    else o = li, u = pi, c = mi;
-    De(e, { name: n, Mc: (h) => {
-      var b = (p(), A)[h >>> 2 >>> 0];
-      return b = o(h + 4, b * t, true), xe(h), b;
-    }, Sc: (h, b) => {
-      if (typeof b != "string") throw new dt(`Cannot pass non-string to C++ string type ${n}`);
-      var E = c(b), I = pt(4 + E + t);
-      return (p(), A)[I >>> 2 >>> 0] = E / t, u(b, I + 4, E + t), h !== null && h.push(xe, I), I;
-    }, Rc: Sr, Tc(h) {
-      xe(h);
-    } });
-  }
-  function yi(e, t) {
-    De(e >>>= 0, { ee: true, name: t = Be(t >>> 0), Mc: () => {
-    }, Sc: () => {
-    } });
-  }
-  function bi(e) {
-    Wr(e >>> 0, !f, 1, !s, 131072, false), bn();
-  }
-  var he = (e) => {
-    if (!W) try {
-      if (e(), !(0 < G)) try {
-        i ? Wt() && Fr(S) : br(S);
-      } catch (t) {
-        t instanceof wt || t == "unwind" || y(0, t);
-      }
-    } catch (t) {
-      t instanceof wt || t == "unwind" || y(0, t);
-    }
-  }, wi = !Atomics.waitAsync || globalThis.navigator?.userAgent && 91 > Number((navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./) || [])[2]);
-  function Ar(e) {
-    e >>>= 0, wi || (Atomics.waitAsync((p(), x), e >>> 2, e).value.then(Dt), e += 128, Atomics.store((p(), x), e >>> 2, 1));
-  }
-  var Dt = () => he(() => {
-    var e = Wt();
-    e && (Ar(e), Mo());
-  });
-  function gi(e, t) {
-    (e >>>= 0) == t >>> 0 ? setTimeout(Dt) : i ? postMessage({ Vc: e, Oc: "checkMailbox" }) : (e = Je[e]) && e.postMessage({ Oc: "checkMailbox" });
-  }
-  var Ir = [];
-  function Ti(e, t, n, o, u) {
-    for (t >>>= 0, u >>>= 0, Ir.length = 0, n = u >>> 3, o = u + o >>> 3; n < o; ) {
-      var c;
-      c = (p(), me)[n++ >>> 0] ? (p(), me)[n++ >>> 0] : (p(), ae)[n++ >>> 0], Ir.push(c);
-    }
-    return (t ? Vr[t] : of[e])(...Ir);
-  }
-  var vi = () => {
-    G = 0;
-  };
-  function Ei(e) {
-    e >>>= 0, i ? postMessage({ Oc: "cleanupThread", he: e }) : yn(Je[e]);
-  }
-  function Si(e) {
-  }
-  var Pt = (e) => {
-    try {
-      e();
-    } catch (t) {
-      Te(t);
-    }
-  };
-  function Ai(e) {
-    var t = (...n) => {
-      _t.push(e);
-      try {
-        return e(...n);
-      } finally {
-        W || (_t.pop(), Me && Ge === 1 && _t.length === 0 && (Ge = 0, G += 1, Pt(ba), typeof Fibers < "u" && Fibers.Be()));
-      }
-    };
-    return jn.set(e, t), t;
-  }
-  var Ge = 0, Me = null, zn = 0, _t = [], xr = /* @__PURE__ */ new Map(), Vn = /* @__PURE__ */ new Map(), jn = /* @__PURE__ */ new Map(), Ii = 0, Lr = null, xi = [], Hn = (e) => function(t) {
-    if (!W) {
-      if (Ge === 0) {
-        var n = false, o = false;
-        t((u = 0) => {
-          if (!W && (zn = u, n = true, o)) {
-            Ge = 2, Pt(() => wa(Me)), typeof MainLoop < "u" && MainLoop.Xd && MainLoop.resume(), u = false;
-            try {
-              var c = function() {
-                var E = (p(), x)[Me + 8 >>> 2 >>> 0];
-                return E = Vn.get(E), E = jn.get(E), --G, E();
-              }();
-            } catch (E) {
-              c = E, u = true;
-            }
-            var h = false;
-            if (!Me) {
-              var b = Lr;
-              b && (Lr = null, (u ? b.reject : b.resolve)(c), h = true);
-            }
-            if (u && !h) throw c;
-          }
-        }), o = true, n || (Ge = 1, Me = function() {
-          var u = pt(65548), c = u + 12;
-          if ((p(), A)[u >>> 2 >>> 0] = c, (p(), A)[u + 4 >>> 2 >>> 0] = c + 65536, c = _t[0], !xr.has(c)) {
-            var h = Ii++;
-            xr.set(c, h), Vn.set(h, c);
-          }
-          return c = xr.get(c), (p(), x)[u + 8 >>> 2 >>> 0] = c, u;
-        }(), typeof MainLoop < "u" && MainLoop.Xd && MainLoop.pause(), Pt(() => ya(Me)));
-      } else Ge === 2 ? (Ge = 0, Pt(ga), xe(Me), Me = null, xi.forEach(he)) : Te(`invalid state: ${Ge}`);
-      return zn;
-    }
-  }((t) => {
-    e().then(t);
-  });
-  function Li(e) {
-    return e >>>= 0, Hn(async () => {
-      var t = await ve(e);
-      return Ie(t);
-    });
-  }
-  var Or = [], Oi = (e) => {
-    var t = Or.length;
-    return Or.push(e), t;
-  }, Bi = (e, t) => {
-    for (var n = Array(e), o = 0; o < e; ++o) {
-      var u = o, c = (p(), A)[t + 4 * o >>> 2 >>> 0], h = vr[c];
-      if (h === void 0) throw e = `parameter ${o}`, c = lo(c), t = Be(c), xe(c), new dt(`${e} has unknown type ${t}`);
-      n[u] = h;
-    }
-    return n;
-  }, Mi = (e, t, n) => {
-    var o = [];
-    return e = e(o, n), o.length && ((p(), A)[t >>> 2 >>> 0] = Ie(o)), e;
-  }, Ci = {}, Rt = (e) => {
-    var t = Ci[e];
-    return t === void 0 ? Be(e) : t;
-  };
-  function Ui(e, t, n) {
-    var [o, ...u] = Bi(e, t >>> 0);
-    t = o.Sc.bind(o);
-    var c = u.map((E) => E.Rc.bind(E));
-    e--;
-    var h = { toValue: ve };
-    switch (e = c.map((E, I) => {
-      var F = `argFromPtr${I}`;
-      return h[F] = E, `${F}(args${I ? "+" + 8 * I : ""})`;
-    }), n) {
-      case 0:
-        var b = "toValue(handle)";
-        break;
-      case 2:
-        b = "new (toValue(handle))";
-        break;
-      case 3:
-        b = "";
-        break;
-      case 1:
-        h.getStringOrSymbol = Rt, b = "toValue(handle)[getStringOrSymbol(methodName)]";
-    }
-    return b += `(${e})`, o.ee || (h.toReturnWire = t, h.emval_returnValue = Mi, b = `return emval_returnValue(toReturnWire, destructorsRef, ${b})`), b = `return function (handle, methodName, destructorsRef, args) {
-  ${b}
-  }`, n = new Function(Object.keys(h), b)(...Object.values(h)), b = `methodCaller<(${u.map((E) => E.name)}) => ${o.name}>`, Oi(Object.defineProperty(n, "name", { value: b }));
-  }
-  function Di(e, t) {
-    return t >>>= 0, (e = ve(e >>> 0)) == ve(t);
-  }
-  function Pi(e) {
-    return (e >>>= 0) ? (e = Rt(e), Ie(globalThis[e])) : Ie(globalThis);
-  }
-  function _i(e) {
-    return e = Rt(e >>> 0), Ie(r[e]);
-  }
-  function Ri(e, t) {
-    return t >>>= 0, e = ve(e >>> 0), t = ve(t), Ie(e[t]);
-  }
-  function Ni(e) {
-    9 < (e >>>= 0) && (Xe[e + 1] += 1);
-  }
-  function Yn(e, t, n, o, u) {
-    return Or[e >>> 0](t >>> 0, n >>> 0, o >>> 0, u >>> 0);
-  }
-  function ki(e, t, n, o, u) {
-    return Yn(e >>> 0, t >>> 0, n >>> 0, o >>> 0, u >>> 0);
-  }
-  function Wi() {
-    return Ie([]);
-  }
-  function Fi(e) {
-    e = ve(e >>> 0);
-    for (var t = Array(e.length), n = 0; n < e.length; n++) t[n] = e[n];
-    return Ie(t);
-  }
-  function Gi(e) {
-    return Ie(Rt(e >>> 0));
-  }
-  function $i() {
-    return Ie({});
-  }
-  function zi(e) {
-    for (var t = ve(e >>>= 0); t.length; ) {
-      var n = t.pop();
-      t.pop()(n);
-    }
-    Er(e);
-  }
-  function Vi(e, t, n) {
-    t >>>= 0, n >>>= 0, e = ve(e >>> 0), t = ve(t), n = ve(n), e[t] = n;
-  }
-  function ji(e, t) {
-    e = ce(e), t >>>= 0, e = new Date(1e3 * e), (p(), x)[t >>> 2 >>> 0] = e.getUTCSeconds(), (p(), x)[t + 4 >>> 2 >>> 0] = e.getUTCMinutes(), (p(), x)[t + 8 >>> 2 >>> 0] = e.getUTCHours(), (p(), x)[t + 12 >>> 2 >>> 0] = e.getUTCDate(), (p(), x)[t + 16 >>> 2 >>> 0] = e.getUTCMonth(), (p(), x)[t + 20 >>> 2 >>> 0] = e.getUTCFullYear() - 1900, (p(), x)[t + 24 >>> 2 >>> 0] = e.getUTCDay(), e = (e.getTime() - Date.UTC(e.getUTCFullYear(), 0, 1, 0, 0, 0, 0)) / 864e5 | 0, (p(), x)[t + 28 >>> 2 >>> 0] = e;
-  }
-  var qn = (e) => e % 4 == 0 && (e % 100 != 0 || e % 400 == 0), Jn = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335], Xn = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-  function Hi(e, t) {
-    e = ce(e), t >>>= 0, e = new Date(1e3 * e), (p(), x)[t >>> 2 >>> 0] = e.getSeconds(), (p(), x)[t + 4 >>> 2 >>> 0] = e.getMinutes(), (p(), x)[t + 8 >>> 2 >>> 0] = e.getHours(), (p(), x)[t + 12 >>> 2 >>> 0] = e.getDate(), (p(), x)[t + 16 >>> 2 >>> 0] = e.getMonth(), (p(), x)[t + 20 >>> 2 >>> 0] = e.getFullYear() - 1900, (p(), x)[t + 24 >>> 2 >>> 0] = e.getDay();
-    var n = (qn(e.getFullYear()) ? Jn : Xn)[e.getMonth()] + e.getDate() - 1 | 0;
-    (p(), x)[t + 28 >>> 2 >>> 0] = n, (p(), x)[t + 36 >>> 2 >>> 0] = -60 * e.getTimezoneOffset(), n = new Date(e.getFullYear(), 6, 1).getTimezoneOffset();
-    var o = new Date(e.getFullYear(), 0, 1).getTimezoneOffset();
-    e = 0 | (n != o && e.getTimezoneOffset() == Math.min(o, n)), (p(), x)[t + 32 >>> 2 >>> 0] = e;
-  }
-  function Yi(e) {
-    e >>>= 0;
-    var t = new Date((p(), x)[e + 20 >>> 2 >>> 0] + 1900, (p(), x)[e + 16 >>> 2 >>> 0], (p(), x)[e + 12 >>> 2 >>> 0], (p(), x)[e + 8 >>> 2 >>> 0], (p(), x)[e + 4 >>> 2 >>> 0], (p(), x)[e >>> 2 >>> 0], 0), n = (p(), x)[e + 32 >>> 2 >>> 0], o = t.getTimezoneOffset(), u = new Date(t.getFullYear(), 6, 1).getTimezoneOffset(), c = new Date(t.getFullYear(), 0, 1).getTimezoneOffset(), h = Math.min(c, u);
-    return 0 > n ? (p(), x)[e + 32 >>> 2 >>> 0] = +(u != c && h == o) : 0 < n != (h == o) && (u = Math.max(c, u), t.setTime(t.getTime() + 6e4 * ((0 < n ? h : u) - o))), (p(), x)[e + 24 >>> 2 >>> 0] = t.getDay(), n = (qn(t.getFullYear()) ? Jn : Xn)[t.getMonth()] + t.getDate() - 1 | 0, (p(), x)[e + 28 >>> 2 >>> 0] = n, (p(), x)[e >>> 2 >>> 0] = t.getSeconds(), (p(), x)[e + 4 >>> 2 >>> 0] = t.getMinutes(), (p(), x)[e + 8 >>> 2 >>> 0] = t.getHours(), (p(), x)[e + 12 >>> 2 >>> 0] = t.getDate(), (p(), x)[e + 16 >>> 2 >>> 0] = t.getMonth(), (p(), x)[e + 20 >>> 2 >>> 0] = t.getYear(), e = t.getTime(), BigInt(isNaN(e) ? -1 : e / 1e3);
-  }
-  function Qn(e, t, n, o, u, c, h) {
-    return i ? V(16, 1, e, t, n, o, u, c, h) : -52;
-  }
-  function Zn(e, t, n, o, u, c) {
-    if (i) return V(17, 1, e, t, n, o, u, c);
-  }
-  var Tt = {}, qi = () => performance.timeOrigin + performance.now();
-  function Kn(e, t) {
-    if (i) return V(18, 1, e, t);
-    if (Tt[e] && (clearTimeout(Tt[e].id), delete Tt[e]), !t) return 0;
-    var n = setTimeout(() => {
-      delete Tt[e], he(() => Bo(e, performance.timeOrigin + performance.now()));
-    }, t);
-    return Tt[e] = { id: n, Ae: t }, 0;
-  }
-  function Ji(e, t, n, o) {
-    e >>>= 0, t >>>= 0, n >>>= 0, o >>>= 0;
-    var u = (/* @__PURE__ */ new Date()).getFullYear(), c = new Date(u, 0, 1).getTimezoneOffset();
-    u = new Date(u, 6, 1).getTimezoneOffset();
-    var h = Math.max(c, u);
-    (p(), A)[e >>> 2 >>> 0] = 60 * h, (p(), x)[t >>> 2 >>> 0] = +(c != u), e = (t = (b) => {
-      var E = Math.abs(b);
-      return `UTC${0 <= b ? "-" : "+"}${String(Math.floor(E / 60)).padStart(2, "0")}${String(E % 60).padStart(2, "0")}`;
-    })(c), t = t(u), u < c ? (Pe(e, n, 17), Pe(t, o, 17)) : (Pe(e, o, 17), Pe(t, n, 17));
-  }
-  var Xi = () => Date.now(), Qi = 1;
-  function Zi(e, t, n) {
-    if (n >>>= 0, !(0 <= e && 3 >= e)) return 28;
-    if (e === 0) e = Date.now();
-    else {
-      if (!Qi) return 52;
-      e = performance.timeOrigin + performance.now();
-    }
-    return e = Math.round(1e6 * e), (p(), me)[n >>> 3 >>> 0] = BigInt(e), 0;
-  }
-  var Br = [], eo = (e, t) => {
-    Br.length = 0;
-    for (var n; n = (p(), J)[e++ >>> 0]; ) {
-      var o = n != 105;
-      t += (o &= n != 112) && t % 8 ? 4 : 0, Br.push(n == 112 ? (p(), A)[t >>> 2 >>> 0] : n == 106 ? (p(), me)[t >>> 3 >>> 0] : n == 105 ? (p(), x)[t >>> 2 >>> 0] : (p(), ae)[t >>> 3 >>> 0]), t += o ? 8 : 4;
-    }
-    return Br;
-  };
-  function Ki(e, t, n) {
-    return e >>>= 0, t = eo(t >>> 0, n >>> 0), Vr[e](...t);
-  }
-  function eu(e, t, n) {
-    return e >>>= 0, t = eo(t >>> 0, n >>> 0), Vr[e](...t);
-  }
-  var tu = () => {
-  };
-  function ru(e, t) {
-    return O(ct(e >>> 0, t >>> 0));
-  }
-  var nu = () => {
-    throw G += 1, "unwind";
-  };
-  function ou() {
-    return 4294901760;
-  }
-  var au = () => 1, su = () => navigator.hardwareConcurrency;
-  function iu(e) {
-    e >>>= 0;
-    var t = (p(), J).length;
-    if (e <= t || 4294901760 < e) return false;
-    for (var n = 1; 4 >= n; n *= 2) {
-      var o = t * (1 + 0.2 / n);
-      o = Math.min(o, e + 100663296);
-      e: {
-        o = (Math.min(4294901760, 65536 * Math.ceil(Math.max(e, o) / 65536)) - Fe.buffer.byteLength + 65535) / 65536 | 0;
-        try {
-          Fe.grow(o), se();
-          var u = 1;
-          break e;
-        } catch {
-        }
-        u = void 0;
-      }
-      if (u) return true;
-    }
-    return false;
-  }
-  var Ce = (e) => {
-    var t = _e(e) + 1, n = Ft(t);
-    return Pe(e, n, t), n;
-  }, Mr = (e, t) => {
-    (p(), A)[e >>> 2 >>> 0] = t;
-    var n = (p(), A)[e >>> 2 >>> 0];
-    (p(), A)[e + 4 >>> 2 >>> 0] = (t - n) / 4294967296;
-  }, vt = (e) => (p(), A)[e >>> 2 >>> 0] + 4294967296 * (p(), x)[e + 4 >>> 2 >>> 0], de = [], uu = (e, t) => {
-    de[e >>> 0] = t;
-  }, Re = [], Nt = [], lt = (e, t) => {
-    Nt[e] = new Promise((n) => t.finally(() => n(e)));
-  }, L = (e) => {
-    if (e) return de[e >>> 0];
-  }, fu = (e, t) => {
-    for (e = (p(), A)[e >>> 2 >>> 0]; e; e = (p(), A)[e >>> 2 >>> 0]) t[(p(), x)[e + 4 >>> 2 >>> 0]](e);
-  }, kt = (e, t, n) => {
-    (p(), A)[e >>> 2 >>> 0] = t, (p(), A)[e + 4 >>> 2 >>> 0] = n;
-  }, to = (e) => {
-    var t = (p(), A)[e >>> 2 >>> 0];
-    return e = (p(), A)[e + 4 >>> 2 >>> 0], ct(t, e);
-  }, Ne = (e) => {
-    var t = (p(), A)[e >>> 2 >>> 0];
-    return e = (p(), A)[e + 4 >>> 2 >>> 0], t ? ct(t, e) : e === 0 ? "" : void 0;
-  }, cu = (e) => {
-    var t = Ne(e + 4), n = (n = (p(), A)[e + 12 >>> 2 >>> 0]) ? L(n) : "auto";
-    if (e += 16) {
-      var o = L((p(), A)[e + 4 >>> 2 >>> 0]), u = (p(), A)[e + 16 >>> 2 >>> 0], c = (p(), A)[e + 20 >>> 2 >>> 0];
-      if (u) {
-        for (var h = {}, b = 0; b < u; ++b) {
-          var E = c + 24 * b;
-          h[to(E + 4)] = (p(), ae)[E + 16 >>> 3 >>> 0];
-        }
-        u = h;
-      } else u = void 0;
-      e = { module: o, constants: u, entryPoint: Ne(e + 8) };
-    } else e = void 0;
-    return { label: t, layout: n, compute: e };
-  }, ro = (e, t) => {
-    function n(o, u) {
-      o = e[o], (p(), A)[t + u >>> 2 >>> 0] = o;
-    }
-    n("maxTextureDimension1D", 4), n("maxTextureDimension2D", 8), n("maxTextureDimension3D", 12), n("maxTextureArrayLayers", 16), n("maxBindGroups", 20), n("maxBindGroupsPlusVertexBuffers", 24), n("maxBindingsPerBindGroup", 28), n("maxDynamicUniformBuffersPerPipelineLayout", 32), n("maxDynamicStorageBuffersPerPipelineLayout", 36), n("maxSampledTexturesPerShaderStage", 40), n("maxSamplersPerShaderStage", 44), n("maxStorageBuffersPerShaderStage", 48), n("maxStorageTexturesPerShaderStage", 52), n("maxUniformBuffersPerShaderStage", 56), n("minUniformBufferOffsetAlignment", 80), n("minStorageBufferOffsetAlignment", 84), Mr(t + 64, e.maxUniformBufferBindingSize), Mr(t + 72, e.maxStorageBufferBindingSize), n("maxVertexBuffers", 88), Mr(t + 96, e.maxBufferSize), n("maxVertexAttributes", 104), n("maxVertexBufferArrayStride", 108), n("maxInterStageShaderVariables", 112), n("maxColorAttachments", 116), n("maxColorAttachmentBytesPerSample", 120), n("maxComputeWorkgroupStorageSize", 124), n("maxComputeInvocationsPerWorkgroup", 128), n("maxComputeWorkgroupSizeX", 132), n("maxComputeWorkgroupSizeY", 136), n("maxComputeWorkgroupSizeZ", 140), n("maxComputeWorkgroupsPerDimension", 144), e.ze !== void 0 && n("maxImmediateSize", 148);
-  }, du = [, "validation", "out-of-memory", "internal"], lu = [, "compatibility", "core"], no = { 1: "core-features-and-limits", 2: "depth-clip-control", 3: "depth32float-stencil8", 4: "texture-compression-bc", 5: "texture-compression-bc-sliced-3d", 6: "texture-compression-etc2", 7: "texture-compression-astc", 8: "texture-compression-astc-sliced-3d", 9: "timestamp-query", 10: "indirect-first-instance", 11: "shader-f16", 12: "rg11b10ufloat-renderable", 13: "bgra8unorm-storage", 14: "float32-filterable", 15: "float32-blendable", 16: "clip-distances", 17: "dual-source-blending", 18: "subgroups", 19: "texture-formats-tier1", 20: "texture-formats-tier2", 21: "primitive-index", 22: "texture-component-swizzle", 327692: "chromium-experimental-unorm16-texture-formats", 327729: "chromium-experimental-multi-draw-indirect" }, pu = [, "low-power", "high-performance"], mu = [, "occlusion", "timestamp"], hu = { undefined: 1, unknown: 1, destroyed: 2 };
-  function yu(e, t, n, o, u, c) {
-    t = ce(t), n = ce(n), o >>>= 0, u >>>= 0, c >>>= 0;
-    var h = L(e >>> 0);
-    if (e = {}, c) {
-      var b = (p(), A)[c + 12 >>> 2 >>> 0];
-      if (b) {
-        var E = (p(), A)[c + 16 >>> 2 >>> 0];
-        e.requiredFeatures = Array.from((p(), A).subarray(E >>> 2 >>> 0, E + 4 * b >>> 2 >>> 0), (B) => no[B]);
-      }
-      var I = (p(), A)[c + 20 >>> 2 >>> 0];
-      if (I) {
-        let B = function(ye, fe, Qe = false) {
-          fe = I + fe, (fe = (p(), A)[fe >>> 2 >>> 0]) == 4294967295 || Qe && fe == 0 || (F[ye] = fe);
-        }, ue = function(ye, fe) {
-          fe = I + fe;
-          var Qe = (p(), A)[fe >>> 2 >>> 0], $f = (p(), A)[fe + 4 >>> 2 >>> 0];
-          Qe == 4294967295 && $f == 4294967295 || (F[ye] = vt(fe));
-        };
-        var j = B, te = ue, F = {};
-        B("maxTextureDimension1D", 4), B("maxTextureDimension2D", 8), B("maxTextureDimension3D", 12), B("maxTextureArrayLayers", 16), B("maxBindGroups", 20), B("maxBindGroupsPlusVertexBuffers", 24), B("maxDynamicUniformBuffersPerPipelineLayout", 32), B("maxDynamicStorageBuffersPerPipelineLayout", 36), B("maxSampledTexturesPerShaderStage", 40), B("maxSamplersPerShaderStage", 44), B("maxStorageBuffersPerShaderStage", 48), B("maxStorageTexturesPerShaderStage", 52), B("maxUniformBuffersPerShaderStage", 56), B("minUniformBufferOffsetAlignment", 80), B("minStorageBufferOffsetAlignment", 84), ue("maxUniformBufferBindingSize", 64), ue("maxStorageBufferBindingSize", 72), B("maxVertexBuffers", 88), ue("maxBufferSize", 96), B("maxVertexAttributes", 104), B("maxVertexBufferArrayStride", 108), B("maxInterStageShaderVariables", 112), B("maxColorAttachments", 116), B("maxColorAttachmentBytesPerSample", 120), B("maxComputeWorkgroupStorageSize", 124), B("maxComputeInvocationsPerWorkgroup", 128), B("maxComputeWorkgroupSizeX", 132), B("maxComputeWorkgroupSizeY", 136), B("maxComputeWorkgroupSizeZ", 140), B("maxComputeWorkgroupsPerDimension", 144), B("maxImmediateSize", 148, true), e.requiredLimits = F;
-      }
-      (b = (p(), A)[c + 24 >>> 2 >>> 0]) && (b = { label: Ne(b + 4) }, e.defaultQueue = b), e.label = Ne(c + 4);
-    }
-    G += 1, lt(t, h.requestDevice(e).then((B) => {
-      --G, he(() => {
-        de[u >>> 0] = B.queue, de[o >>> 0] = B, G += 1, lt(n, B.lost.then((ue) => {
-          he(() => {
-            B.onuncapturederror = () => {
-            };
-            var ye = P(), fe = Ce(ue.message);
-            _r(n, hu[ue.reason], fe), D(ye);
-          }), --G;
-        })), B.onuncapturederror = (ue) => {
-          var ye = 5;
-          ue.error instanceof GPUValidationError ? ye = 2 : ue.error instanceof GPUOutOfMemoryError ? ye = 3 : ue.error instanceof GPUInternalError && (ye = 4);
-          var fe = P();
-          ue = Ce(ue.error.message), Io(o, ye, ue), D(fe);
-        }, "adapterInfo" in B || (B.adapterInfo = h.info), kr(t, 1, o, 0);
-      });
-    }, (B) => {
-      --G, he(() => {
-        var ue = P(), ye = Ce(B.message);
-        kr(t, 3, o, ye), n && _r(n, 4, ye), D(ue);
-      });
-    }));
-  }
-  function bu(e) {
-    var t = L(e >>>= 0), n = Re[e];
-    if (n) {
-      for (var o = 0; o < n.length; ++o) n[o]();
-      delete Re[e];
-    }
-    t.destroy();
-  }
-  function wu(e, t, n) {
-    n >>>= 0;
-    var o = L(e >>>= 0);
-    n == 4294967295 && (n = void 0);
-    try {
-      var u = o.getMappedRange(t >>> 0, n);
-    } catch {
-      return 0;
-    }
-    var c = Gr(16, u.byteLength);
-    return (p(), J).set(new Uint8Array(u), c >>> 0), Re[e].push(() => xe(c)), c;
-  }
-  function gu(e, t, n) {
-    n >>>= 0;
-    var o = L(e >>>= 0);
-    n == 4294967295 && (n = void 0);
-    try {
-      var u = o.getMappedRange(t >>> 0, n);
-    } catch {
-      return 0;
-    }
-    var c = Gr(16, u.byteLength);
-    return (p(), J).fill(0, c, u.byteLength), Re[e].push(() => {
-      new Uint8Array(u).set((p(), J).subarray(c >>> 0, c + u.byteLength >>> 0)), xe(c);
-    }), c;
-  }
-  function Tu(e, t, n, o, u) {
-    e >>>= 0, t = ce(t), n = ce(n), u >>>= 0;
-    var c = L(e);
-    Re[e] = [], u == 4294967295 && (u = void 0), G += 1, lt(t, c.mapAsync(n, o >>> 0, u).then(() => {
-      --G, he(() => {
-        Rr(t, 1, 0);
-      });
-    }, (h) => {
-      --G, he(() => {
-        P();
-        var b = Ce(h.message);
-        Rr(t, h.name === "AbortError" ? 4 : h.name === "OperationError" ? 3 : 0, b), delete Re[e];
-      });
-    }));
-  }
-  function vu(e) {
-    var t = L(e >>>= 0), n = Re[e];
-    if (n) {
-      for (var o = 0; o < n.length; ++o) n[o]();
-      delete Re[e], t.unmap();
-    }
-  }
-  function Eu(e) {
-    delete de[e >>> 0];
-  }
-  function Su(e, t, n) {
-    e >>>= 0, t >>>= 0, n >>>= 0;
-    var o = !!(p(), A)[t + 32 >>> 2 >>> 0];
-    t = { label: Ne(t + 4), usage: (p(), A)[t + 16 >>> 2 >>> 0], size: vt(t + 24), mappedAtCreation: o }, e = L(e);
-    try {
-      var u = e.createBuffer(t);
-    } catch {
-      return false;
-    }
-    return de[n >>> 0] = u, o && (Re[n] = []), true;
-  }
-  function Au(e, t, n, o) {
-    e >>>= 0, t = ce(t), o >>>= 0, n = cu(n >>> 0), e = L(e), G += 1, lt(t, e.createComputePipelineAsync(n).then((u) => {
-      --G, he(() => {
-        de[o >>> 0] = u, Pr(t, 1, o, 0);
-      });
-    }, (u) => {
-      --G, he(() => {
-        var c = P(), h = Ce(u.message);
-        Pr(t, u.reason === "validation" ? 3 : u.reason === "internal" ? 4 : 0, o, h), D(c);
-      });
-    }));
-  }
-  function Iu(e, t, n) {
-    e >>>= 0, t >>>= 0, n >>>= 0;
-    var o = (p(), A)[t >>> 2 >>> 0], u = (p(), x)[o + 4 >>> 2 >>> 0];
-    t = { label: Ne(t + 4), code: "" }, u === 2 && (t.code = to(o + 8)), e = L(e).createShaderModule(t), de[n >>> 0] = e;
-  }
-  var xu = (e) => {
-    (e = L(e)).onuncapturederror = null, e.destroy();
-  };
-  function Lu(e, t) {
-    t = ce(t), e = L(e >>> 0), G += 1, lt(t, e.popErrorScope().then((n) => {
-      --G, he(() => {
-        var o = 5;
-        n ? n instanceof GPUValidationError ? o = 2 : n instanceof GPUOutOfMemoryError ? o = 3 : n instanceof GPUInternalError && (o = 4) : o = 1;
-        var u = P(), c = n ? Ce(n.message) : 0;
-        Nr(t, 1, o, c), D(u);
-      });
-    }, (n) => {
-      --G, he(() => {
-        var o = P(), u = Ce(n.message);
-        Nr(t, 1, 5, u), D(o);
-      });
-    }));
-  }
-  function Ou(e, t, n, o) {
-    if (t = ce(t), o >>>= 0, n >>>= 0) {
-      var u = { featureLevel: lu[(p(), x)[n + 4 >>> 2 >>> 0]], powerPreference: pu[(p(), x)[n + 8 >>> 2 >>> 0]], forceFallbackAdapter: !!(p(), A)[n + 12 >>> 2 >>> 0] };
-      (e = (p(), A)[n >>> 2 >>> 0]) !== 0 && (p(), u.De = !!(p(), A)[e + 8 >>> 2 >>> 0]);
-    }
-    "gpu" in navigator ? (G += 1, lt(t, navigator.gpu.requestAdapter(u).then((c) => {
-      --G, he(() => {
-        if (c) de[o >>> 0] = c, Et(t, 1, o, 0);
-        else {
-          var h = P(), b = Ce("WebGPU not available on this browser (requestAdapter returned null)");
-          Et(t, 3, o, b), D(h);
-        }
-      });
-    }, (c) => {
-      --G, he(() => {
-        var h = P(), b = Ce(c.message);
-        Et(t, 4, o, b), D(h);
-      });
-    }))) : (u = P(), e = Ce("WebGPU not available on this browser (navigator.gpu is not available)"), Et(t, 3, o, e), D(u));
-  }
-  function Bu(e, t, n) {
-    return e >>>= 0, t >>>= 0, n >>>= 0, Hn(async () => {
-      var o = [];
-      if (n) {
-        var u = (p(), x)[n >>> 2 >>> 0];
-        o.length = t + 1, o[t] = new Promise((b) => setTimeout(b, u, 0));
-      } else o.length = t;
-      for (var c = 0; c < t; ++c) {
-        var h = vt(e + 8 * c);
-        if (!(h in Nt)) return h;
-        o[c] = Nt[h];
-      }
-      return o = await Promise.race(o), delete Nt[o], o;
-    });
-  }
-  var Cr, Ur = {}, oo = () => {
-    if (!Cr) {
-      var e, t = { USER: "web_user", LOGNAME: "web_user", PATH: "/", PWD: "/", HOME: "/home/web_user", LANG: (globalThis.navigator?.language ?? "C").replace("-", "_") + ".UTF-8", _: "./this.program" };
-      for (e in Ur) Ur[e] === void 0 ? delete t[e] : t[e] = Ur[e];
-      var n = [];
-      for (e in t) n.push(`${e}=${t[e]}`);
-      Cr = n;
-    }
-    return Cr;
-  };
-  function ao(e, t) {
-    if (i) return V(19, 1, e, t);
-    e >>>= 0, t >>>= 0;
-    var n, o = 0, u = 0;
-    for (n of oo()) {
-      var c = t + o;
-      (p(), A)[e + u >>> 2 >>> 0] = c, o += Pe(n, c, 1 / 0) + 1, u += 4;
-    }
-    return 0;
-  }
-  function so(e, t) {
-    if (i) return V(20, 1, e, t);
-    e >>>= 0, t >>>= 0;
-    var n = oo();
-    for (var o of ((p(), A)[e >>> 2 >>> 0] = n.length, e = 0, n)) e += _e(o) + 1;
-    return (p(), A)[t >>> 2 >>> 0] = e, 0;
-  }
-  function io(e) {
-    return i ? V(21, 1, e) : 52;
-  }
-  function uo(e, t, n, o) {
-    return i ? V(22, 1, e, t, n, o) : 52;
-  }
-  function fo(e, t, n, o) {
-    return i ? V(23, 1, e, t, n, o) : 70;
-  }
-  var Mu = [null, [], []];
-  function co(e, t, n, o) {
-    if (i) return V(24, 1, e, t, n, o);
-    t >>>= 0, n >>>= 0, o >>>= 0;
-    for (var u = 0, c = 0; c < n; c++) {
-      var h = (p(), A)[t >>> 2 >>> 0], b = (p(), A)[t + 4 >>> 2 >>> 0];
-      t += 8;
-      for (var E = 0; E < b; E++) {
-        var I = e, F = (p(), J)[h + E >>> 0], j = Mu[I];
-        F === 0 || F === 10 ? ((I === 1 ? Y : O)(xn(j)), j.length = 0) : j.push(F);
-      }
-      u += b;
-    }
-    return (p(), A)[o >>> 2 >>> 0] = u, 0;
-  }
-  function Cu(e) {
-    return e >>> 0;
-  }
-  function Uu(e, t) {
-    return ro(L(e >>> 0).limits, t >>> 0), 1;
-  }
-  function Du(e, t) {
-    return L(e >>> 0).features.has(no[t]);
-  }
-  function Pu(e) {
-    return BigInt(L(e >>> 0).size);
-  }
-  function _u(e) {
-    return BigInt(L(e >>> 0).usage);
-  }
-  function Ru(e, t) {
-    if (e >>>= 0, t >>>= 0) {
-      var n = Ne(t + 4);
-      n = { label: n, timestampWrites: t = (t = (p(), A)[t + 12 >>> 2 >>> 0]) !== 0 ? { querySet: L((p(), A)[t + 4 >>> 2 >>> 0]), beginningOfPassWriteIndex: (p(), A)[t + 8 >>> 2 >>> 0], endOfPassWriteIndex: (p(), A)[t + 12 >>> 2 >>> 0] } : void 0 };
-    }
-    return t = L(e), e = To(0), n = t.beginComputePass(n), de[e >>> 0] = n, e;
-  }
-  function Nu(e, t, n, o) {
-    n = ce(n), (o = ce(o)) == -1 && (o = void 0), (e = L(e >>> 0)).clearBuffer(L(t >>> 0), n, o);
-  }
-  function ku(e, t, n, o, u, c) {
-    n = ce(n), u = ce(u), c = ce(c), L(e >>> 0).copyBufferToBuffer(L(t >>> 0), n, L(o >>> 0), u, c);
-  }
-  function Wu(e) {
-    var t = L(e >>> 0);
-    return e = wo(0), t = t.finish(), de[e >>> 0] = t, e;
-  }
-  function Fu(e, t, n, o, u, c) {
-    c = ce(c), L(e >>> 0).resolveQuerySet(L(t >>> 0), n, o, L(u >>> 0), c);
-  }
-  function Gu(e, t, n, o) {
-    L(e >>> 0).dispatchWorkgroups(t, n, o);
-  }
-  function $u(e, t, n) {
-    n = ce(n), L(e >>> 0).dispatchWorkgroupsIndirect(L(t >>> 0), n);
-  }
-  function zu(e) {
-    L(e >>> 0).end();
-  }
-  function Vu(e, t, n, o, u) {
-    o >>>= 0, u >>>= 0, e = L(e >>> 0), n = L(n >>> 0), o == 0 ? e.setBindGroup(t, n) : e.setBindGroup(t, n, (p(), A), u >>> 2, o);
-  }
-  function ju(e, t) {
-    L(e >>> 0).setPipeline(L(t >>> 0));
-  }
-  function Hu(e, t, n) {
-    L(e >>> 0).Ce(L(t >>> 0), n);
-  }
-  function Yu(e, t) {
-    var n = L(e >>> 0);
-    return e = bo(0), t = n.getBindGroupLayout(t), de[e >>> 0] = t, e;
-  }
-  function qu(e, t) {
-    function n(u) {
-      var c = (p(), A)[u + 8 >>> 2 >>> 0], h = (p(), A)[u + 32 >>> 2 >>> 0], b = (p(), A)[u + 36 >>> 2 >>> 0], E = 0;
-      return fu(u, { 327681: (I) => {
-        E = (p(), A)[I + 8 >>> 2 >>> 0];
-      } }), c ? ((h = vt(u + 24)) == -1 && (h = void 0), c = { buffer: L(c), offset: vt(u + 16), size: h }) : c = L(h || b || E), { binding: (p(), A)[u + 4 >>> 2 >>> 0], resource: c };
-    }
-    e >>>= 0, t = { label: Ne(4 + (t >>>= 0)), layout: L((p(), A)[t + 12 >>> 2 >>> 0]), entries: function(u, c) {
-      for (var h = [], b = 0; b < u; ++b) h.push(n(c + 40 * b));
-      return h;
-    }((p(), A)[t + 16 >>> 2 >>> 0], (p(), A)[t + 20 >>> 2 >>> 0]) }, e = L(e);
-    var o = yo(0);
-    return uu(o, e.createBindGroup(t)), o;
-  }
-  function Ju(e, t) {
-    var n;
-    return e >>>= 0, (t >>>= 0) && (n = { label: Ne(t + 4) }), t = L(e), e = go(0), n = t.createCommandEncoder(n), de[e >>> 0] = n, e;
-  }
-  function Xu(e, t) {
-    e >>>= 0, t >>>= 0, t = { type: mu[(p(), x)[t + 12 >>> 2 >>> 0]], count: (p(), A)[t + 16 >>> 2 >>> 0] };
-    var n = L(e);
-    return e = vo(0), t = n.createQuerySet(t), de[e >>> 0] = t, e;
-  }
-  function Qu(e, t) {
-    e = L(e >>> 0).adapterInfo, t >>>= 0, (p(), A)[t + 52 >>> 2 >>> 0] = e.subgroupMinSize, (p(), A)[t + 56 >>> 2 >>> 0] = e.subgroupMaxSize;
-    var n = e.vendor + e.architecture + e.device + e.description, o = _e(n) + 1, u = pt(o);
-    return u && Pe(n, u, o), n = u, o = _e(e.vendor), kt(t + 4, n, o), n += o, o = _e(e.architecture), kt(t + 12, n, o), n += o, o = _e(e.device), kt(t + 20, n, o), kt(t + 28, n + o, _e(e.description)), (p(), x)[t + 36 >>> 2 >>> 0] = 2, e = e.isFallbackAdapter ? 3 : 4, (p(), x)[t + 40 >>> 2 >>> 0] = e, (p(), A)[t + 44 >>> 2 >>> 0] = 0, (p(), A)[t + 48 >>> 2 >>> 0] = 0, 1;
-  }
-  var Zu = { "core-features-and-limits": 1, "depth-clip-control": 2, "depth32float-stencil8": 3, "texture-compression-bc": 4, "texture-compression-bc-sliced-3d": 5, "texture-compression-etc2": 6, "texture-compression-astc": 7, "texture-compression-astc-sliced-3d": 8, "timestamp-query": 9, "indirect-first-instance": 10, "shader-f16": 11, "rg11b10ufloat-renderable": 12, "bgra8unorm-storage": 13, "float32-filterable": 14, "float32-blendable": 15, "clip-distances": 16, "dual-source-blending": 17, subgroups: 18, "texture-formats-tier1": 19, "texture-formats-tier2": 20, "primitive-index": 21, "texture-component-swizzle": 22, "chromium-experimental-unorm16-texture-formats": 327692, "chromium-experimental-multi-draw-indirect": 327729 };
-  function Ku(e, t) {
-    t >>>= 0;
-    var n = L(e >>> 0);
-    e = pt(4 * n.features.size);
-    var o = 0, u = 0;
-    for (let c of n.features) 0 <= (n = Zu[c]) && ((p(), x)[e + o >>> 2 >>> 0] = n, o += 4, u++);
-    (p(), A)[t + 4 >>> 2 >>> 0] = e, (p(), A)[t >>> 2 >>> 0] = u;
-  }
-  function ef(e, t) {
-    return ro(L(e >>> 0).limits, t >>> 0), 1;
-  }
-  function tf(e, t) {
-    L(e >>> 0).pushErrorScope(du[t]);
-  }
-  function rf(e, t, n) {
-    t >>>= 0, n >>>= 0, e = L(e >>> 0), t = Array.from((p(), x).subarray(n >>> 2 >>> 0, n + 4 * t >>> 2 >>> 0), (o) => L(o)), e.submit(t);
-  }
-  function nf(e, t, n, o, u) {
-    n = ce(n), o >>>= 0, u >>>= 0, e = L(e >>> 0), t = L(t >>> 0), o = (p(), J).subarray(o >>> 0, o + u >>> 0), e.writeBuffer(t, n, o, 0, u);
-  }
-  i || function() {
-    for (var e = r.numThreads - 1; e--; ) gn();
-    Ae.push(async () => {
-      var t = async function() {
-        if (!i) return Promise.all(We.map(wn));
-      }();
-      Oe++, await t, --Oe == 0 && ee && (t = ee, ee = null, t());
-    });
-  }(), i || (Fe = new WebAssembly.Memory({ initial: 256, maximum: 65536, shared: true }), se()), r.wasmBinary && (g = r.wasmBinary), r.stackSave = () => P(), r.stackRestore = (e) => D(e), r.stackAlloc = (e) => Ft(e), r.setValue = function(e, t, n = "i8") {
-    switch (n.endsWith("*") && (n = "*"), n) {
-      case "i1":
-      case "i8":
-        (p(), X)[e >>> 0] = t;
-        break;
-      case "i16":
-        (p(), Ue)[e >>> 1 >>> 0] = t;
-        break;
-      case "i32":
-        (p(), x)[e >>> 2 >>> 0] = t;
-        break;
-      case "i64":
-        (p(), me)[e >>> 3 >>> 0] = BigInt(t);
-        break;
-      case "float":
-        (p(), _)[e >>> 2 >>> 0] = t;
-        break;
-      case "double":
-        (p(), ae)[e >>> 3 >>> 0] = t;
-        break;
-      case "*":
-        (p(), A)[e >>> 2 >>> 0] = t;
-        break;
-      default:
-        Te(`invalid type for setValue: ${n}`);
-    }
-  }, r.getValue = function(e, t = "i8") {
-    switch (t.endsWith("*") && (t = "*"), t) {
-      case "i1":
-      case "i8":
-        return (p(), X)[e >>> 0];
-      case "i16":
-        return (p(), Ue)[e >>> 1 >>> 0];
-      case "i32":
-        return (p(), x)[e >>> 2 >>> 0];
-      case "i64":
-        return (p(), me)[e >>> 3 >>> 0];
-      case "float":
-        return (p(), _)[e >>> 2 >>> 0];
-      case "double":
-        return (p(), ae)[e >>> 3 >>> 0];
-      case "*":
-        return (p(), A)[e >>> 2 >>> 0];
-      default:
-        Te(`invalid type for getValue: ${t}`);
-    }
-  }, r.UTF8ToString = ct, r.stringToUTF8 = Pe, r.lengthBytesUTF8 = _e;
-  var lo, po, Dr, Wt, xe, pt, mo, ho, yo, bo, wo, go, To, vo, Eo, So, Ao, Pr, _r, Rr, Nr, Et, kr, Io, Wr, xo, Lo, Oo, Fr, Bo, Mo, Gr, N, St, Co, D, Ft, P, Uo, $r, Do, Po, _o, zr, Ro, No, ko, Wo, Fo, Go, $o, zo, Vo, jo, Ho, Yo, qo, Jo, Xo, Qo, Zo, Ko, ea, ta, ra, na, oa, aa, sa, ia, ua, fa, ca, da, la, pa, ma, ha, ya, ba, wa, ga, ke, of = [qe, yr, En, Ln, On, Bn, Mn, Cn, Un, Dn, Pn, _n, Rn, Nn, kn, Wn, Qn, Zn, Kn, ao, so, io, uo, fo, co], Vr = { 970348: (e, t, n, o, u) => {
-    if (r === void 0 || !r.Uc) return 1;
-    if ((e = ct(Number(e >>> 0))).startsWith("./") && (e = e.substring(2)), !(e = r.Uc.get(e))) return 2;
-    if (t = Number(t >>> 0), n = Number(n >>> 0), o = Number(o >>> 0), t + n > e.byteLength) return 3;
-    try {
-      let c = e.subarray(t, t + n);
-      switch (u) {
-        case 0:
-          (p(), J).set(c, o >>> 0);
-          break;
-        case 1:
-          r.ad ? r.ad(o, c) : r.ne(o, c);
-          break;
-        default:
-          return 4;
-      }
-      return 0;
-    } catch {
-      return 4;
-    }
-  }, 971172: (e, t, n) => {
-    r.Sd(e, (p(), J).subarray(t >>> 0, t + n >>> 0));
-  }, 971236: () => r.le(), 971278: (e) => {
-    r.jd(e);
-  }, 971315: () => typeof wasmOffsetConverter < "u" };
-  function af(e, t, n, o) {
-    var u = P();
-    try {
-      return zo(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function sf(e, t, n) {
-    var o = P();
-    try {
-      return Fo(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      N(1, 0);
-    }
-  }
-  function uf(e) {
-    var t = P();
-    try {
-      Ro(e);
-    } catch (n) {
-      if (D(t), n !== n + 0) throw n;
-      N(1, 0);
-    }
-  }
-  function ff(e, t) {
-    var n = P();
-    try {
-      return zr(e, t);
-    } catch (o) {
-      if (D(n), o !== o + 0) throw o;
-      N(1, 0);
-    }
-  }
-  function cf(e, t, n) {
-    var o = P();
-    try {
-      _o(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      N(1, 0);
-    }
-  }
-  function df(e, t) {
-    var n = P();
-    try {
-      Vo(e, t);
-    } catch (o) {
-      if (D(n), o !== o + 0) throw o;
-      N(1, 0);
-    }
-  }
-  function lf(e, t, n, o, u, c, h) {
-    var b = P();
-    try {
-      return Wo(e, t, n, o, u, c, h);
-    } catch (E) {
-      if (D(b), E !== E + 0) throw E;
-      N(1, 0);
-    }
-  }
-  function pf(e, t, n, o, u, c) {
-    var h = P();
-    try {
-      No(e, t, n, o, u, c);
-    } catch (b) {
-      if (D(h), b !== b + 0) throw b;
-      N(1, 0);
-    }
-  }
-  function mf(e, t, n, o) {
-    var u = P();
-    try {
-      $o(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function hf(e, t, n, o, u, c, h) {
-    var b = P();
-    try {
-      Ho(e, t, n, o, u, c, h);
-    } catch (E) {
-      if (D(b), E !== E + 0) throw E;
-      N(1, 0);
-    }
-  }
-  function yf(e, t, n, o, u, c, h) {
-    var b = P();
-    try {
-      Yo(e, t, n, o, u, c, h);
-    } catch (E) {
-      if (D(b), E !== E + 0) throw E;
-      N(1, 0);
-    }
-  }
-  function bf(e, t, n, o, u, c, h, b) {
-    var E = P();
-    try {
-      ra(e, t, n, o, u, c, h, b);
-    } catch (I) {
-      if (D(E), I !== I + 0) throw I;
-      N(1, 0);
-    }
-  }
-  function wf(e, t, n, o, u, c, h, b, E, I, F, j) {
-    var te = P();
-    try {
-      qo(e, t, n, o, u, c, h, b, E, I, F, j);
-    } catch (B) {
-      if (D(te), B !== B + 0) throw B;
-      N(1, 0);
-    }
-  }
-  function gf(e, t, n, o, u) {
-    var c = P();
-    try {
-      return jo(e, t, n, o, u);
-    } catch (h) {
-      if (D(c), h !== h + 0) throw h;
-      N(1, 0);
-    }
-  }
-  function Tf(e, t, n, o, u) {
-    var c = P();
-    try {
-      ko(e, t, n, o, u);
-    } catch (h) {
-      if (D(c), h !== h + 0) throw h;
-      N(1, 0);
-    }
-  }
-  function vf(e, t, n, o, u, c, h, b) {
-    var E = P();
-    try {
-      Go(e, t, n, o, u, c, h, b);
-    } catch (I) {
-      if (D(E), I !== I + 0) throw I;
-      N(1, 0);
-    }
-  }
-  function Ef(e) {
-    var t = P();
-    try {
-      return na(e);
-    } catch (n) {
-      if (D(t), n !== n + 0) throw n;
-      N(1, 0);
-    }
-  }
-  function Sf(e, t, n) {
-    var o = P();
-    try {
-      return oa(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      N(1, 0);
-    }
-  }
-  function Af(e, t) {
-    var n = P();
-    try {
-      return ha(e, t);
-    } catch (o) {
-      if (D(n), o !== o + 0) throw o;
-      return N(1, 0), 0n;
-    }
-  }
-  function If2(e) {
-    var t = P();
-    try {
-      return Jo(e);
-    } catch (n) {
-      if (D(t), n !== n + 0) throw n;
-      return N(1, 0), 0n;
-    }
-  }
-  function xf(e, t, n, o) {
-    var u = P();
-    try {
-      return aa(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function Lf(e, t, n, o, u) {
-    var c = P();
-    try {
-      return sa(e, t, n, o, u);
-    } catch (h) {
-      if (D(c), h !== h + 0) throw h;
-      N(1, 0);
-    }
-  }
-  function Of(e, t, n, o, u, c) {
-    var h = P();
-    try {
-      return ia(e, t, n, o, u, c);
-    } catch (b) {
-      if (D(h), b !== b + 0) throw b;
-      N(1, 0);
-    }
-  }
-  function Bf(e, t, n, o, u, c) {
-    var h = P();
-    try {
-      return ea(e, t, n, o, u, c);
-    } catch (b) {
-      if (D(h), b !== b + 0) throw b;
-      N(1, 0);
-    }
-  }
-  function Mf(e, t, n, o, u, c) {
-    var h = P();
-    try {
-      return ua(e, t, n, o, u, c);
-    } catch (b) {
-      if (D(h), b !== b + 0) throw b;
-      N(1, 0);
-    }
-  }
-  function Cf(e, t, n, o, u, c, h, b) {
-    var E = P();
-    try {
-      return ta(e, t, n, o, u, c, h, b);
-    } catch (I) {
-      if (D(E), I !== I + 0) throw I;
-      N(1, 0);
-    }
-  }
-  function Uf(e, t, n, o, u) {
-    var c = P();
-    try {
-      return fa(e, t, n, o, u);
-    } catch (h) {
-      if (D(c), h !== h + 0) throw h;
-      return N(1, 0), 0n;
-    }
-  }
-  function Df(e, t, n, o) {
-    var u = P();
-    try {
-      return ca(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function Pf(e, t, n, o) {
-    var u = P();
-    try {
-      return da(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function _f(e, t, n, o, u, c, h, b, E, I, F, j) {
-    var te = P();
-    try {
-      return la(e, t, n, o, u, c, h, b, E, I, F, j);
-    } catch (B) {
-      if (D(te), B !== B + 0) throw B;
-      N(1, 0);
-    }
-  }
-  function Rf(e, t, n, o, u, c, h, b, E, I, F) {
-    var j = P();
-    try {
-      pa(e, t, n, o, u, c, h, b, E, I, F);
-    } catch (te) {
-      if (D(j), te !== te + 0) throw te;
-      N(1, 0);
-    }
-  }
-  function Nf(e, t, n, o, u, c, h, b, E, I, F, j, te, B, ue, ye) {
-    var fe = P();
-    try {
-      ma(e, t, n, o, u, c, h, b, E, I, F, j, te, B, ue, ye);
-    } catch (Qe) {
-      if (D(fe), Qe !== Qe + 0) throw Qe;
-      N(1, 0);
-    }
-  }
-  function kf(e, t, n) {
-    var o = P();
-    try {
-      return Qo(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      return N(1, 0), 0n;
-    }
-  }
-  function Wf(e, t, n) {
-    var o = P();
-    try {
-      return Xo(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      N(1, 0);
-    }
-  }
-  function Ff(e, t, n) {
-    var o = P();
-    try {
-      return Zo(e, t, n);
-    } catch (u) {
-      if (D(o), u !== u + 0) throw u;
-      N(1, 0);
-    }
-  }
-  function Gf(e, t, n, o) {
-    var u = P();
-    try {
-      Ko(e, t, n, o);
-    } catch (c) {
-      if (D(u), c !== c + 0) throw c;
-      N(1, 0);
-    }
-  }
-  function Gt() {
-    if (0 < Oe) ee = Gt;
-    else if (i) C?.(r), hr();
-    else {
-      for (var e = Ae; 0 < e.length; ) e.shift()(r);
-      0 < Oe ? ee = Gt : (r.calledRun = true, W || (hr(), C?.(r)));
-    }
-  }
-  return i || (ke = await bt(), Gt()), r.PTR_SIZE = 4, r.webgpuInit = (e) => {
-    let t = /* @__PURE__ */ new WeakMap(), n, o, u = 1;
-    r.webgpuRegisterDevice = (b) => {
-      if (o !== void 0) throw Error("another WebGPU EP inference session is being created.");
-      if (b) {
-        var E = t.get(b);
-        if (!E) {
-          let I = ((F, j = 0) => {
-            var te = Ao(j);
-            return j = So(j, te), de[te >>> 0] = F.queue, de[j >>> 0] = F, j;
-          })(b, E = ho(0));
-          E = [u++, E, I], t.set(b, E);
-        }
-        return n = b, o = E[0], E;
-      }
-      n = void 0, o = 0;
-    };
-    let c = /* @__PURE__ */ new Map();
-    r.webgpuOnCreateSession = (b) => {
-      if (o !== void 0) {
-        var E = o;
-        if (o = void 0, b) {
-          let I = Dr(E);
-          c.set(b, I), E === 0 && e(n ?? L(I));
-        }
-        n = void 0;
-      }
-    }, r.webgpuOnReleaseSession = (b) => {
-      c.delete(b);
-    };
-    let h = Symbol("gpuBufferMetadata");
-    r.webgpuRegisterBuffer = (b, E, I) => {
-      if (I) return b[h] = [I, NaN], I;
-      if (I = b[h]) return I[1]++, I[0];
-      if ((E = c.get(E)) === void 0) throw Error("Invalid session handle passed to webgpuRegisterBuffer");
-      return E = ((F, j = 0) => (F.mapState === "unmapped" || Te(), j = Eo(j), de[j >>> 0] = F, j))(b, E), b[h] = [E, 1], E;
-    }, r.webgpuUnregisterBuffer = (b) => {
-      let E = b[h];
-      if (!E) throw Error("Buffer is not registered");
-      E[1]--, E[1] === 0 && (mo(E[0]), delete b[h]);
-    }, r.webgpuGetBuffer = (b) => L(b), r.webgpuCreateDownloader = (b, E, I) => {
-      if ((I = c.get(I)) === void 0) throw Error("Invalid session handle passed to webgpuRegisterBuffer");
-      let F = L(I), j = 16 * Math.ceil(Number(E) / 16);
-      return async () => {
-        let te = F.createBuffer({ size: j, usage: 9 });
-        try {
-          let B = F.createCommandEncoder();
-          return B.copyBufferToBuffer(b, 0, te, 0, j), F.queue.submit([B.finish()]), await te.mapAsync(GPUMapMode.READ), te.getMappedRange().slice(0, E);
-        } finally {
-          te.destroy();
-        }
-      };
-    }, r.ad = (b, E) => {
-      var I = E.buffer;
-      let F = E.byteOffset, j = E.byteLength;
-      if (E = 16 * Math.ceil(Number(j) / 16), b = L(b), !n) {
-        var te = Dr(o);
-        n = L(te);
-      }
-      let B = (te = n.createBuffer({ mappedAtCreation: true, size: E, usage: 6 })).getMappedRange();
-      new Uint8Array(B).set(new Uint8Array(I, F, j)), te.unmap(), (I = n.createCommandEncoder()).copyBufferToBuffer(te, 0, b, 0, E), n.queue.submit([I.finish()]), te.destroy();
-    };
-  }, r.webnnInit = (e) => {
-    let t = e[0];
-    [r.le, r.jd, r.webnnEnsureTensor, r.Sd, r.webnnDownloadTensor, r.ke, r.webnnEnableTraceEvent] = e.slice(1), r.webnnReleaseTensorId = r.jd, r.webnnUploadTensor = r.Sd, r.webnnRegisterMLContext = r.ke, r.webnnOnRunStart = (n) => t.onRunStart(n), r.webnnOnRunEnd = t.onRunEnd.bind(t), r.webnnOnReleaseSession = (n) => {
-      t.onReleaseSession(n);
-    }, r.webnnCreateMLTensorDownloader = (n, o) => t.createMLTensorDownloader(n, o), r.webnnRegisterMLTensor = (n, o, u, c) => t.registerMLTensor(n, o, u, c), r.webnnCreateMLContext = (n) => t.createMLContext(n), r.webnnRegisterMLConstant = (n, o, u, c, h, b) => t.registerMLConstant(n, o, u, c, h, r.Uc, b), r.webnnRegisterGraphInput = t.registerGraphInput.bind(t), r.webnnIsGraphInput = t.isGraphInput.bind(t), r.webnnRegisterGraphOutput = t.registerGraphOutput.bind(t), r.webnnIsGraphOutput = t.isGraphOutput.bind(t), r.webnnCreateTemporaryTensor = t.createTemporaryTensor.bind(t), r.webnnIsGraphInputOutputTypeSupported = t.isGraphInputOutputTypeSupported.bind(t);
-  }, re ? r : new Promise((e, t) => {
-    C = e, R = t;
-  });
-}
-var Xf;
-var Qf;
-var rs = k(() => {
-  "use strict";
-  Xf = es, Qf = globalThis.self?.name?.startsWith("em-pthread");
-  Qf && es();
-});
-var as;
-var tn;
-var Zf;
-var ge;
-var ss;
-var en;
-var Kf;
-var ec;
-var is;
-var tc;
-var ns;
-var us;
-var os;
-var fs;
-var Yt = k(() => {
-  "use strict";
-  Ht();
-  as = typeof location > "u" ? void 0 : location.origin, tn = import.meta.url > "file:" && import.meta.url < "file;", Zf = () => {
-    if (true) {
-      if (tn) {
-        let a = URL;
-        return new URL(new a("ort.webgpu.bundle.min.mjs", import.meta.url).href, as).href;
-      }
-      return import.meta.url;
-    }
-  }, ge = Zf(), ss = () => {
-    if (ge && !ge.startsWith("blob:")) return ge.substring(0, ge.lastIndexOf("/") + 1);
-  }, en = (a, r) => {
-    try {
-      let s = r ?? ge;
-      return (s ? new URL(a, s) : new URL(a)).origin === as;
-    } catch {
-      return false;
-    }
-  }, Kf = (a, r) => {
-    let s = r ?? ge;
-    try {
-      return (s ? new URL(a, s) : new URL(a)).href;
-    } catch {
-      return;
-    }
-  }, ec = (a, r) => `${r ?? "./"}${a}`, is = async (a) => {
-    let s = await (await fetch(a, { credentials: "same-origin" })).blob();
-    return URL.createObjectURL(s);
-  }, tc = async (a) => (await import(
-    /*webpackIgnore:true*/
-    /*@vite-ignore*/
-    a
-  )).default, ns = (Ka(), $t(Za)).default, us = async () => {
-    if (!ge) throw new Error("Failed to load proxy worker: cannot determine the script source URL.");
-    if (en(ge)) return [void 0, ns()];
-    let a = await is(ge);
-    return [a, ns(a)];
-  }, os = (rs(), $t(ts)).default, fs = async (a, r, s, f) => {
-    let i = os && !(a || r);
-    if (i) if (ge) i = en(ge) || f && !s;
-    else if (f && !s) i = true;
-    else throw new Error("cannot determine the script source URL.");
-    if (i) return [void 0, os];
-    {
-      let d = "ort-wasm-simd-threaded.asyncify.mjs", l = a ?? Kf(d, r), m = s && l && !en(l, r), y = m ? await is(l) : l ?? ec(d, r);
-      return [m ? y : void 0, await tc(y)];
-    }
-  };
-});
-var rn;
-var nn;
-var rr;
-var cs;
-var rc;
-var nc;
-var oc;
-var qt;
-var z;
-var je = k(() => {
-  "use strict";
-  Yt();
-  nn = false, rr = false, cs = false, rc = () => {
-    if (typeof SharedArrayBuffer > "u") return false;
-    try {
-      return typeof MessageChannel < "u" && new MessageChannel().port1.postMessage(new SharedArrayBuffer(1)), WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 5, 4, 1, 3, 1, 1, 10, 11, 1, 9, 0, 65, 0, 254, 16, 2, 0, 26, 11]));
-    } catch {
-      return false;
-    }
-  }, nc = () => {
-    try {
-      return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 10, 30, 1, 28, 0, 65, 0, 253, 15, 253, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 186, 1, 26, 11]));
-    } catch {
-      return false;
-    }
-  }, oc = () => {
-    try {
-      return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 19, 1, 17, 0, 65, 1, 253, 15, 65, 2, 253, 15, 65, 3, 253, 15, 253, 147, 2, 11]));
-    } catch {
-      return false;
-    }
-  }, qt = async (a) => {
-    if (nn) return Promise.resolve();
-    if (rr) throw new Error("multiple calls to 'initializeWebAssembly()' detected.");
-    if (cs) throw new Error("previous call to 'initializeWebAssembly()' failed.");
-    rr = true;
-    let r = a.initTimeout, s = a.numThreads;
-    if (a.simd !== false) {
-      if (a.simd === "relaxed") {
-        if (!oc()) throw new Error("Relaxed WebAssembly SIMD is not supported in the current environment.");
-      } else if (!nc()) throw new Error("WebAssembly SIMD is not supported in the current environment.");
-    }
-    let f = rc();
-    s > 1 && !f && (typeof self < "u" && !self.crossOriginIsolated && console.warn("env.wasm.numThreads is set to " + s + ", but this will not work unless you enable crossOriginIsolated mode. See https://web.dev/cross-origin-isolation-guide/ for more info."), console.warn("WebAssembly multi-threading is not supported in the current environment. Falling back to single-threading."), a.numThreads = s = 1);
-    let i = a.wasmPaths, d = typeof i == "string" ? i : void 0, l = i?.mjs, m = l?.href ?? l, y = i?.wasm, w = y?.href ?? y, T = a.wasmBinary, [g, v] = await fs(m, d, s > 1, !!T || !!w), S = false, C = [];
-    if (r > 0 && C.push(new Promise((R) => {
-      setTimeout(() => {
-        S = true, R();
-      }, r);
-    })), C.push(new Promise((R, H) => {
-      let U = { numThreads: s };
-      if (T) U.wasmBinary = T, U.locateFile = (M) => M;
-      else if (w || d) U.locateFile = (M) => w ?? d + M;
-      else if (m && m.indexOf("blob:") !== 0) U.locateFile = (M) => new URL(M, m).href;
-      else if (g) {
-        let M = ss();
-        M && (U.locateFile = (Y) => M + Y);
-      }
-      v(U).then((M) => {
-        rr = false, nn = true, rn = M, R(), g && URL.revokeObjectURL(g);
-      }, (M) => {
-        rr = false, cs = true, H(M);
-      });
-    })), await Promise.race(C), S) throw new Error(`WebAssembly backend initializing failed due to timeout: ${r}ms`);
-  }, z = () => {
-    if (nn && rn) return rn;
-    throw new Error("WebAssembly is not initialized yet.");
-  };
-});
-var be;
-var Lt;
-var $;
-var nr = k(() => {
-  "use strict";
-  je();
-  be = (a, r) => {
-    let s = z(), f = s.lengthBytesUTF8(a) + 1, i = s._malloc(f);
-    return s.stringToUTF8(a, i, f), r.push(i), i;
-  }, Lt = (a, r, s, f) => {
-    if (typeof a == "object" && a !== null) {
-      if (s.has(a)) throw new Error("Circular reference in options");
-      s.add(a);
-    }
-    Object.entries(a).forEach(([i, d]) => {
-      let l = r ? r + i : i;
-      if (typeof d == "object") Lt(d, l + ".", s, f);
-      else if (typeof d == "string" || typeof d == "number") f(l, d.toString());
-      else if (typeof d == "boolean") f(l, d ? "1" : "0");
-      else throw new Error(`Can't handle extra config type: ${typeof d}`);
-    });
-  }, $ = (a) => {
-    let r = z(), s = r.stackSave();
-    try {
-      let f = r.PTR_SIZE, i = r.stackAlloc(2 * f);
-      r._OrtGetLastError(i, i + f);
-      let d = Number(r.getValue(i, f === 4 ? "i32" : "i64")), l = r.getValue(i + f, "*"), m = l ? r.UTF8ToString(l) : "";
-      throw new Error(`${a} ERROR_CODE: ${d}, ERROR_MESSAGE: ${m}`);
-    } finally {
-      r.stackRestore(s);
-    }
-  };
-});
-var ds;
-var ls = k(() => {
-  "use strict";
-  je();
-  nr();
-  ds = (a) => {
-    let r = z(), s = 0, f = [], i = a || {};
-    try {
-      if (a?.logSeverityLevel === void 0) i.logSeverityLevel = 2;
-      else if (typeof a.logSeverityLevel != "number" || !Number.isInteger(a.logSeverityLevel) || a.logSeverityLevel < 0 || a.logSeverityLevel > 4) throw new Error(`log severity level is not valid: ${a.logSeverityLevel}`);
-      if (a?.logVerbosityLevel === void 0) i.logVerbosityLevel = 0;
-      else if (typeof a.logVerbosityLevel != "number" || !Number.isInteger(a.logVerbosityLevel)) throw new Error(`log verbosity level is not valid: ${a.logVerbosityLevel}`);
-      a?.terminate === void 0 && (i.terminate = false);
-      let d = 0;
-      return a?.tag !== void 0 && (d = be(a.tag, f)), s = r._OrtCreateRunOptions(i.logSeverityLevel, i.logVerbosityLevel, !!i.terminate, d), s === 0 && $("Can't create run options."), a?.extra !== void 0 && Lt(a.extra, "", /* @__PURE__ */ new WeakSet(), (l, m) => {
-        let y = be(l, f), w = be(m, f);
-        r._OrtAddRunConfigEntry(s, y, w) !== 0 && $(`Can't set a run config entry: ${l} - ${m}.`);
-      }), [s, f];
-    } catch (d) {
-      throw s !== 0 && r._OrtReleaseRunOptions(s), f.forEach((l) => r._free(l)), d;
-    }
-  };
-});
-var ac;
-var sc;
-var ic;
-var on;
-var ot;
-var uc;
-var ps;
-var ms = k(() => {
-  "use strict";
-  je();
-  nr();
-  ac = (a) => {
-    switch (a) {
-      case "disabled":
-        return 0;
-      case "basic":
-        return 1;
-      case "extended":
-        return 2;
-      case "layout":
-        return 3;
-      case "all":
-        return 99;
-      default:
-        throw new Error(`unsupported graph optimization level: ${a}`);
-    }
-  }, sc = (a) => {
-    switch (a) {
-      case "sequential":
-        return 0;
-      case "parallel":
-        return 1;
-      default:
-        throw new Error(`unsupported execution mode: ${a}`);
-    }
-  }, ic = (a) => {
-    a.extra || (a.extra = {}), a.extra.session || (a.extra.session = {});
-    let r = a.extra.session;
-    r.use_ort_model_bytes_directly || (r.use_ort_model_bytes_directly = "1"), a.executionProviders && a.executionProviders.some((s) => (typeof s == "string" ? s : s.name) === "webgpu") && (a.enableMemPattern = false);
-  }, on = (a, r, s, f) => {
-    let i = be(r, f), d = be(s, f);
-    z()._OrtAddSessionConfigEntry(a, i, d) !== 0 && $(`Can't set a session config entry: ${r} - ${s}.`);
-  }, ot = (a, r, s, f) => {
-    let i = be(r, f), d = be(s, f);
-    a.push([i, d]);
-  }, uc = async (a, r, s) => {
-    let f = r.executionProviders;
-    for (let i of f) {
-      let d = typeof i == "string" ? i : i.name, l = [];
-      switch (d) {
-        case "webnn":
-          if (d = "WEBNN", typeof i != "string") {
-            let v = i?.deviceType;
-            v && on(a, "deviceType", v, s);
-          }
-          break;
-        case "webgpu":
-          {
-            d = "WebGPU";
-            let g;
-            if (typeof i != "string") {
-              let S = i;
-              if (S.device) if (typeof GPUDevice < "u" && S.device instanceof GPUDevice) g = S.device;
-              else throw new Error("Invalid GPU device set in WebGPU EP options.");
-              let { enableGraphCapture: C } = r;
-              if (typeof C == "boolean" && C && ot(l, "enableGraphCapture", "1", s), typeof S.preferredLayout == "string" && ot(l, "preferredLayout", S.preferredLayout, s), S.forceCpuNodeNames) {
-                let R = Array.isArray(S.forceCpuNodeNames) ? S.forceCpuNodeNames : [S.forceCpuNodeNames];
-                ot(l, "forceCpuNodeNames", R.join(`
-`), s);
-              }
-              S.validationMode && ot(l, "validationMode", S.validationMode, s);
-            }
-            let v = z().webgpuRegisterDevice(g);
-            if (v) {
-              let [S, C, R] = v;
-              ot(l, "deviceId", S.toString(), s), ot(l, "webgpuInstance", C.toString(), s), ot(l, "webgpuDevice", R.toString(), s);
-            }
-          }
-          break;
-        case "wasm":
-        case "cpu":
-          continue;
-        default:
-          throw new Error(`not supported execution provider: ${d}`);
-      }
-      let m = be(d, s), y = l.length, w = 0, T = 0;
-      if (y > 0) {
-        w = z()._malloc(y * z().PTR_SIZE), s.push(w), T = z()._malloc(y * z().PTR_SIZE), s.push(T);
-        for (let g = 0; g < y; g++) z().setValue(w + g * z().PTR_SIZE, l[g][0], "*"), z().setValue(T + g * z().PTR_SIZE, l[g][1], "*");
-      }
-      await z()._OrtAppendExecutionProvider(a, m, w, T, y) !== 0 && $(`Can't append execution provider: ${d}.`);
-    }
-  }, ps = async (a) => {
-    let r = z(), s = 0, f = [], i = a || {};
-    ic(i);
-    try {
-      let d = ac(i.graphOptimizationLevel ?? "all"), l = sc(i.executionMode ?? "sequential"), m = typeof i.logId == "string" ? be(i.logId, f) : 0, y = i.logSeverityLevel ?? 2;
-      if (!Number.isInteger(y) || y < 0 || y > 4) throw new Error(`log severity level is not valid: ${y}`);
-      let w = i.logVerbosityLevel ?? 0;
-      if (!Number.isInteger(w) || w < 0 || w > 4) throw new Error(`log verbosity level is not valid: ${w}`);
-      let T = typeof i.optimizedModelFilePath == "string" ? be(i.optimizedModelFilePath, f) : 0;
-      if (s = r._OrtCreateSessionOptions(d, !!i.enableCpuMemArena, !!i.enableMemPattern, l, !!i.enableProfiling, 0, m, y, w, T), s === 0 && $("Can't create session options."), i.executionProviders && await uc(s, i, f), i.enableGraphCapture !== void 0) {
-        if (typeof i.enableGraphCapture != "boolean") throw new Error(`enableGraphCapture must be a boolean value: ${i.enableGraphCapture}`);
-        on(s, "enableGraphCapture", i.enableGraphCapture.toString(), f);
-      }
-      if (i.freeDimensionOverrides) for (let [g, v] of Object.entries(i.freeDimensionOverrides)) {
-        if (typeof g != "string") throw new Error(`free dimension override name must be a string: ${g}`);
-        if (typeof v != "number" || !Number.isInteger(v) || v < 0) throw new Error(`free dimension override value must be a non-negative integer: ${v}`);
-        let S = be(g, f);
-        r._OrtAddFreeDimensionOverride(s, S, v) !== 0 && $(`Can't set a free dimension override: ${g} - ${v}.`);
-      }
-      return i.extra !== void 0 && Lt(i.extra, "", /* @__PURE__ */ new WeakSet(), (g, v) => {
-        on(s, g, v, f);
-      }), [s, f];
-    } catch (d) {
-      throw s !== 0 && r._OrtReleaseSessionOptions(s) !== 0 && $("Can't release session options."), f.forEach((l) => r._free(l)), d;
-    }
-  };
-});
-var He;
-var or;
-var mt;
-var at;
-var Ot;
-var ar;
-var sr;
-var an;
-var st = k(() => {
-  "use strict";
-  He = (a) => {
-    switch (a) {
-      case "int8":
-        return 3;
-      case "uint8":
-        return 2;
-      case "bool":
-        return 9;
-      case "int16":
-        return 5;
-      case "uint16":
-        return 4;
-      case "int32":
-        return 6;
-      case "uint32":
-        return 12;
-      case "float16":
-        return 10;
-      case "float32":
-        return 1;
-      case "float64":
-        return 11;
-      case "string":
-        return 8;
-      case "int64":
-        return 7;
-      case "uint64":
-        return 13;
-      case "int4":
-        return 22;
-      case "uint4":
-        return 21;
-      default:
-        throw new Error(`unsupported data type: ${a}`);
-    }
-  }, or = (a) => {
-    switch (a) {
-      case 3:
-        return "int8";
-      case 2:
-        return "uint8";
-      case 9:
-        return "bool";
-      case 5:
-        return "int16";
-      case 4:
-        return "uint16";
-      case 6:
-        return "int32";
-      case 12:
-        return "uint32";
-      case 10:
-        return "float16";
-      case 1:
-        return "float32";
-      case 11:
-        return "float64";
-      case 8:
-        return "string";
-      case 7:
-        return "int64";
-      case 13:
-        return "uint64";
-      case 22:
-        return "int4";
-      case 21:
-        return "uint4";
-      default:
-        throw new Error(`unsupported data type: ${a}`);
-    }
-  }, mt = (a, r) => {
-    let s = [-1, 4, 1, 1, 2, 2, 4, 8, -1, 1, 2, 8, 4, 8, -1, -1, -1, -1, -1, -1, -1, 0.5, 0.5][a], f = typeof r == "number" ? r : r.reduce((i, d) => i * d, 1);
-    return s > 0 ? Math.ceil(f * s) : void 0;
-  }, at = (a) => {
-    switch (a) {
-      case "float16":
-        return typeof Float16Array < "u" && Float16Array.from ? Float16Array : Uint16Array;
-      case "float32":
-        return Float32Array;
-      case "uint8":
-        return Uint8Array;
-      case "int8":
-        return Int8Array;
-      case "uint16":
-        return Uint16Array;
-      case "int16":
-        return Int16Array;
-      case "int32":
-        return Int32Array;
-      case "bool":
-        return Uint8Array;
-      case "float64":
-        return Float64Array;
-      case "uint32":
-        return Uint32Array;
-      case "int64":
-        return BigInt64Array;
-      case "uint64":
-        return BigUint64Array;
-      default:
-        throw new Error(`unsupported type: ${a}`);
-    }
-  }, Ot = (a) => {
-    switch (a) {
-      case "verbose":
-        return 0;
-      case "info":
-        return 1;
-      case "warning":
-        return 2;
-      case "error":
-        return 3;
-      case "fatal":
-        return 4;
-      default:
-        throw new Error(`unsupported logging level: ${a}`);
-    }
-  }, ar = (a) => a === "float32" || a === "float16" || a === "int32" || a === "int64" || a === "uint32" || a === "uint8" || a === "bool" || a === "uint4" || a === "int4", sr = (a) => a === "float32" || a === "float16" || a === "int32" || a === "int64" || a === "uint32" || a === "uint64" || a === "int8" || a === "uint8" || a === "bool" || a === "uint4" || a === "int4", an = (a) => {
-    switch (a) {
-      case "none":
-        return 0;
-      case "cpu":
-        return 1;
-      case "cpu-pinned":
-        return 2;
-      case "texture":
-        return 3;
-      case "gpu-buffer":
-        return 4;
-      case "ml-tensor":
-        return 5;
-      default:
-        throw new Error(`unsupported data location: ${a}`);
-    }
-  };
-});
-var Bt;
-var sn = k(() => {
-  "use strict";
-  Ht();
-  Bt = async (a) => {
-    if (typeof a == "string") if (false) try {
-      let { readFile: r } = Hr("node:fs/promises");
-      return new Uint8Array(await r(a));
-    } catch (r) {
-      if (r.code === "ERR_FS_FILE_TOO_LARGE") {
-        let { createReadStream: s } = Hr("node:fs"), f = s(a), i = [];
-        for await (let d of f) i.push(d);
-        return new Uint8Array(Buffer.concat(i));
-      }
-      throw r;
-    }
-    else {
-      let r = await fetch(a);
-      if (!r.ok) throw new Error(`failed to load external data file: ${a}`);
-      let s = r.headers.get("Content-Length"), f = s ? parseInt(s, 10) : 0;
-      if (f < 1073741824) return new Uint8Array(await r.arrayBuffer());
-      {
-        if (!r.body) throw new Error(`failed to load external data file: ${a}, no response body.`);
-        let i = r.body.getReader(), d;
-        try {
-          d = new ArrayBuffer(f);
-        } catch (m) {
-          if (m instanceof RangeError) {
-            let y = Math.ceil(f / 65536);
-            d = new WebAssembly.Memory({ initial: y, maximum: y }).buffer;
-          } else throw m;
-        }
-        let l = 0;
-        for (; ; ) {
-          let { done: m, value: y } = await i.read();
-          if (m) break;
-          let w = y.byteLength;
-          new Uint8Array(d, l, w).set(y), l += w;
-        }
-        return new Uint8Array(d, 0, f);
-      }
-    }
-    else return a instanceof Blob ? new Uint8Array(await a.arrayBuffer()) : a instanceof Uint8Array ? a : new Uint8Array(a);
-  };
-});
-var hs;
-var ys = k(() => {
-  "use strict";
-  st();
-  hs = (a, r) => new (at(r))(a);
-});
-var fc;
-var cc;
-var bs;
-var ws;
-var gs;
-var dc;
-var pe;
-var un = k(() => {
-  "use strict";
-  st();
-  fc = ["V", "I", "W", "E", "F"], cc = (a, r) => {
-    console.log(`[${fc[a]},${(/* @__PURE__ */ new Date()).toISOString()}]${r}`);
-  }, gs = (a, r) => {
-    bs = a, ws = r;
-  }, dc = (a, r) => {
-    let s = Ot(a), f = Ot(bs);
-    s >= f && cc(s, typeof r == "function" ? r() : r);
-  }, pe = (...a) => {
-    ws && dc(...a);
-  };
-});
-var vs;
-var cn;
-var Es;
-var lc;
-var Ts;
-var pc;
-var Ss;
-var ir;
-var ur;
-var fn;
-var As;
-var Is = k(() => {
-  "use strict";
-  st();
-  un();
-  vs = /* @__PURE__ */ new Map([["float32", 32], ["float16", 16], ["int32", 32], ["uint32", 32], ["int64", 64], ["uint64", 64], ["int8", 8], ["uint8", 8], ["int4", 4], ["uint4", 4]]), cn = (a, r) => {
-    if (r === "int32") return a;
-    let s = vs.get(r);
-    if (!s) throw new Error(`WebNN backend does not support data type: ${r}`);
-    let f = s / 8;
-    if (a.byteLength % f !== 0) throw new Error(`Invalid Uint8Array length - must be a multiple of ${f}.`);
-    let i = a.byteLength / f, d = new (at(r))(a.buffer, a.byteOffset, i);
-    switch (r) {
-      case "int64":
-      case "uint64": {
-        let l = new Int32Array(i);
-        for (let m = 0; m < i; m++) {
-          let y = d[m];
-          if (y > 2147483647n || y < -2147483648n) throw new Error("Can not convert int64 data to int32 - value out of range.");
-          l[m] = Number(y);
-        }
-        return new Uint8Array(l.buffer);
-      }
-      case "int8":
-      case "uint8":
-      case "uint32": {
-        if (r === "uint32" && d.some((m) => m > 2147483647)) throw new Error("Can not convert uint32 data to int32 - value out of range.");
-        let l = Int32Array.from(d, Number);
-        return new Uint8Array(l.buffer);
-      }
-      default:
-        throw new Error(`Unsupported data conversion from ${r} to 'int32'`);
-    }
-  }, Es = (a, r) => {
-    if (r === "int32") return a;
-    if (a.byteLength % 4 !== 0) throw new Error("Invalid Uint8Array length - must be a multiple of 4 (int32).");
-    let s = a.byteLength / 4, f = new Int32Array(a.buffer, a.byteOffset, s);
-    switch (r) {
-      case "int64": {
-        let i = BigInt64Array.from(f, BigInt);
-        return new Uint8Array(i.buffer);
-      }
-      case "uint64": {
-        if (f.some((d) => d < 0)) throw new Error("Can not convert int32 data to uin64 - negative value found.");
-        let i = BigUint64Array.from(f, BigInt);
-        return new Uint8Array(i.buffer);
-      }
-      case "int8": {
-        if (f.some((d) => d < -128 || d > 127)) throw new Error("Can not convert int32 data to int8 - value out of range.");
-        let i = Int8Array.from(f, Number);
-        return new Uint8Array(i.buffer);
-      }
-      case "uint8": {
-        if (f.some((i) => i < 0 || i > 255)) throw new Error("Can not convert int32 data to uint8 - value out of range.");
-        return Uint8Array.from(f, Number);
-      }
-      case "uint32": {
-        if (f.some((d) => d < 0)) throw new Error("Can not convert int32 data to uint32 - negative value found.");
-        let i = Uint32Array.from(f, Number);
-        return new Uint8Array(i.buffer);
-      }
-      default:
-        throw new Error(`Unsupported data conversion from 'int32' to ${r}`);
-    }
-  }, lc = 1, Ts = () => lc++, pc = /* @__PURE__ */ new Map([["int8", "int32"], ["uint8", "int32"], ["uint32", "int32"], ["int64", "int32"]]), Ss = (a, r) => {
-    let s = vs.get(a);
-    if (!s) throw new Error(`WebNN backend does not support data type: ${a}`);
-    return r.length > 0 ? Math.ceil(r.reduce((f, i) => f * i) * s / 8) : 0;
-  }, ir = class {
-    constructor(r) {
-      this.isDataConverted = false;
-      let { sessionId: s, context: f, tensor: i, dataType: d, shape: l, fallbackDataType: m } = r;
-      this.sessionId = s, this.mlContext = f, this.mlTensor = i, this.dataType = d, this.tensorShape = l, this.fallbackDataType = m;
-    }
-    get tensor() {
-      return this.mlTensor;
-    }
-    get type() {
-      return this.dataType;
-    }
-    get fallbackType() {
-      return this.fallbackDataType;
-    }
-    get shape() {
-      return this.tensorShape;
-    }
-    get byteLength() {
-      return Ss(this.dataType, this.tensorShape);
-    }
-    destroy() {
-      pe("verbose", () => "[WebNN] TensorWrapper.destroy"), this.mlTensor.destroy();
-    }
-    write(r) {
-      this.mlContext.writeTensor(this.mlTensor, r);
-    }
-    async read(r) {
-      if (this.fallbackDataType) {
-        let s = await this.mlContext.readTensor(this.mlTensor), f = Es(new Uint8Array(s), this.dataType);
-        if (r) {
-          (r instanceof ArrayBuffer ? new Uint8Array(r) : new Uint8Array(r.buffer, r.byteOffset, r.byteLength)).set(f);
-          return;
-        } else return f.buffer;
-      } else return r ? this.mlContext.readTensor(this.mlTensor, r) : this.mlContext.readTensor(this.mlTensor);
-    }
-    canReuseTensor(r, s, f) {
-      return this.mlContext === r && this.dataType === s && this.tensorShape.length === f.length && this.tensorShape.every((i, d) => i === f[d]);
-    }
-    setIsDataConverted(r) {
-      this.isDataConverted = r;
-    }
-  }, ur = class {
-    constructor(r, s) {
-      this.tensorManager = r;
-      this.wrapper = s;
-    }
-    get tensorWrapper() {
-      return this.wrapper;
-    }
-    releaseTensor() {
-      this.tensorWrapper && (this.tensorManager.releaseTensor(this.tensorWrapper), this.wrapper = void 0);
-    }
-    async ensureTensor(r, s, f, i) {
-      let d = this.tensorManager.getMLContext(r), l = this.tensorManager.getMLOpSupportLimits(r), m;
-      if (!l?.input.dataTypes.includes(s)) {
-        if (m = pc.get(s), !m || l?.input.dataTypes.includes(m)) throw new Error(`WebNN backend does not support data type: ${s}`);
-        pe("verbose", () => `[WebNN] TensorIdTracker.ensureTensor: fallback dataType from ${s} to ${m}`);
-      }
-      if (this.wrapper) {
-        if (this.wrapper.canReuseTensor(d, s, f)) return this.wrapper.tensor;
-        if (i) {
-          if (this.wrapper.byteLength !== Ss(s, f)) throw new Error("Unable to copy data to tensor with different size.");
-          this.activeUpload = new Uint8Array(await this.wrapper.read());
-        }
-        this.tensorManager.releaseTensor(this.wrapper);
-      }
-      let y = typeof MLTensorUsage > "u" ? void 0 : MLTensorUsage.READ | MLTensorUsage.WRITE;
-      return this.wrapper = await this.tensorManager.getCachedTensor(r, s, f, y, true, true, m), i && this.activeUpload && (this.wrapper.write(this.activeUpload), this.activeUpload = void 0), this.wrapper.tensor;
-    }
-    upload(r) {
-      let s = r;
-      if (this.wrapper) {
-        if (this.wrapper.fallbackType) if (this.wrapper.fallbackType === "int32") s = cn(r, this.wrapper.type), this.wrapper.setIsDataConverted(true);
-        else throw new Error(`Unsupported fallback data type: ${this.wrapper.fallbackType}`);
-        if (r.byteLength === this.wrapper.byteLength) {
-          this.wrapper.write(s);
-          return;
-        } else pe("verbose", () => "Data size does not match tensor size. Releasing tensor."), this.releaseTensor();
-      }
-      this.activeUpload ? this.activeUpload.set(s) : this.activeUpload = new Uint8Array(s);
-    }
-    async download(r) {
-      if (this.activeUpload) {
-        let s = this.wrapper?.isDataConverted ? Es(this.activeUpload, this.wrapper?.type) : this.activeUpload;
-        if (r) {
-          r instanceof ArrayBuffer ? new Uint8Array(r).set(s) : new Uint8Array(r.buffer, r.byteOffset, r.byteLength).set(s);
-          return;
-        } else return s.buffer;
-      }
-      if (!this.wrapper) throw new Error("Tensor has not been created.");
-      return r ? this.wrapper.read(r) : this.wrapper.read();
-    }
-  }, fn = class {
-    constructor(r) {
-      this.backend = r;
-      this.tensorTrackersById = /* @__PURE__ */ new Map();
-      this.freeTensors = [];
-      this.externalTensors = /* @__PURE__ */ new Set();
-    }
-    getMLContext(r) {
-      let s = this.backend.getMLContext(r);
-      if (!s) throw new Error("MLContext not found for session.");
-      return s;
-    }
-    getMLOpSupportLimits(r) {
-      return this.backend.getMLOpSupportLimits(r);
-    }
-    reserveTensorId() {
-      let r = Ts();
-      return this.tensorTrackersById.set(r, new ur(this)), r;
-    }
-    releaseTensorId(r) {
-      let s = this.tensorTrackersById.get(r);
-      s && (this.tensorTrackersById.delete(r), s.tensorWrapper && this.releaseTensor(s.tensorWrapper));
-    }
-    async ensureTensor(r, s, f, i, d) {
-      pe("verbose", () => `[WebNN] TensorManager.ensureTensor {tensorId: ${s}, dataType: ${f}, shape: ${i}, copyOld: ${d}}`);
-      let l = this.tensorTrackersById.get(s);
-      if (!l) throw new Error("Tensor not found.");
-      return l.ensureTensor(r, f, i, d);
-    }
-    upload(r, s) {
-      let f = this.tensorTrackersById.get(r);
-      if (!f) throw new Error("Tensor not found.");
-      f.upload(s);
-    }
-    async download(r, s) {
-      pe("verbose", () => `[WebNN] TensorManager.download {tensorId: ${r}, dstBuffer: ${s?.byteLength}}`);
-      let f = this.tensorTrackersById.get(r);
-      if (!f) throw new Error("Tensor not found.");
-      return f.download(s);
-    }
-    releaseTensorsForSession(r) {
-      for (let s of this.freeTensors) s.sessionId === r && s.destroy();
-      this.freeTensors = this.freeTensors.filter((s) => s.sessionId !== r);
-    }
-    registerTensor(r, s, f, i) {
-      let d = this.getMLContext(r), l = Ts(), m = new ir({ sessionId: r, context: d, tensor: s, dataType: f, shape: i });
-      return this.tensorTrackersById.set(l, new ur(this, m)), this.externalTensors.add(m), l;
-    }
-    async getCachedTensor(r, s, f, i, d, l, m) {
-      let y = this.getMLContext(r);
-      for (let [T, g] of this.freeTensors.entries()) if (g.canReuseTensor(y, s, f)) {
-        pe("verbose", () => `[WebNN] Reusing tensor {dataType: ${s}, ${m ? `fallbackDataType: ${m},` : ""} shape: ${f}`);
-        let v = this.freeTensors.splice(T, 1)[0];
-        return v.sessionId = r, v;
-      }
-      pe("verbose", () => `[WebNN] MLContext.createTensor {dataType: ${s}, ${m ? `fallbackDataType: ${m},` : ""} shape: ${f}}`);
-      let w = await y.createTensor({ dataType: m ?? s, shape: f, dimensions: f, usage: i, writable: d, readable: l });
-      return new ir({ sessionId: r, context: y, tensor: w, dataType: s, shape: f, fallbackDataType: m });
-    }
-    releaseTensor(r) {
-      this.externalTensors.has(r) && this.externalTensors.delete(r), this.freeTensors.push(r);
-    }
-  }, As = (...a) => new fn(...a);
-});
-var xs = {};
-At(xs, { WebNNBackend: () => dn });
-var fr;
-var mc;
-var dn;
-var Ls = k(() => {
-  "use strict";
-  st();
-  je();
-  ys();
-  Is();
-  un();
-  fr = /* @__PURE__ */ new Map([[1, "float32"], [10, "float16"], [6, "int32"], [12, "uint32"], [7, "int64"], [13, "uint64"], [22, "int4"], [21, "uint4"], [3, "int8"], [2, "uint8"], [9, "uint8"]]), mc = (a, r) => {
-    if (a === r) return true;
-    if (a === void 0 || r === void 0) return false;
-    let s = Object.keys(a).sort(), f = Object.keys(r).sort();
-    return s.length === f.length && s.every((i, d) => i === f[d] && a[i] === r[i]);
-  }, dn = class {
-    constructor(r) {
-      this.tensorManager = As(this);
-      this.mlContextBySessionId = /* @__PURE__ */ new Map();
-      this.sessionIdsByMLContext = /* @__PURE__ */ new Map();
-      this.mlContextCache = [];
-      this.sessionGraphInputs = /* @__PURE__ */ new Map();
-      this.sessionGraphOutputs = /* @__PURE__ */ new Map();
-      this.temporaryGraphInputs = [];
-      this.temporaryGraphOutputs = [];
-      this.temporarySessionTensorIds = /* @__PURE__ */ new Map();
-      this.mlOpSupportLimitsBySessionId = /* @__PURE__ */ new Map();
-      gs(r.logLevel, !!r.debug);
-    }
-    get currentSessionId() {
-      if (this.activeSessionId === void 0) throw new Error("No active session");
-      return this.activeSessionId;
-    }
-    onRunStart(r) {
-      pe("verbose", () => `[WebNN] onRunStart {sessionId: ${r}}`), this.activeSessionId = r;
-    }
-    onRunEnd(r) {
-      pe("verbose", () => `[WebNN] onRunEnd {sessionId: ${r}}`);
-      let s = this.temporarySessionTensorIds.get(r);
-      if (s) {
-        for (let f of s) pe("verbose", () => `[WebNN] releasing temporary tensor {tensorId: ${f}}`), this.tensorManager.releaseTensorId(f);
-        this.temporarySessionTensorIds.delete(r), this.activeSessionId = void 0;
-      }
-    }
-    async createMLContext(r) {
-      if (r instanceof GPUDevice) {
-        let f = this.mlContextCache.findIndex((i) => i.gpuDevice === r);
-        if (f !== -1) return this.mlContextCache[f].mlContext;
-        {
-          let i = await navigator.ml.createContext(r);
-          return this.mlContextCache.push({ gpuDevice: r, mlContext: i }), i;
-        }
-      } else if (r === void 0) {
-        let f = this.mlContextCache.findIndex((i) => i.options === void 0 && i.gpuDevice === void 0);
-        if (f !== -1) return this.mlContextCache[f].mlContext;
-        {
-          let i = await navigator.ml.createContext();
-          return this.mlContextCache.push({ mlContext: i }), i;
-        }
-      }
-      let s = this.mlContextCache.findIndex((f) => mc(f.options, r));
-      if (s !== -1) return this.mlContextCache[s].mlContext;
-      {
-        let f = await navigator.ml.createContext(r);
-        return this.mlContextCache.push({ options: r, mlContext: f }), f;
-      }
-    }
-    registerMLContext(r, s) {
-      this.mlContextBySessionId.set(r, s);
-      let f = this.sessionIdsByMLContext.get(s);
-      f || (f = /* @__PURE__ */ new Set(), this.sessionIdsByMLContext.set(s, f)), f.add(r), this.mlOpSupportLimitsBySessionId.has(r) || this.mlOpSupportLimitsBySessionId.set(r, s.opSupportLimits()), this.temporaryGraphInputs.length > 0 && (this.sessionGraphInputs.set(r, this.temporaryGraphInputs), this.temporaryGraphInputs = []), this.temporaryGraphOutputs.length > 0 && (this.sessionGraphOutputs.set(r, this.temporaryGraphOutputs), this.temporaryGraphOutputs = []);
-    }
-    onReleaseSession(r) {
-      this.sessionGraphInputs.delete(r), this.sessionGraphOutputs.delete(r);
-      let s = this.mlContextBySessionId.get(r);
-      if (!s) return;
-      this.tensorManager.releaseTensorsForSession(r), this.mlContextBySessionId.delete(r), this.mlOpSupportLimitsBySessionId.delete(r);
-      let f = this.sessionIdsByMLContext.get(s);
-      if (f.delete(r), f.size === 0) {
-        this.sessionIdsByMLContext.delete(s);
-        let i = this.mlContextCache.findIndex((d) => d.mlContext === s);
-        i !== -1 && this.mlContextCache.splice(i, 1);
-      }
-    }
-    getMLContext(r) {
-      return this.mlContextBySessionId.get(r);
-    }
-    getMLOpSupportLimits(r) {
-      return this.mlOpSupportLimitsBySessionId.get(r);
-    }
-    reserveTensorId() {
-      return this.tensorManager.reserveTensorId();
-    }
-    releaseTensorId(r) {
-      pe("verbose", () => `[WebNN] releaseTensorId {tensorId: ${r}}`), this.tensorManager.releaseTensorId(r);
-    }
-    async ensureTensor(r, s, f, i, d) {
-      let l = fr.get(f);
-      if (!l) throw new Error(`Unsupported ONNX data type: ${f}`);
-      return this.tensorManager.ensureTensor(r ?? this.currentSessionId, s, l, i, d);
-    }
-    async createTemporaryTensor(r, s, f) {
-      pe("verbose", () => `[WebNN] createTemporaryTensor {onnxDataType: ${s}, shape: ${f}}`);
-      let i = fr.get(s);
-      if (!i) throw new Error(`Unsupported ONNX data type: ${s}`);
-      let d = this.tensorManager.reserveTensorId();
-      await this.tensorManager.ensureTensor(r, d, i, f, false);
-      let l = this.temporarySessionTensorIds.get(r);
-      return l ? l.push(d) : this.temporarySessionTensorIds.set(r, [d]), d;
-    }
-    uploadTensor(r, s) {
-      if (!z().shouldTransferToMLTensor) throw new Error("Trying to upload to a MLTensor while shouldTransferToMLTensor is false");
-      pe("verbose", () => `[WebNN] uploadTensor {tensorId: ${r}, data: ${s.byteLength}}`), this.tensorManager.upload(r, s);
-    }
-    async downloadTensor(r, s) {
-      return this.tensorManager.download(r, s);
-    }
-    createMLTensorDownloader(r, s) {
-      return async () => {
-        let f = await this.tensorManager.download(r);
-        return hs(f, s);
-      };
-    }
-    registerMLTensor(r, s, f, i) {
-      let d = fr.get(f);
-      if (!d) throw new Error(`Unsupported ONNX data type: ${f}`);
-      let l = this.tensorManager.registerTensor(r, s, d, i);
-      return pe("verbose", () => `[WebNN] registerMLTensor {tensor: ${s}, dataType: ${d}, dimensions: ${i}} -> {tensorId: ${l}}`), l;
-    }
-    registerMLConstant(r, s, f, i, d, l, m = false) {
-      if (!l) throw new Error("External mounted files are not available.");
-      let y = r;
-      r.startsWith("./") && (y = r.substring(2));
-      let w = l.get(y);
-      if (!w) throw new Error(`File with name ${y} not found in preloaded files.`);
-      if (s + f > w.byteLength) throw new Error("Out of bounds: data offset and length exceed the external file data size.");
-      let T = w.slice(s, s + f).buffer, g;
-      switch (d.dataType) {
-        case "float32":
-          g = new Float32Array(T);
-          break;
-        case "float16":
-          g = typeof Float16Array < "u" && Float16Array.from ? new Float16Array(T) : new Uint16Array(T);
-          break;
-        case "int32":
-          g = new Int32Array(T);
-          break;
-        case "uint32":
-          g = new Uint32Array(T);
-          break;
-        case "int64":
-          if (m) {
-            let v = cn(new Uint8Array(T), "int64");
-            g = new Int32Array(v.buffer), d.dataType = "int32";
-          } else g = new BigInt64Array(T);
-          break;
-        case "uint64":
-          g = new BigUint64Array(T);
-          break;
-        case "int8":
-          g = new Int8Array(T);
-          break;
-        case "int4":
-        case "uint4":
-        case "uint8":
-          g = new Uint8Array(T);
-          break;
-        default:
-          throw new Error(`Unsupported data type: ${d.dataType} in creating WebNN Constant from external data.`);
-      }
-      return pe("verbose", () => `[WebNN] registerMLConstant {dataType: ${d.dataType}, shape: ${d.shape}}} ${m ? "(Note: it was int64 data type and registered to int32 as workaround)" : ""}`), i.constant(d, g);
-    }
-    registerGraphInput(r) {
-      this.temporaryGraphInputs.push(r);
-    }
-    registerGraphOutput(r) {
-      this.temporaryGraphOutputs.push(r);
-    }
-    isGraphInput(r, s) {
-      let f = this.sessionGraphInputs.get(r);
-      return f ? f.includes(s) : false;
-    }
-    isGraphOutput(r, s) {
-      let f = this.sessionGraphOutputs.get(r);
-      return f ? f.includes(s) : false;
-    }
-    isGraphInputOutputTypeSupported(r, s, f = true) {
-      let i = fr.get(He(s)), d = this.mlOpSupportLimitsBySessionId.get(r);
-      return typeof i > "u" ? false : f ? !!d?.input.dataTypes.includes(i) : !!d?.output.dataTypes.includes(i);
-    }
-    flush() {
-    }
-  };
-});
-var hc;
-var Jt;
-var Xt;
-var it;
-var yc;
-var Os;
-var xt;
-var Qt;
-var Zt;
-var Bs;
-var Kt;
-var er;
-var tr;
-var Kr = k(() => {
-  "use strict";
-  Ve();
-  ls();
-  ms();
-  st();
-  je();
-  nr();
-  sn();
-  hc = (a, r) => {
-    z()._OrtInit(a, r) !== 0 && $("Can't initialize onnxruntime.");
-  }, Jt = async (a) => {
-    hc(a.wasm.numThreads, Ot(a.logLevel));
-  }, Xt = async (a, r) => {
-    z().asyncInit?.();
-    let s = a.webgpu.adapter;
-    if (r === "webgpu") {
-      if (typeof navigator > "u" || !navigator.gpu) throw new Error("WebGPU is not supported in current environment");
-      if (s) {
-        if (typeof s.limits != "object" || typeof s.features != "object" || typeof s.requestDevice != "function") throw new Error("Invalid GPU adapter set in `env.webgpu.adapter`. It must be a GPUAdapter object.");
-      } else {
-        let f = a.webgpu.powerPreference;
-        if (f !== void 0 && f !== "low-power" && f !== "high-performance") throw new Error(`Invalid powerPreference setting: "${f}"`);
-        let i = a.webgpu.forceFallbackAdapter;
-        if (i !== void 0 && typeof i != "boolean") throw new Error(`Invalid forceFallbackAdapter setting: "${i}"`);
-        if (s = await navigator.gpu.requestAdapter({ powerPreference: f, forceFallbackAdapter: i }), !s) throw new Error('Failed to get GPU adapter. You may need to enable flag "--enable-unsafe-webgpu" if you are using Chrome.');
-      }
-    }
-    if (r === "webnn" && (typeof navigator > "u" || !navigator.ml)) throw new Error("WebNN is not supported in current environment");
-    if (r === "webgpu" && z().webgpuInit((f) => {
-      a.webgpu.device = f;
-    }), r === "webnn") {
-      let f = new (Ls(), $t(xs)).WebNNBackend(a);
-      z().webnnInit([f, () => f.reserveTensorId(), (i) => f.releaseTensorId(i), async (i, d, l, m, y) => f.ensureTensor(i, d, l, m, y), (i, d) => {
-        f.uploadTensor(i, d);
-      }, async (i, d) => f.downloadTensor(i, d), (i, d) => f.registerMLContext(i, d), !!a.trace]);
-    }
-  }, it = /* @__PURE__ */ new Map(), yc = (a) => {
-    let r = z(), s = r.stackSave();
-    try {
-      let f = r.PTR_SIZE, i = r.stackAlloc(2 * f);
-      r._OrtGetInputOutputCount(a, i, i + f) !== 0 && $("Can't get session input/output count.");
-      let l = f === 4 ? "i32" : "i64";
-      return [Number(r.getValue(i, l)), Number(r.getValue(i + f, l))];
-    } finally {
-      r.stackRestore(s);
-    }
-  }, Os = (a, r) => {
-    let s = z(), f = s.stackSave(), i = 0;
-    try {
-      let d = s.PTR_SIZE, l = s.stackAlloc(2 * d);
-      s._OrtGetInputOutputMetadata(a, r, l, l + d) !== 0 && $("Can't get session input/output metadata.");
-      let y = Number(s.getValue(l, "*"));
-      i = Number(s.getValue(l + d, "*"));
-      let w = s.HEAP32[i / 4];
-      if (w === 0) return [y, 0];
-      let T = s.HEAPU32[i / 4 + 1], g = [];
-      for (let v = 0; v < T; v++) {
-        let S = Number(s.getValue(i + 8 + v * d, "*"));
-        g.push(S !== 0 ? s.UTF8ToString(S) : Number(s.getValue(i + 8 + (v + T) * d, "*")));
-      }
-      return [y, w, g];
-    } finally {
-      s.stackRestore(f), i !== 0 && s._OrtFree(i);
-    }
-  }, xt = (a) => {
-    let r = z(), s = r._malloc(a.byteLength);
-    if (s === 0) throw new Error(`Can't create a session. failed to allocate a buffer of size ${a.byteLength}.`);
-    return r.HEAPU8.set(a, s), [s, a.byteLength];
-  }, Qt = async (a, r) => {
-    let s, f, i = z();
-    Array.isArray(a) ? [s, f] = a : a.buffer === i.HEAPU8.buffer ? [s, f] = [a.byteOffset, a.byteLength] : [s, f] = xt(a);
-    let d = 0, l = 0, m = 0, y = [], w = [], T = [];
-    try {
-      if ([l, y] = await ps(r), r?.externalData && i.mountExternalData) {
-        let O = [];
-        for (let W of r.externalData) {
-          let oe = typeof W == "string" ? W : W.path;
-          O.push(Bt(typeof W == "string" ? W : W.data).then((p) => {
-            i.mountExternalData(oe, p);
-          }));
-        }
-        await Promise.all(O);
-      }
-      for (let O of r?.executionProviders ?? []) if ((typeof O == "string" ? O : O.name) === "webnn") {
-        if (i.shouldTransferToMLTensor = false, typeof O != "string") {
-          let oe = O, p = oe?.context, ne = oe?.gpuDevice, X = oe?.deviceType, J = oe?.powerPreference;
-          p ? i.currentContext = p : ne ? i.currentContext = await i.webnnCreateMLContext(ne) : i.currentContext = await i.webnnCreateMLContext({ deviceType: X, powerPreference: J });
-        } else i.currentContext = await i.webnnCreateMLContext();
-        break;
-      }
-      d = await i._OrtCreateSession(s, f, l), i.webgpuOnCreateSession?.(d), d === 0 && $("Can't create a session."), i.jsepOnCreateSession?.(), i.currentContext && (i.webnnRegisterMLContext(d, i.currentContext), i.currentContext = void 0, i.shouldTransferToMLTensor = true);
-      let [g, v] = yc(d), S = !!r?.enableGraphCapture, C = [], R = [], H = [], U = [], M = [];
-      for (let O = 0; O < g; O++) {
-        let [W, oe, p] = Os(d, O);
-        W === 0 && $("Can't get an input name."), w.push(W);
-        let ne = i.UTF8ToString(W);
-        C.push(ne), H.push(oe === 0 ? { name: ne, isTensor: false } : { name: ne, isTensor: true, type: or(oe), shape: p });
-      }
-      for (let O = 0; O < v; O++) {
-        let [W, oe, p] = Os(d, O + g);
-        W === 0 && $("Can't get an output name."), T.push(W);
-        let ne = i.UTF8ToString(W);
-        R.push(ne), U.push(oe === 0 ? { name: ne, isTensor: false } : { name: ne, isTensor: true, type: or(oe), shape: p });
-        {
-          if (S && r?.preferredOutputLocation === void 0) {
-            M.push("gpu-buffer");
-            continue;
-          }
-          let X = typeof r?.preferredOutputLocation == "string" ? r.preferredOutputLocation : r?.preferredOutputLocation?.[ne] ?? "cpu", J = i.webnnIsGraphOutput;
-          if (X === "cpu" && J && J(d, ne)) {
-            M.push("ml-tensor-cpu-output");
-            continue;
-          }
-          if (X !== "cpu" && X !== "cpu-pinned" && X !== "gpu-buffer" && X !== "ml-tensor") throw new Error(`Not supported preferred output location: ${X}.`);
-          if (S && X !== "gpu-buffer") throw new Error(`Not supported preferred output location: ${X}. Only 'gpu-buffer' location is supported when enableGraphCapture is true.`);
-          M.push(X);
-        }
-      }
-      let Y = null;
-      return M.some((O) => O === "gpu-buffer" || O === "ml-tensor" || O === "ml-tensor-cpu-output") && (m = i._OrtCreateBinding(d), m === 0 && $("Can't create IO binding."), Y = { handle: m, outputPreferredLocations: M, outputPreferredLocationsEncoded: M.map((O) => O === "ml-tensor-cpu-output" ? "ml-tensor" : O).map((O) => an(O)) }), it.set(d, [d, w, T, Y, S, false]), [d, C, R, H, U];
-    } catch (g) {
-      throw w.forEach((v) => i._OrtFree(v)), T.forEach((v) => i._OrtFree(v)), m !== 0 && i._OrtReleaseBinding(m) !== 0 && $("Can't release IO binding."), d !== 0 && i._OrtReleaseSession(d) !== 0 && $("Can't release session."), g;
-    } finally {
-      i._free(s), l !== 0 && i._OrtReleaseSessionOptions(l) !== 0 && $("Can't release session options."), y.forEach((g) => i._free(g)), i.unmountExternalData?.();
-    }
-  }, Zt = (a) => {
-    let r = z(), s = it.get(a);
-    if (!s) throw new Error(`cannot release session. invalid session id: ${a}`);
-    let [f, i, d, l, m] = s;
-    l && (m && r._OrtClearBoundOutputs(l.handle) !== 0 && $("Can't clear bound outputs."), r._OrtReleaseBinding(l.handle) !== 0 && $("Can't release IO binding.")), r.jsepOnReleaseSession?.(a), r.webnnOnReleaseSession?.(a), r.webgpuOnReleaseSession?.(a), i.forEach((y) => r._OrtFree(y)), d.forEach((y) => r._OrtFree(y)), r._OrtReleaseSession(f) !== 0 && $("Can't release session."), it.delete(a);
-  }, Bs = async (a, r, s, f, i, d, l = false) => {
-    if (!a) {
-      r.push(0);
-      return;
-    }
-    let m = z(), y = m.PTR_SIZE, w = a[0], T = a[1], g = a[3], v = g, S, C;
-    if (w === "string" && (g === "gpu-buffer" || g === "ml-tensor")) throw new Error("String tensor is not supported on GPU.");
-    if (l && g !== "gpu-buffer") throw new Error(`External buffer must be provided for input/output index ${d} when enableGraphCapture is true.`);
-    if (g === "gpu-buffer") {
-      let U = a[2].gpuBuffer;
-      C = mt(He(w), T);
-      {
-        let M = m.webgpuRegisterBuffer;
-        if (!M) throw new Error('Tensor location "gpu-buffer" is not supported without using WebGPU.');
-        S = M(U, f);
-      }
-    } else if (g === "ml-tensor") {
-      let U = a[2].mlTensor;
-      C = mt(He(w), T);
-      let M = m.webnnRegisterMLTensor;
-      if (!M) throw new Error('Tensor location "ml-tensor" is not supported without using WebNN.');
-      S = M(f, U, He(w), T);
-    } else {
-      let U = a[2];
-      if (Array.isArray(U)) {
-        C = y * U.length, S = m._malloc(C), s.push(S);
-        for (let M = 0; M < U.length; M++) {
-          if (typeof U[M] != "string") throw new TypeError(`tensor data at index ${M} is not a string`);
-          m.setValue(S + M * y, be(U[M], s), "*");
-        }
-      } else {
-        let M = m.webnnIsGraphInput, Y = m.webnnIsGraphOutput;
-        if (w !== "string" && M && Y) {
-          let O = m.UTF8ToString(i);
-          if (M(f, O) || Y(f, O)) {
-            let W = He(w);
-            C = mt(W, T), v = "ml-tensor";
-            let oe = m.webnnCreateTemporaryTensor, p = m.webnnUploadTensor;
-            if (!oe || !p) throw new Error('Tensor location "ml-tensor" is not supported without using WebNN.');
-            let ne = await oe(f, W, T);
-            p(ne, new Uint8Array(U.buffer, U.byteOffset, U.byteLength)), S = ne;
-          } else C = U.byteLength, S = m._malloc(C), s.push(S), m.HEAPU8.set(new Uint8Array(U.buffer, U.byteOffset, C), S);
-        } else C = U.byteLength, S = m._malloc(C), s.push(S), m.HEAPU8.set(new Uint8Array(U.buffer, U.byteOffset, C), S);
-      }
-    }
-    let R = m.stackSave(), H = m.stackAlloc(4 * T.length);
-    try {
-      T.forEach((M, Y) => m.setValue(H + Y * y, M, y === 4 ? "i32" : "i64"));
-      let U = m._OrtCreateTensor(He(w), S, C, H, T.length, an(v));
-      U === 0 && $(`Can't create tensor for input/output. session=${f}, index=${d}.`), r.push(U);
-    } finally {
-      m.stackRestore(R);
-    }
-  }, Kt = async (a, r, s, f, i, d) => {
-    let l = z(), m = l.PTR_SIZE, y = it.get(a);
-    if (!y) throw new Error(`cannot run inference. invalid session id: ${a}`);
-    let w = y[0], T = y[1], g = y[2], v = y[3], S = y[4], C = y[5], R = r.length, H = f.length, U = 0, M = [], Y = [], O = [], W = [], oe = [], p = l.stackSave(), ne = l.stackAlloc(R * m), X = l.stackAlloc(R * m), J = l.stackAlloc(H * m), Ue = l.stackAlloc(H * m);
-    try {
-      [U, M] = ds(d), $e("wasm prepareInputOutputTensor");
-      for (let _ = 0; _ < R; _++) await Bs(s[_], Y, W, a, T[r[_]], r[_], S);
-      for (let _ = 0; _ < H; _++) await Bs(i[_], O, W, a, g[f[_]], R + f[_], S);
-      ze("wasm prepareInputOutputTensor");
-      for (let _ = 0; _ < R; _++) l.setValue(ne + _ * m, Y[_], "*"), l.setValue(X + _ * m, T[r[_]], "*");
-      for (let _ = 0; _ < H; _++) l.setValue(J + _ * m, O[_], "*"), l.setValue(Ue + _ * m, g[f[_]], "*");
-      if (v && !C) {
-        let { handle: _, outputPreferredLocations: ae, outputPreferredLocationsEncoded: me } = v;
-        if (T.length !== R) throw new Error(`input count from feeds (${R}) is expected to be always equal to model's input count (${T.length}).`);
-        $e("wasm bindInputsOutputs");
-        for (let q = 0; q < R; q++) {
-          let we = r[q];
-          await l._OrtBindInput(_, T[we], Y[q]) !== 0 && $(`Can't bind input[${q}] for session=${a}.`);
-        }
-        for (let q = 0; q < H; q++) {
-          let we = f[q];
-          i[q]?.[3] ? (oe.push(O[q]), l._OrtBindOutput(_, g[we], O[q], 0) !== 0 && $(`Can't bind pre-allocated output[${q}] for session=${a}.`)) : l._OrtBindOutput(_, g[we], 0, me[we]) !== 0 && $(`Can't bind output[${q}] to ${ae[q]} for session=${a}.`);
-        }
-        ze("wasm bindInputsOutputs"), it.set(a, [w, T, g, v, S, true]);
-      }
-      l.jsepOnRunStart?.(w), l.webnnOnRunStart?.(w);
-      let Q;
-      v ? Q = await l._OrtRunWithBinding(w, v.handle, H, J, U) : Q = await l._OrtRun(w, X, ne, R, Ue, H, J, U), Q !== 0 && $("failed to call OrtRun().");
-      let x = [], A = [];
-      $e("wasm ProcessOutputTensor");
-      for (let _ = 0; _ < H; _++) {
-        let ae = Number(l.getValue(J + _ * m, "*"));
-        if (ae === O[_] || oe.includes(O[_])) {
-          x.push(i[_]), ae !== O[_] && l._OrtReleaseTensor(ae) !== 0 && $("Can't release tensor.");
-          continue;
-        }
-        let me = l.stackSave(), q = l.stackAlloc(4 * m), we = false, re, se = 0;
-        try {
-          l._OrtGetTensorData(ae, q, q + m, q + 2 * m, q + 3 * m) !== 0 && $(`Can't access output tensor data on index ${_}.`);
-          let Te = m === 4 ? "i32" : "i64", Ye = Number(l.getValue(q, Te));
-          se = l.getValue(q + m, "*");
-          let bt = l.getValue(q + m * 2, "*"), wt = Number(l.getValue(q + m * 3, Te)), Se = [];
-          for (let ee = 0; ee < wt; ee++) Se.push(Number(l.getValue(bt + ee * m, Te)));
-          l._OrtFree(bt) !== 0 && $("Can't free memory for tensor dims.");
-          let Ae = Se.reduce((ee, Z) => ee * Z, 1);
-          re = or(Ye);
-          let Oe = v?.outputPreferredLocations[f[_]];
-          if (re === "string") {
-            if (Oe === "gpu-buffer" || Oe === "ml-tensor") throw new Error("String tensor is not supported on GPU.");
-            let ee = [];
-            for (let Z = 0; Z < Ae; Z++) {
-              let G = l.getValue(se + Z * m, "*"), V = l.getValue(se + (Z + 1) * m, "*"), qe = Z === Ae - 1 ? void 0 : V - G;
-              ee.push(l.UTF8ToString(G, qe));
-            }
-            x.push([re, Se, ee, "cpu"]);
-          } else if (Oe === "gpu-buffer" && Ae > 0) {
-            let ee = l.webgpuGetBuffer;
-            if (!ee) throw new Error('preferredLocation "gpu-buffer" is not supported without using WebGPU.');
-            let Z = ee(se), G = mt(Ye, Ae);
-            if (G === void 0 || !ar(re)) throw new Error(`Unsupported data type: ${re}`);
-            we = true;
-            {
-              l.webgpuRegisterBuffer(Z, a, se);
-              let V = l.webgpuCreateDownloader(Z, G, a);
-              x.push([re, Se, { gpuBuffer: Z, download: async () => {
-                let qe = await V();
-                return new (at(re))(qe);
-              }, dispose: () => {
-                l._OrtReleaseTensor(ae) !== 0 && $("Can't release tensor.");
-              } }, "gpu-buffer"]);
-            }
-          } else if (Oe === "ml-tensor" && Ae > 0) {
-            let ee = l.webnnEnsureTensor, Z = l.webnnIsGraphInputOutputTypeSupported;
-            if (!ee || !Z) throw new Error('preferredLocation "ml-tensor" is not supported without using WebNN.');
-            if (mt(Ye, Ae) === void 0 || !sr(re)) throw new Error(`Unsupported data type: ${re}`);
-            if (!Z(a, re, false)) throw new Error(`preferredLocation "ml-tensor" for ${re} output is not supported by current WebNN Context.`);
-            let V = await ee(a, se, Ye, Se, false);
-            we = true, x.push([re, Se, { mlTensor: V, download: l.webnnCreateMLTensorDownloader(se, re), dispose: () => {
-              l.webnnReleaseTensorId(se), l._OrtReleaseTensor(ae);
-            } }, "ml-tensor"]);
-          } else if (Oe === "ml-tensor-cpu-output" && Ae > 0) {
-            let ee = l.webnnCreateMLTensorDownloader(se, re)(), Z = x.length;
-            we = true, A.push((async () => {
-              let G = [Z, await ee];
-              return l.webnnReleaseTensorId(se), l._OrtReleaseTensor(ae), G;
-            })()), x.push([re, Se, [], "cpu"]);
-          } else {
-            let ee = at(re), Z = new ee(Ae);
-            new Uint8Array(Z.buffer, Z.byteOffset, Z.byteLength).set(l.HEAPU8.subarray(se, se + Z.byteLength)), x.push([re, Se, Z, "cpu"]);
-          }
-        } finally {
-          l.stackRestore(me), re === "string" && se && l._free(se), we || l._OrtReleaseTensor(ae);
-        }
-      }
-      v && !S && (l._OrtClearBoundOutputs(v.handle) !== 0 && $("Can't clear bound outputs."), it.set(a, [w, T, g, v, S, false]));
-      for (let [_, ae] of await Promise.all(A)) x[_][2] = ae;
-      return ze("wasm ProcessOutputTensor"), x;
-    } finally {
-      l.webnnOnRunEnd?.(w), l.stackRestore(p), s.forEach((Q) => {
-        Q && Q[3] === "gpu-buffer" && l.webgpuUnregisterBuffer(Q[2].gpuBuffer);
-      }), i.forEach((Q) => {
-        Q && Q[3] === "gpu-buffer" && l.webgpuUnregisterBuffer(Q[2].gpuBuffer);
-      }), Y.forEach((Q) => l._OrtReleaseTensor(Q)), O.forEach((Q) => l._OrtReleaseTensor(Q)), W.forEach((Q) => l._free(Q)), U !== 0 && l._OrtReleaseRunOptions(U), M.forEach((Q) => l._free(Q));
-    }
-  }, er = (a) => {
-    let r = z(), s = it.get(a);
-    if (!s) throw new Error("invalid session id");
-    let f = s[0], i = r._OrtEndProfiling(f);
-    i === 0 && $("Can't get an profile file name."), r._OrtFree(i);
-  }, tr = (a) => {
-    let r = [];
-    for (let s of a) {
-      let f = s[2];
-      !Array.isArray(f) && "buffer" in f && r.push(f.buffer);
-    }
-    return r;
-  };
-});
-var ut;
-var Ee;
-var Mt;
-var dr;
-var lr;
-var cr;
-var ln;
-var pn;
-var ht;
-var yt;
-var wc;
-var Ms;
-var Cs;
-var Us;
-var Ds;
-var Ps;
-var _s;
-var Rs;
-var mn = k(() => {
-  "use strict";
-  Ve();
-  Kr();
-  je();
-  Yt();
-  ut = () => !!K.wasm.proxy && typeof document < "u", Mt = false, dr = false, lr = false, pn = /* @__PURE__ */ new Map(), ht = (a, r) => {
-    let s = pn.get(a);
-    s ? s.push(r) : pn.set(a, [r]);
-  }, yt = () => {
-    if (Mt || !dr || lr || !Ee) throw new Error("worker not ready");
-  }, wc = (a) => {
-    switch (a.data.type) {
-      case "init-wasm":
-        Mt = false, a.data.err ? (lr = true, ln[1](a.data.err)) : (dr = true, ln[0]()), cr && (URL.revokeObjectURL(cr), cr = void 0);
-        break;
-      case "init-ep":
-      case "copy-from":
-      case "create":
-      case "release":
-      case "run":
-      case "end-profiling": {
-        let r = pn.get(a.data.type);
-        a.data.err ? r.shift()[1](a.data.err) : r.shift()[0](a.data.out);
-        break;
-      }
-      default:
-    }
-  }, Ms = async () => {
-    if (!dr) {
-      if (Mt) throw new Error("multiple calls to 'initWasm()' detected.");
-      if (lr) throw new Error("previous call to 'initWasm()' failed.");
-      if (Mt = true, ut()) return new Promise((a, r) => {
-        Ee?.terminate(), us().then(([s, f]) => {
-          try {
-            Ee = f, Ee.onerror = (d) => r(d), Ee.onmessage = wc, ln = [a, r];
-            let i = { type: "init-wasm", in: K };
-            !i.in.wasm.wasmPaths && (s || tn) && (i.in.wasm.wasmPaths = { wasm: new URL("ort-wasm-simd-threaded.asyncify.wasm", import.meta.url).href }), Ee.postMessage(i), cr = s;
-          } catch (i) {
-            r(i);
-          }
-        }, r);
-      });
-      try {
-        await qt(K.wasm), await Jt(K), dr = true;
-      } catch (a) {
-        throw lr = true, a;
-      } finally {
-        Mt = false;
-      }
-    }
-  }, Cs = async (a) => {
-    if (ut()) return yt(), new Promise((r, s) => {
-      ht("init-ep", [r, s]);
-      let f = { type: "init-ep", in: { epName: a, env: K } };
-      Ee.postMessage(f);
-    });
-    await Xt(K, a);
-  }, Us = async (a) => ut() ? (yt(), new Promise((r, s) => {
-    ht("copy-from", [r, s]);
-    let f = { type: "copy-from", in: { buffer: a } };
-    Ee.postMessage(f, [a.buffer]);
-  })) : xt(a), Ds = async (a, r) => {
-    if (ut()) {
-      if (r?.preferredOutputLocation) throw new Error('session option "preferredOutputLocation" is not supported for proxy.');
-      return yt(), new Promise((s, f) => {
-        ht("create", [s, f]);
-        let i = { type: "create", in: { model: a, options: { ...r } } }, d = [];
-        a instanceof Uint8Array && d.push(a.buffer), Ee.postMessage(i, d);
-      });
-    } else return Qt(a, r);
-  }, Ps = async (a) => {
-    if (ut()) return yt(), new Promise((r, s) => {
-      ht("release", [r, s]);
-      let f = { type: "release", in: a };
-      Ee.postMessage(f);
-    });
-    Zt(a);
-  }, _s = async (a, r, s, f, i, d) => {
-    if (ut()) {
-      if (s.some((l) => l[3] !== "cpu")) throw new Error("input tensor on GPU is not supported for proxy.");
-      if (i.some((l) => l)) throw new Error("pre-allocated output tensor is not supported for proxy.");
-      return yt(), new Promise((l, m) => {
-        ht("run", [l, m]);
-        let y = s, w = { type: "run", in: { sessionId: a, inputIndices: r, inputs: y, outputIndices: f, options: d } };
-        Ee.postMessage(w, tr(y));
-      });
-    } else return Kt(a, r, s, f, i, d);
-  }, Rs = async (a) => {
-    if (ut()) return yt(), new Promise((r, s) => {
-      ht("end-profiling", [r, s]);
-      let f = { type: "end-profiling", in: a };
-      Ee.postMessage(f);
-    });
-    er(a);
-  };
-});
-var Ns;
-var gc;
-var pr;
-var ks = k(() => {
-  "use strict";
-  Ve();
-  mn();
-  st();
-  Ht();
-  sn();
-  Ns = (a, r) => {
-    switch (a.location) {
-      case "cpu":
-        return [a.type, a.dims, a.data, "cpu"];
-      case "gpu-buffer":
-        return [a.type, a.dims, { gpuBuffer: a.gpuBuffer }, "gpu-buffer"];
-      case "ml-tensor":
-        return [a.type, a.dims, { mlTensor: a.mlTensor }, "ml-tensor"];
-      default:
-        throw new Error(`invalid data location: ${a.location} for ${r()}`);
-    }
-  }, gc = (a) => {
-    switch (a[3]) {
-      case "cpu":
-        return new Le(a[0], a[2], a[1]);
-      case "gpu-buffer": {
-        let r = a[0];
-        if (!ar(r)) throw new Error(`not supported data type: ${r} for deserializing GPU tensor`);
-        let { gpuBuffer: s, download: f, dispose: i } = a[2];
-        return Le.fromGpuBuffer(s, { dataType: r, dims: a[1], download: f, dispose: i });
-      }
-      case "ml-tensor": {
-        let r = a[0];
-        if (!sr(r)) throw new Error(`not supported data type: ${r} for deserializing MLTensor tensor`);
-        let { mlTensor: s, download: f, dispose: i } = a[2];
-        return Le.fromMLTensor(s, { dataType: r, dims: a[1], download: f, dispose: i });
-      }
-      default:
-        throw new Error(`invalid data location: ${a[3]}`);
-    }
-  }, pr = class {
-    async fetchModelAndCopyToWasmMemory(r) {
-      return Us(await Bt(r));
-    }
-    async loadModel(r, s) {
-      tt();
-      let f;
-      typeof r == "string" ? f = await this.fetchModelAndCopyToWasmMemory(r) : f = r, [this.sessionId, this.inputNames, this.outputNames, this.inputMetadata, this.outputMetadata] = await Ds(f, s), rt();
-    }
-    async dispose() {
-      return Ps(this.sessionId);
-    }
-    async run(r, s, f) {
-      tt();
-      let i = [], d = [];
-      Object.entries(r).forEach((v) => {
-        let S = v[0], C = v[1], R = this.inputNames.indexOf(S);
-        if (R === -1) throw new Error(`invalid input '${S}'`);
-        i.push(C), d.push(R);
-      });
-      let l = [], m = [];
-      Object.entries(s).forEach((v) => {
-        let S = v[0], C = v[1], R = this.outputNames.indexOf(S);
-        if (R === -1) throw new Error(`invalid output '${S}'`);
-        l.push(C), m.push(R);
-      });
-      let y = i.map((v, S) => Ns(v, () => `input "${this.inputNames[d[S]]}"`)), w = l.map((v, S) => v ? Ns(v, () => `output "${this.outputNames[m[S]]}"`) : null), T = await _s(this.sessionId, d, y, m, w, f), g = {};
-      for (let v = 0; v < T.length; v++) g[this.outputNames[m[v]]] = l[v] ?? gc(T[v]);
-      return rt(), g;
-    }
-    startProfiling() {
-    }
-    endProfiling() {
-      Rs(this.sessionId);
-    }
-  };
-});
-var Fs = {};
-At(Fs, { OnnxruntimeWebAssemblyBackend: () => mr, initializeFlags: () => Ws, wasmBackend: () => Tc });
-var Ws;
-var mr;
-var Tc;
-var Gs = k(() => {
-  "use strict";
-  Ve();
-  mn();
-  ks();
-  Ws = () => {
-    (typeof K.wasm.initTimeout != "number" || K.wasm.initTimeout < 0) && (K.wasm.initTimeout = 0);
-    let a = K.wasm.simd;
-    if (typeof a != "boolean" && a !== void 0 && a !== "fixed" && a !== "relaxed" && (console.warn(`Property "env.wasm.simd" is set to unknown value "${a}". Reset it to \`false\` and ignore SIMD feature checking.`), K.wasm.simd = false), typeof K.wasm.proxy != "boolean" && (K.wasm.proxy = false), typeof K.wasm.trace != "boolean" && (K.wasm.trace = false), typeof K.wasm.numThreads != "number" || !Number.isInteger(K.wasm.numThreads) || K.wasm.numThreads <= 0) if (typeof self < "u" && !self.crossOriginIsolated) K.wasm.numThreads = 1;
-    else {
-      let r = typeof navigator > "u" ? Hr("node:os").cpus().length : navigator.hardwareConcurrency;
-      K.wasm.numThreads = Math.min(4, Math.ceil((r || 1) / 2));
-    }
-  }, mr = class {
-    async init(r) {
-      Ws(), await Ms(), await Cs(r);
-    }
-    async createInferenceSessionHandler(r, s) {
-      let f = new pr();
-      return await f.loadModel(r, s), f;
-    }
-  }, Tc = new mr();
-});
-Ve();
-Ve();
-Ve();
-var Ja = "1.26.0-dev.20260416-b7804b056c";
-var gl = Zr;
-{
-  let a = (Gs(), $t(Fs)).wasmBackend;
-  Ke("webgpu", a, 5), Ke("webnn", a, 5), Ke("cpu", a, 10), Ke("wasm", a, 10);
-}
-Object.defineProperty(K.versions, "web", { value: Ja, enumerable: true });
-
-// node_modules/onnxruntime-common/dist/esm/version.js
-var version = "1.24.3";
-
-// node_modules/onnxruntime-common/dist/esm/env-impl.js
-var logLevelValue = "warning";
-var env = {
-  wasm: {},
-  webgl: {},
-  webgpu: {},
-  versions: { common: version },
-  set logLevel(value) {
-    if (value === void 0) {
-      return;
-    }
-    if (typeof value !== "string" || ["verbose", "info", "warning", "error", "fatal"].indexOf(value) === -1) {
-      throw new Error(`Unsupported logging level: ${value}`);
-    }
-    logLevelValue = value;
-  },
-  get logLevel() {
-    return logLevelValue;
-  }
-};
-Object.defineProperty(env, "logLevel", { enumerable: true });
-
-// node_modules/onnxruntime-common/dist/esm/tensor-conversion-impl.js
-var tensorToDataURL = (tensor, options) => {
-  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : new OffscreenCanvas(1, 1);
-  canvas.width = tensor.dims[3];
-  canvas.height = tensor.dims[2];
-  const pixels2DContext = canvas.getContext("2d");
-  if (pixels2DContext != null) {
-    let width;
-    let height;
-    if (options?.tensorLayout !== void 0 && options.tensorLayout === "NHWC") {
-      width = tensor.dims[2];
-      height = tensor.dims[3];
-    } else {
-      width = tensor.dims[3];
-      height = tensor.dims[2];
-    }
-    const inputformat = options?.format !== void 0 ? options.format : "RGB";
-    const norm = options?.norm;
-    let normMean;
-    let normBias;
-    if (norm === void 0 || norm.mean === void 0) {
-      normMean = [255, 255, 255, 255];
-    } else {
-      if (typeof norm.mean === "number") {
-        normMean = [norm.mean, norm.mean, norm.mean, norm.mean];
-      } else {
-        normMean = [norm.mean[0], norm.mean[1], norm.mean[2], 0];
-        if (norm.mean[3] !== void 0) {
-          normMean[3] = norm.mean[3];
-        }
-      }
-    }
-    if (norm === void 0 || norm.bias === void 0) {
-      normBias = [0, 0, 0, 0];
-    } else {
-      if (typeof norm.bias === "number") {
-        normBias = [norm.bias, norm.bias, norm.bias, norm.bias];
-      } else {
-        normBias = [norm.bias[0], norm.bias[1], norm.bias[2], 0];
-        if (norm.bias[3] !== void 0) {
-          normBias[3] = norm.bias[3];
-        }
-      }
-    }
-    const stride = height * width;
-    let rTensorPointer = 0, gTensorPointer = stride, bTensorPointer = stride * 2, aTensorPointer = -1;
-    if (inputformat === "RGBA") {
-      rTensorPointer = 0;
-      gTensorPointer = stride;
-      bTensorPointer = stride * 2;
-      aTensorPointer = stride * 3;
-    } else if (inputformat === "RGB") {
-      rTensorPointer = 0;
-      gTensorPointer = stride;
-      bTensorPointer = stride * 2;
-    } else if (inputformat === "RBG") {
-      rTensorPointer = 0;
-      bTensorPointer = stride;
-      gTensorPointer = stride * 2;
-    }
-    for (let i = 0; i < height; i++) {
-      for (let j = 0; j < width; j++) {
-        const R = (tensor.data[rTensorPointer++] - normBias[0]) * normMean[0];
-        const G = (tensor.data[gTensorPointer++] - normBias[1]) * normMean[1];
-        const B = (tensor.data[bTensorPointer++] - normBias[2]) * normMean[2];
-        const A = aTensorPointer === -1 ? 255 : (tensor.data[aTensorPointer++] - normBias[3]) * normMean[3];
-        pixels2DContext.fillStyle = "rgba(" + R + "," + G + "," + B + "," + A + ")";
-        pixels2DContext.fillRect(j, i, 1, 1);
-      }
-    }
-    if ("toDataURL" in canvas) {
-      return canvas.toDataURL();
-    } else {
-      throw new Error("toDataURL is not supported");
-    }
-  } else {
-    throw new Error("Can not access image data");
-  }
-};
-var tensorToImageData = (tensor, options) => {
-  const pixels2DContext = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : new OffscreenCanvas(1, 1).getContext("2d");
-  let image;
-  if (pixels2DContext != null) {
-    let width;
-    let height;
-    let channels;
-    if (options?.tensorLayout !== void 0 && options.tensorLayout === "NHWC") {
-      width = tensor.dims[2];
-      height = tensor.dims[1];
-      channels = tensor.dims[3];
-    } else {
-      width = tensor.dims[3];
-      height = tensor.dims[2];
-      channels = tensor.dims[1];
-    }
-    const inputformat = options !== void 0 ? options.format !== void 0 ? options.format : "RGB" : "RGB";
-    const norm = options?.norm;
-    let normMean;
-    let normBias;
-    if (norm === void 0 || norm.mean === void 0) {
-      normMean = [255, 255, 255, 255];
-    } else {
-      if (typeof norm.mean === "number") {
-        normMean = [norm.mean, norm.mean, norm.mean, norm.mean];
-      } else {
-        normMean = [norm.mean[0], norm.mean[1], norm.mean[2], 255];
-        if (norm.mean[3] !== void 0) {
-          normMean[3] = norm.mean[3];
-        }
-      }
-    }
-    if (norm === void 0 || norm.bias === void 0) {
-      normBias = [0, 0, 0, 0];
-    } else {
-      if (typeof norm.bias === "number") {
-        normBias = [norm.bias, norm.bias, norm.bias, norm.bias];
-      } else {
-        normBias = [norm.bias[0], norm.bias[1], norm.bias[2], 0];
-        if (norm.bias[3] !== void 0) {
-          normBias[3] = norm.bias[3];
-        }
-      }
-    }
-    const stride = height * width;
-    if (options !== void 0) {
-      if (options.format !== void 0 && channels === 4 && options.format !== "RGBA" || channels === 3 && options.format !== "RGB" && options.format !== "BGR") {
-        throw new Error("Tensor format doesn't match input tensor dims");
-      }
-    }
-    const step = 4;
-    let rImagePointer = 0, gImagePointer = 1, bImagePointer = 2, aImagePointer = 3;
-    let rTensorPointer = 0, gTensorPointer = stride, bTensorPointer = stride * 2, aTensorPointer = -1;
-    if (inputformat === "RGBA") {
-      rTensorPointer = 0;
-      gTensorPointer = stride;
-      bTensorPointer = stride * 2;
-      aTensorPointer = stride * 3;
-    } else if (inputformat === "RGB") {
-      rTensorPointer = 0;
-      gTensorPointer = stride;
-      bTensorPointer = stride * 2;
-    } else if (inputformat === "RBG") {
-      rTensorPointer = 0;
-      bTensorPointer = stride;
-      gTensorPointer = stride * 2;
-    }
-    image = pixels2DContext.createImageData(width, height);
-    for (let i = 0; i < height * width; rImagePointer += step, gImagePointer += step, bImagePointer += step, aImagePointer += step, i++) {
-      image.data[rImagePointer] = (tensor.data[rTensorPointer++] - normBias[0]) * normMean[0];
-      image.data[gImagePointer] = (tensor.data[gTensorPointer++] - normBias[1]) * normMean[1];
-      image.data[bImagePointer] = (tensor.data[bTensorPointer++] - normBias[2]) * normMean[2];
-      image.data[aImagePointer] = aTensorPointer === -1 ? 255 : (tensor.data[aTensorPointer++] - normBias[3]) * normMean[3];
-    }
-  } else {
-    throw new Error("Can not access image data");
-  }
-  return image;
-};
-
-// node_modules/onnxruntime-common/dist/esm/tensor-factory-impl.js
-var bufferToTensor = (buffer, options) => {
-  if (buffer === void 0) {
-    throw new Error("Image buffer must be defined");
-  }
-  if (options.height === void 0 || options.width === void 0) {
-    throw new Error("Image height and width must be defined");
-  }
-  if (options.tensorLayout === "NHWC") {
-    throw new Error("NHWC Tensor layout is not supported yet");
-  }
-  const { height, width } = options;
-  const norm = options.norm ?? { mean: 255, bias: 0 };
-  let normMean;
-  let normBias;
-  if (typeof norm.mean === "number") {
-    normMean = [norm.mean, norm.mean, norm.mean, norm.mean];
-  } else {
-    normMean = [norm.mean[0], norm.mean[1], norm.mean[2], norm.mean[3] ?? 255];
-  }
-  if (typeof norm.bias === "number") {
-    normBias = [norm.bias, norm.bias, norm.bias, norm.bias];
-  } else {
-    normBias = [norm.bias[0], norm.bias[1], norm.bias[2], norm.bias[3] ?? 0];
-  }
-  const inputformat = options.format !== void 0 ? options.format : "RGBA";
-  const outputformat = options.tensorFormat !== void 0 ? options.tensorFormat !== void 0 ? options.tensorFormat : "RGB" : "RGB";
-  const stride = height * width;
-  const float32Data = outputformat === "RGBA" ? new Float32Array(stride * 4) : new Float32Array(stride * 3);
-  let step = 4, rImagePointer = 0, gImagePointer = 1, bImagePointer = 2, aImagePointer = 3;
-  let rTensorPointer = 0, gTensorPointer = stride, bTensorPointer = stride * 2, aTensorPointer = -1;
-  if (inputformat === "RGB") {
-    step = 3;
-    rImagePointer = 0;
-    gImagePointer = 1;
-    bImagePointer = 2;
-    aImagePointer = -1;
-  }
-  if (outputformat === "RGBA") {
-    aTensorPointer = stride * 3;
-  } else if (outputformat === "RBG") {
-    rTensorPointer = 0;
-    bTensorPointer = stride;
-    gTensorPointer = stride * 2;
-  } else if (outputformat === "BGR") {
-    bTensorPointer = 0;
-    gTensorPointer = stride;
-    rTensorPointer = stride * 2;
-  }
-  for (let i = 0; i < stride; i++, rImagePointer += step, bImagePointer += step, gImagePointer += step, aImagePointer += step) {
-    float32Data[rTensorPointer++] = (buffer[rImagePointer] + normBias[0]) / normMean[0];
-    float32Data[gTensorPointer++] = (buffer[gImagePointer] + normBias[1]) / normMean[1];
-    float32Data[bTensorPointer++] = (buffer[bImagePointer] + normBias[2]) / normMean[2];
-    if (aTensorPointer !== -1 && aImagePointer !== -1) {
-      float32Data[aTensorPointer++] = (buffer[aImagePointer] + normBias[3]) / normMean[3];
-    }
-  }
-  const outputTensor = outputformat === "RGBA" ? new Tensor("float32", float32Data, [1, 4, height, width]) : new Tensor("float32", float32Data, [1, 3, height, width]);
-  return outputTensor;
-};
-var tensorFromImage = async (image, options) => {
-  const isHTMLImageEle = typeof HTMLImageElement !== "undefined" && image instanceof HTMLImageElement;
-  const isImageDataEle = typeof ImageData !== "undefined" && image instanceof ImageData;
-  const isImageBitmap = typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap;
-  const isString = typeof image === "string";
-  let data;
-  let bufferToTensorOptions = options ?? {};
-  const createCanvas = () => {
-    if (typeof document !== "undefined") {
-      return document.createElement("canvas");
-    } else if (typeof OffscreenCanvas !== "undefined") {
-      return new OffscreenCanvas(1, 1);
-    } else {
-      throw new Error("Canvas is not supported");
-    }
-  };
-  const createCanvasContext = (canvas) => {
-    if (typeof HTMLCanvasElement !== "undefined" && canvas instanceof HTMLCanvasElement) {
-      return canvas.getContext("2d");
-    } else if (canvas instanceof OffscreenCanvas) {
-      return canvas.getContext("2d");
-    } else {
-      return null;
-    }
-  };
-  if (isHTMLImageEle) {
-    const canvas = createCanvas();
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const pixels2DContext = createCanvasContext(canvas);
-    if (pixels2DContext != null) {
-      let height = image.height;
-      let width = image.width;
-      if (options !== void 0 && options.resizedHeight !== void 0 && options.resizedWidth !== void 0) {
-        height = options.resizedHeight;
-        width = options.resizedWidth;
-      }
-      if (options !== void 0) {
-        bufferToTensorOptions = options;
-        if (options.tensorFormat !== void 0) {
-          throw new Error("Image input config format must be RGBA for HTMLImageElement");
-        } else {
-          bufferToTensorOptions.tensorFormat = "RGBA";
-        }
-        bufferToTensorOptions.height = height;
-        bufferToTensorOptions.width = width;
-      } else {
-        bufferToTensorOptions.tensorFormat = "RGBA";
-        bufferToTensorOptions.height = height;
-        bufferToTensorOptions.width = width;
-      }
-      pixels2DContext.drawImage(image, 0, 0);
-      data = pixels2DContext.getImageData(0, 0, width, height).data;
-    } else {
-      throw new Error("Can not access image data");
-    }
-  } else if (isImageDataEle) {
-    let height;
-    let width;
-    if (options !== void 0 && options.resizedWidth !== void 0 && options.resizedHeight !== void 0) {
-      height = options.resizedHeight;
-      width = options.resizedWidth;
-    } else {
-      height = image.height;
-      width = image.width;
-    }
-    if (options !== void 0) {
-      bufferToTensorOptions = options;
-    }
-    bufferToTensorOptions.format = "RGBA";
-    bufferToTensorOptions.height = height;
-    bufferToTensorOptions.width = width;
-    if (options !== void 0) {
-      const tempCanvas = createCanvas();
-      tempCanvas.width = width;
-      tempCanvas.height = height;
-      const pixels2DContext = createCanvasContext(tempCanvas);
-      if (pixels2DContext != null) {
-        pixels2DContext.putImageData(image, 0, 0);
-        data = pixels2DContext.getImageData(0, 0, width, height).data;
-      } else {
-        throw new Error("Can not access image data");
-      }
-    } else {
-      data = image.data;
-    }
-  } else if (isImageBitmap) {
-    if (options === void 0) {
-      throw new Error("Please provide image config with format for Imagebitmap");
-    }
-    const canvas = createCanvas();
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const pixels2DContext = createCanvasContext(canvas);
-    if (pixels2DContext != null) {
-      const height = image.height;
-      const width = image.width;
-      pixels2DContext.drawImage(image, 0, 0, width, height);
-      data = pixels2DContext.getImageData(0, 0, width, height).data;
-      bufferToTensorOptions.height = height;
-      bufferToTensorOptions.width = width;
-      return bufferToTensor(data, bufferToTensorOptions);
-    } else {
-      throw new Error("Can not access image data");
-    }
-  } else if (isString) {
-    return new Promise((resolve, reject) => {
-      const canvas = createCanvas();
-      const context = createCanvasContext(canvas);
-      if (!image || !context) {
-        return reject();
-      }
-      const newImage = new Image();
-      newImage.crossOrigin = "Anonymous";
-      newImage.src = image;
-      newImage.onload = () => {
-        canvas.width = newImage.width;
-        canvas.height = newImage.height;
-        context.drawImage(newImage, 0, 0, canvas.width, canvas.height);
-        const img = context.getImageData(0, 0, canvas.width, canvas.height);
-        bufferToTensorOptions.height = canvas.height;
-        bufferToTensorOptions.width = canvas.width;
-        resolve(bufferToTensor(img.data, bufferToTensorOptions));
-      };
-    });
-  } else {
-    throw new Error("Input data provided is not supported - aborted tensor creation");
-  }
-  if (data !== void 0) {
-    return bufferToTensor(data, bufferToTensorOptions);
-  } else {
-    throw new Error("Input data provided is not supported - aborted tensor creation");
-  }
-};
-var tensorFromTexture = (texture, options) => {
-  const { width, height, download, dispose } = options;
-  const dims = [1, height, width, 4];
-  return new Tensor({ location: "texture", type: "float32", texture, dims, download, dispose });
-};
-var tensorFromGpuBuffer = (gpuBuffer, options) => {
-  const { dataType, dims, download, dispose } = options;
-  return new Tensor({ location: "gpu-buffer", type: dataType ?? "float32", gpuBuffer, dims, download, dispose });
-};
-var tensorFromMLTensor = (mlTensor, options) => {
-  const { dataType, dims, download, dispose } = options;
-  return new Tensor({ location: "ml-tensor", type: dataType ?? "float32", mlTensor, dims, download, dispose });
-};
-var tensorFromPinnedBuffer = (type, buffer, dims) => new Tensor({ location: "cpu-pinned", type, data: buffer, dims: dims ?? [buffer.length] });
-
-// node_modules/onnxruntime-common/dist/esm/tensor-impl-type-mapping.js
-var NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP = /* @__PURE__ */ new Map([
-  ["float32", Float32Array],
-  ["uint8", Uint8Array],
-  ["int8", Int8Array],
-  ["uint16", Uint16Array],
-  ["int16", Int16Array],
-  ["int32", Int32Array],
-  ["bool", Uint8Array],
-  ["float64", Float64Array],
-  ["uint32", Uint32Array],
-  ["int4", Uint8Array],
-  ["uint4", Uint8Array]
-]);
-var NUMERIC_TENSOR_TYPEDARRAY_TO_TYPE_MAP = /* @__PURE__ */ new Map([
-  [Float32Array, "float32"],
-  [Uint8Array, "uint8"],
-  [Int8Array, "int8"],
-  [Uint16Array, "uint16"],
-  [Int16Array, "int16"],
-  [Int32Array, "int32"],
-  [Float64Array, "float64"],
-  [Uint32Array, "uint32"]
-]);
-var isTypedArrayChecked = false;
-var checkTypedArray = () => {
-  if (!isTypedArrayChecked) {
-    isTypedArrayChecked = true;
-    const isBigInt64ArrayAvailable = typeof BigInt64Array !== "undefined" && BigInt64Array.from;
-    const isBigUint64ArrayAvailable = typeof BigUint64Array !== "undefined" && BigUint64Array.from;
-    const Float16Array2 = globalThis.Float16Array;
-    const isFloat16ArrayAvailable = typeof Float16Array2 !== "undefined" && Float16Array2.from;
-    if (isBigInt64ArrayAvailable) {
-      NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.set("int64", BigInt64Array);
-      NUMERIC_TENSOR_TYPEDARRAY_TO_TYPE_MAP.set(BigInt64Array, "int64");
-    }
-    if (isBigUint64ArrayAvailable) {
-      NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.set("uint64", BigUint64Array);
-      NUMERIC_TENSOR_TYPEDARRAY_TO_TYPE_MAP.set(BigUint64Array, "uint64");
-    }
-    if (isFloat16ArrayAvailable) {
-      NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.set("float16", Float16Array2);
-      NUMERIC_TENSOR_TYPEDARRAY_TO_TYPE_MAP.set(Float16Array2, "float16");
-    } else {
-      NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.set("float16", Uint16Array);
-    }
-  }
-};
-
-// node_modules/onnxruntime-common/dist/esm/tensor-utils-impl.js
-var calculateSize = (dims) => {
-  let size = 1;
-  for (let i = 0; i < dims.length; i++) {
-    const dim = dims[i];
-    if (typeof dim !== "number" || !Number.isSafeInteger(dim)) {
-      throw new TypeError(`dims[${i}] must be an integer, got: ${dim}`);
-    }
-    if (dim < 0) {
-      throw new RangeError(`dims[${i}] must be a non-negative integer, got: ${dim}`);
-    }
-    size *= dim;
-  }
-  return size;
-};
-var tensorReshape = (tensor, dims) => {
-  switch (tensor.location) {
-    case "cpu":
-      return new Tensor(tensor.type, tensor.data, dims);
-    case "cpu-pinned":
-      return new Tensor({
-        location: "cpu-pinned",
-        data: tensor.data,
-        type: tensor.type,
-        dims
-      });
-    case "texture":
-      return new Tensor({
-        location: "texture",
-        texture: tensor.texture,
-        type: tensor.type,
-        dims
-      });
-    case "gpu-buffer":
-      return new Tensor({
-        location: "gpu-buffer",
-        gpuBuffer: tensor.gpuBuffer,
-        type: tensor.type,
-        dims
-      });
-    case "ml-tensor":
-      return new Tensor({
-        location: "ml-tensor",
-        mlTensor: tensor.mlTensor,
-        type: tensor.type,
-        dims
-      });
-    default:
-      throw new Error(`tensorReshape: tensor location ${tensor.location} is not supported`);
-  }
-};
-
-// node_modules/onnxruntime-common/dist/esm/tensor-impl.js
-var Tensor = class {
-  /**
-   * implementation.
-   */
-  constructor(arg0, arg1, arg2) {
-    checkTypedArray();
-    let type;
-    let dims;
-    if (typeof arg0 === "object" && "location" in arg0) {
-      this.dataLocation = arg0.location;
-      type = arg0.type;
-      dims = arg0.dims;
-      switch (arg0.location) {
-        case "cpu-pinned": {
-          const expectedTypedArrayConstructor = NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.get(type);
-          if (!expectedTypedArrayConstructor) {
-            throw new TypeError(`unsupported type "${type}" to create tensor from pinned buffer`);
-          }
-          if (!(arg0.data instanceof expectedTypedArrayConstructor)) {
-            throw new TypeError(`buffer should be of type ${expectedTypedArrayConstructor.name}`);
-          }
-          this.cpuData = arg0.data;
-          break;
-        }
-        case "texture": {
-          if (type !== "float32") {
-            throw new TypeError(`unsupported type "${type}" to create tensor from texture`);
-          }
-          this.gpuTextureData = arg0.texture;
-          this.downloader = arg0.download;
-          this.disposer = arg0.dispose;
-          break;
-        }
-        case "gpu-buffer": {
-          if (type !== "float32" && type !== "float16" && type !== "int32" && type !== "int64" && type !== "uint32" && type !== "uint8" && type !== "bool" && type !== "uint4" && type !== "int4") {
-            throw new TypeError(`unsupported type "${type}" to create tensor from gpu buffer`);
-          }
-          this.gpuBufferData = arg0.gpuBuffer;
-          this.downloader = arg0.download;
-          this.disposer = arg0.dispose;
-          break;
-        }
-        case "ml-tensor": {
-          if (type !== "float32" && type !== "float16" && type !== "int32" && type !== "int64" && type !== "uint32" && type !== "uint64" && type !== "int8" && type !== "uint8" && type !== "bool" && type !== "uint4" && type !== "int4") {
-            throw new TypeError(`unsupported type "${type}" to create tensor from MLTensor`);
-          }
-          this.mlTensorData = arg0.mlTensor;
-          this.downloader = arg0.download;
-          this.disposer = arg0.dispose;
-          break;
-        }
-        default:
-          throw new Error(`Tensor constructor: unsupported location '${this.dataLocation}'`);
-      }
-    } else {
-      let data;
-      let maybeDims;
-      if (typeof arg0 === "string") {
-        type = arg0;
-        maybeDims = arg2;
-        if (arg0 === "string") {
-          if (!Array.isArray(arg1)) {
-            throw new TypeError("A string tensor's data must be a string array.");
-          }
-          data = arg1;
-        } else {
-          const typedArrayConstructor = NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP.get(arg0);
-          if (typedArrayConstructor === void 0) {
-            throw new TypeError(`Unsupported tensor type: ${arg0}.`);
-          }
-          if (Array.isArray(arg1)) {
-            if (arg0 === "float16" && typedArrayConstructor === Uint16Array || arg0 === "uint4" || arg0 === "int4") {
-              throw new TypeError(`Creating a ${arg0} tensor from number array is not supported. Please use ${typedArrayConstructor.name} as data.`);
-            } else if (arg0 === "uint64" || arg0 === "int64") {
-              data = typedArrayConstructor.from(arg1, BigInt);
-            } else {
-              data = typedArrayConstructor.from(arg1);
-            }
-          } else if (arg1 instanceof typedArrayConstructor) {
-            data = arg1;
-          } else if (arg1 instanceof Uint8ClampedArray) {
-            if (arg0 === "uint8") {
-              data = Uint8Array.from(arg1);
-            } else {
-              throw new TypeError(`A Uint8ClampedArray tensor's data must be type of uint8`);
-            }
-          } else if (arg0 === "float16" && arg1 instanceof Uint16Array && typedArrayConstructor !== Uint16Array) {
-            data = new globalThis.Float16Array(arg1.buffer, arg1.byteOffset, arg1.length);
-          } else {
-            throw new TypeError(`A ${type} tensor's data must be type of ${typedArrayConstructor}`);
-          }
-        }
-      } else {
-        maybeDims = arg1;
-        if (Array.isArray(arg0)) {
-          if (arg0.length === 0) {
-            throw new TypeError("Tensor type cannot be inferred from an empty array.");
-          }
-          const firstElementType = typeof arg0[0];
-          if (firstElementType === "string") {
-            type = "string";
-            data = arg0;
-          } else if (firstElementType === "boolean") {
-            type = "bool";
-            data = Uint8Array.from(arg0);
-          } else {
-            throw new TypeError(`Invalid element type of data array: ${firstElementType}.`);
-          }
-        } else if (arg0 instanceof Uint8ClampedArray) {
-          type = "uint8";
-          data = Uint8Array.from(arg0);
-        } else {
-          const mappedType = NUMERIC_TENSOR_TYPEDARRAY_TO_TYPE_MAP.get(arg0.constructor);
-          if (mappedType === void 0) {
-            throw new TypeError(`Unsupported type for tensor data: ${arg0.constructor}.`);
-          }
-          type = mappedType;
-          data = arg0;
-        }
-      }
-      if (maybeDims === void 0) {
-        maybeDims = [data.length];
-      } else if (!Array.isArray(maybeDims)) {
-        throw new TypeError("A tensor's dims must be a number array");
-      }
-      dims = maybeDims;
-      this.cpuData = data;
-      this.dataLocation = "cpu";
-    }
-    const size = calculateSize(dims);
-    if (this.cpuData && size !== this.cpuData.length) {
-      if ((type === "uint4" || type === "int4") && Math.ceil(size / 2) === this.cpuData.length) {
-      } else {
-        throw new Error(`Tensor's size(${size}) does not match data length(${this.cpuData.length}).`);
-      }
-    }
-    this.type = type;
-    this.dims = dims;
-    this.size = size;
-  }
-  // #endregion
-  // #region factory
-  static async fromImage(image, options) {
-    return tensorFromImage(image, options);
-  }
-  static fromTexture(texture, options) {
-    return tensorFromTexture(texture, options);
-  }
-  static fromGpuBuffer(gpuBuffer, options) {
-    return tensorFromGpuBuffer(gpuBuffer, options);
-  }
-  static fromMLTensor(mlTensor, options) {
-    return tensorFromMLTensor(mlTensor, options);
-  }
-  static fromPinnedBuffer(type, buffer, dims) {
-    return tensorFromPinnedBuffer(type, buffer, dims);
-  }
-  // #endregion
-  // #region conversions
-  toDataURL(options) {
-    return tensorToDataURL(this, options);
-  }
-  toImageData(options) {
-    return tensorToImageData(this, options);
-  }
-  // #endregion
-  // #region properties
-  get data() {
-    this.ensureValid();
-    if (!this.cpuData) {
-      throw new Error("The data is not on CPU. Use `getData()` to download GPU data to CPU, or use `texture` or `gpuBuffer` property to access the GPU data directly.");
-    }
-    return this.cpuData;
-  }
-  get location() {
-    return this.dataLocation;
-  }
-  get texture() {
-    this.ensureValid();
-    if (!this.gpuTextureData) {
-      throw new Error("The data is not stored as a WebGL texture.");
-    }
-    return this.gpuTextureData;
-  }
-  get gpuBuffer() {
-    this.ensureValid();
-    if (!this.gpuBufferData) {
-      throw new Error("The data is not stored as a WebGPU buffer.");
-    }
-    return this.gpuBufferData;
-  }
-  get mlTensor() {
-    this.ensureValid();
-    if (!this.mlTensorData) {
-      throw new Error("The data is not stored as a WebNN MLTensor.");
-    }
-    return this.mlTensorData;
-  }
-  // #endregion
-  // #region methods
-  async getData(releaseData) {
-    this.ensureValid();
-    switch (this.dataLocation) {
-      case "cpu":
-      case "cpu-pinned":
-        return this.data;
-      case "texture":
-      case "gpu-buffer":
-      case "ml-tensor": {
-        if (!this.downloader) {
-          throw new Error("The current tensor is not created with a specified data downloader.");
-        }
-        if (this.isDownloading) {
-          throw new Error("The current tensor is being downloaded.");
-        }
-        try {
-          this.isDownloading = true;
-          const data = await this.downloader();
-          this.downloader = void 0;
-          this.dataLocation = "cpu";
-          this.cpuData = data;
-          if (releaseData && this.disposer) {
-            this.disposer();
-            this.disposer = void 0;
-          }
-          return data;
-        } finally {
-          this.isDownloading = false;
-        }
-      }
-      default:
-        throw new Error(`cannot get data from location: ${this.dataLocation}`);
-    }
-  }
-  dispose() {
-    if (this.isDownloading) {
-      throw new Error("The current tensor is being downloaded.");
-    }
-    if (this.disposer) {
-      this.disposer();
-      this.disposer = void 0;
-    }
-    this.cpuData = void 0;
-    this.gpuTextureData = void 0;
-    this.gpuBufferData = void 0;
-    this.mlTensorData = void 0;
-    this.downloader = void 0;
-    this.isDownloading = void 0;
-    this.dataLocation = "none";
-  }
-  // #endregion
-  // #region tensor utilities
-  ensureValid() {
-    if (this.dataLocation === "none") {
-      throw new Error("The tensor is disposed.");
-    }
-  }
-  reshape(dims) {
-    this.ensureValid();
-    if (this.downloader || this.disposer) {
-      throw new Error("Cannot reshape a tensor that owns GPU resource.");
-    }
-    return tensorReshape(this, dims);
-  }
-};
-
-// node_modules/onnxruntime-common/dist/esm/tensor.js
-var Tensor2 = Tensor;
-
-// node_modules/@huggingface/transformers/dist/transformers.web.js
-var __defProp2 = Object.defineProperty;
-var __export2 = (target, all) => {
-  for (var name in all)
-    __defProp2(target, name, { get: all[name], enumerable: true });
 };
 var node_fs_default = {};
 var node_path_default = {};
@@ -4776,7 +110,7 @@ var LogLevel = Object.freeze({
   NONE: 50
 });
 var logLevel = LogLevel.WARNING;
-var env2 = {
+var env = {
   version: VERSION,
   /////////////////// Backends settings ///////////////////
   // NOTE: These will be populated later by the backends themselves.
@@ -4790,7 +124,7 @@ var env2 = {
   },
   set logLevel(level) {
     logLevel = level;
-    env2.backends.onnx?.setLogLevel?.(level);
+    env.backends.onnx?.setLogLevel?.(level);
   },
   /////////////////// Model settings ///////////////////
   allowRemoteModels: true,
@@ -4924,7 +258,7 @@ var logger = {
    * @param  {...any} args - Arguments to log
    */
   error(...args) {
-    if (env2.logLevel <= LogLevel.ERROR) {
+    if (env.logLevel <= LogLevel.ERROR) {
       console.error(...args);
     }
   },
@@ -4933,7 +267,7 @@ var logger = {
    * @param  {...any} args - Arguments to log
    */
   warn(...args) {
-    if (env2.logLevel <= LogLevel.WARNING) {
+    if (env.logLevel <= LogLevel.WARNING) {
       console.warn(...args);
     }
   },
@@ -4942,7 +276,7 @@ var logger = {
    * @param  {...any} args - Arguments to log
    */
   info(...args) {
-    if (env2.logLevel <= LogLevel.INFO) {
+    if (env.logLevel <= LogLevel.INFO) {
       console.log(...args);
     }
   },
@@ -4951,7 +285,7 @@ var logger = {
    * @param  {...any} args - Arguments to log
    */
   debug(...args) {
-    if (env2.logLevel <= LogLevel.DEBUG) {
+    if (env.logLevel <= LogLevel.DEBUG) {
       console.log(...args);
     }
   },
@@ -5043,7 +377,7 @@ var AddedToken = class {
 };
 var AddedToken_default = AddedToken;
 var BYTES_TO_UNICODE = (() => {
-  const bs2 = [
+  const bs = [
     ...Array.from(
       { length: "~".charCodeAt(0) - "!".charCodeAt(0) + 1 },
       (_, i) => i + "!".charCodeAt(0)
@@ -5057,17 +391,17 @@ var BYTES_TO_UNICODE = (() => {
       (_, i) => i + "\xAE".charCodeAt(0)
     )
   ];
-  const cs2 = bs2.slice();
+  const cs = bs.slice();
   let n = 0;
   for (let b = 0; b < 256; ++b) {
-    if (!bs2.includes(b)) {
-      bs2.push(b);
-      cs2.push(256 + n);
+    if (!bs.includes(b)) {
+      bs.push(b);
+      cs.push(256 + n);
       n += 1;
     }
   }
-  const ccs = cs2.map((n2) => String.fromCharCode(n2));
-  return Object.fromEntries(bs2.map((b, i) => [b, ccs[i]]));
+  const ccs = cs.map((n2) => String.fromCharCode(n2));
+  return Object.fromEntries(bs.map((b, i) => [b, ccs[i]]));
 })();
 var reverse_dictionary = (data) => Object.fromEntries(Object.entries(data).map(([key, value]) => [value, key]));
 var UNICODE_TO_BYTES = reverse_dictionary(BYTES_TO_UNICODE);
@@ -7959,7 +3293,7 @@ function parse(tokens) {
         throw new SyntaxError(`Unexpected token type: ${tokens[current].type}`);
     }
   }
-  function is2(...types) {
+  function is(...types) {
     return current + types.length <= tokens.length && types.every((type, i) => type === tokens[current + i].type);
   }
   function isStatement(...names) {
@@ -8007,7 +3341,7 @@ function parse(tokens) {
       case "call": {
         ++current;
         let callerArgs = null;
-        if (is2(TOKEN_TYPES.OpenParen)) {
+        if (is(TOKEN_TYPES.OpenParen)) {
           callerArgs = parseArgs();
         }
         const callee = parsePrimaryExpression();
@@ -8040,7 +3374,7 @@ function parse(tokens) {
       case "filter": {
         ++current;
         let filterNode = parsePrimaryExpression();
-        if (filterNode instanceof Identifier && is2(TOKEN_TYPES.OpenParen)) {
+        if (filterNode instanceof Identifier && is(TOKEN_TYPES.OpenParen)) {
           filterNode = parseCallExpression(filterNode);
         }
         expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token");
@@ -8069,7 +3403,7 @@ function parse(tokens) {
     const left = parseExpressionSequence();
     let value = null;
     const body = [];
-    if (is2(TOKEN_TYPES.Equals)) {
+    if (is(TOKEN_TYPES.Equals)) {
       ++current;
       value = parseExpressionSequence();
     } else {
@@ -8120,13 +3454,13 @@ function parse(tokens) {
     return new Macro(name, args, body);
   }
   function parseExpressionSequence(primary = false) {
-    const fn2 = primary ? parsePrimaryExpression : parseExpression;
-    const expressions = [fn2()];
-    const isTuple = is2(TOKEN_TYPES.Comma);
+    const fn = primary ? parsePrimaryExpression : parseExpression;
+    const expressions = [fn()];
+    const isTuple = is(TOKEN_TYPES.Comma);
     while (isTuple) {
       ++current;
-      expressions.push(fn2());
-      if (!is2(TOKEN_TYPES.Comma)) {
+      expressions.push(fn());
+      if (!is(TOKEN_TYPES.Comma)) {
         break;
       }
     }
@@ -8215,7 +3549,7 @@ function parse(tokens) {
         current += 2;
       } else if (isIdentifier("in")) {
         operator = tokens[current++];
-      } else if (is2(TOKEN_TYPES.ComparisonBinaryOperator)) {
+      } else if (is(TOKEN_TYPES.ComparisonBinaryOperator)) {
         operator = tokens[current++];
       } else {
         break;
@@ -8227,7 +3561,7 @@ function parse(tokens) {
   }
   function parseAdditiveExpression() {
     let left = parseMultiplicativeExpression();
-    while (is2(TOKEN_TYPES.AdditiveBinaryOperator)) {
+    while (is(TOKEN_TYPES.AdditiveBinaryOperator)) {
       const operator = tokens[current];
       ++current;
       const right = parseMultiplicativeExpression();
@@ -8237,7 +3571,7 @@ function parse(tokens) {
   }
   function parseCallMemberExpression() {
     const member = parseMemberExpression(parsePrimaryExpression());
-    if (is2(TOKEN_TYPES.OpenParen)) {
+    if (is(TOKEN_TYPES.OpenParen)) {
       return parseCallExpression(member);
     }
     return member;
@@ -8245,7 +3579,7 @@ function parse(tokens) {
   function parseCallExpression(callee) {
     let expression = new CallExpression(callee, parseArgs());
     expression = parseMemberExpression(expression);
-    if (is2(TOKEN_TYPES.OpenParen)) {
+    if (is(TOKEN_TYPES.OpenParen)) {
       expression = parseCallExpression(expression);
     }
     return expression;
@@ -8258,7 +3592,7 @@ function parse(tokens) {
   }
   function parseArgumentsList() {
     const args = [];
-    while (!is2(TOKEN_TYPES.CloseParen)) {
+    while (!is(TOKEN_TYPES.CloseParen)) {
       let argument;
       if (tokens[current].type === TOKEN_TYPES.MultiplicativeBinaryOperator && tokens[current].value === "*") {
         ++current;
@@ -8266,7 +3600,7 @@ function parse(tokens) {
         argument = new SpreadExpression(expr);
       } else {
         argument = parseExpression();
-        if (is2(TOKEN_TYPES.Equals)) {
+        if (is(TOKEN_TYPES.Equals)) {
           ++current;
           if (!(argument instanceof Identifier)) {
             throw new SyntaxError(`Expected identifier for keyword argument`);
@@ -8276,7 +3610,7 @@ function parse(tokens) {
         }
       }
       args.push(argument);
-      if (is2(TOKEN_TYPES.Comma)) {
+      if (is(TOKEN_TYPES.Comma)) {
         ++current;
       }
     }
@@ -8285,14 +3619,14 @@ function parse(tokens) {
   function parseMemberExpressionArgumentsList() {
     const slices = [];
     let isSlice = false;
-    while (!is2(TOKEN_TYPES.CloseSquareBracket)) {
-      if (is2(TOKEN_TYPES.Colon)) {
+    while (!is(TOKEN_TYPES.CloseSquareBracket)) {
+      if (is(TOKEN_TYPES.Colon)) {
         slices.push(void 0);
         ++current;
         isSlice = true;
       } else {
         slices.push(parseExpression());
-        if (is2(TOKEN_TYPES.Colon)) {
+        if (is(TOKEN_TYPES.Colon)) {
           ++current;
           isSlice = true;
         }
@@ -8310,7 +3644,7 @@ function parse(tokens) {
     return slices[0];
   }
   function parseMemberExpression(object) {
-    while (is2(TOKEN_TYPES.Dot) || is2(TOKEN_TYPES.OpenSquareBracket)) {
+    while (is(TOKEN_TYPES.Dot) || is(TOKEN_TYPES.OpenSquareBracket)) {
       const operator = tokens[current];
       ++current;
       let property;
@@ -8330,7 +3664,7 @@ function parse(tokens) {
   }
   function parseMultiplicativeExpression() {
     let left = parseTestExpression();
-    while (is2(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
+    while (is(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
       const operator = tokens[current++];
       const right = parseTestExpression();
       left = new BinaryExpression(operator, left, right);
@@ -8355,13 +3689,13 @@ function parse(tokens) {
   }
   function parseFilterExpression() {
     let operand = parseCallMemberExpression();
-    while (is2(TOKEN_TYPES.Pipe)) {
+    while (is(TOKEN_TYPES.Pipe)) {
       ++current;
       let filter = parsePrimaryExpression();
       if (!(filter instanceof Identifier)) {
         throw new SyntaxError(`Expected identifier for the filter`);
       }
-      if (is2(TOKEN_TYPES.OpenParen)) {
+      if (is(TOKEN_TYPES.OpenParen)) {
         filter = parseCallExpression(filter);
       }
       operand = new FilterExpression(operand, filter);
@@ -8377,7 +3711,7 @@ function parse(tokens) {
       }
       case TOKEN_TYPES.StringLiteral: {
         let value = token.value;
-        while (is2(TOKEN_TYPES.StringLiteral)) {
+        while (is(TOKEN_TYPES.StringLiteral)) {
           value += tokens[current++].value;
         }
         return new StringLiteral(value);
@@ -8391,9 +3725,9 @@ function parse(tokens) {
       }
       case TOKEN_TYPES.OpenSquareBracket: {
         const values = [];
-        while (!is2(TOKEN_TYPES.CloseSquareBracket)) {
+        while (!is(TOKEN_TYPES.CloseSquareBracket)) {
           values.push(parseExpression());
-          if (is2(TOKEN_TYPES.Comma)) {
+          if (is(TOKEN_TYPES.Comma)) {
             ++current;
           }
         }
@@ -8402,12 +3736,12 @@ function parse(tokens) {
       }
       case TOKEN_TYPES.OpenCurlyBracket: {
         const values = /* @__PURE__ */ new Map();
-        while (!is2(TOKEN_TYPES.CloseCurlyBracket)) {
+        while (!is(TOKEN_TYPES.CloseCurlyBracket)) {
           const key = parseExpression();
           expect(TOKEN_TYPES.Colon, "Expected colon between key and value in object literal");
           const value = parseExpression();
           values.set(key, value);
-          if (is2(TOKEN_TYPES.Comma)) {
+          if (is(TOKEN_TYPES.Comma)) {
             ++current;
           }
         }
@@ -9001,18 +4335,18 @@ var Environment = class {
     }
   }
 };
-function setupGlobals(env22) {
-  env22.set("false", false);
-  env22.set("true", true);
-  env22.set("none", null);
-  env22.set("raise_exception", (args) => {
+function setupGlobals(env2) {
+  env2.set("false", false);
+  env2.set("true", true);
+  env2.set("none", null);
+  env2.set("raise_exception", (args) => {
     throw new Error(args);
   });
-  env22.set("range", range);
-  env22.set("strftime_now", strftime_now);
-  env22.set("True", true);
-  env22.set("False", false);
-  env22.set("None", null);
+  env2.set("range", range);
+  env2.set("strftime_now", strftime_now);
+  env2.set("True", true);
+  env2.set("False", false);
+  env2.set("None", null);
 }
 function getAttributeValue(item, attributePath) {
   const parts = attributePath.split(".");
@@ -9077,8 +4411,8 @@ function compareRuntimeValues(a, b, caseSensitive = false) {
 }
 var Interpreter = class {
   global;
-  constructor(env22) {
-    this.global = env22 ?? new Environment();
+  constructor(env2) {
+    this.global = env2 ?? new Environment();
   }
   /**
    * Run the program.
@@ -9608,11 +4942,11 @@ var Interpreter = class {
     if (kwargs.size > 0) {
       args.push(new KeywordArgumentsValue(kwargs));
     }
-    const fn2 = this.evaluate(expr.callee, environment);
-    if (fn2.type !== "FunctionValue") {
-      throw new Error(`Cannot call something that is not a function: got ${fn2.type}`);
+    const fn = this.evaluate(expr.callee, environment);
+    if (fn.type !== "FunctionValue") {
+      throw new Error(`Cannot call something that is not a function: got ${fn.type}`);
     }
-    return fn2.value(args, environment);
+    return fn.value(args, environment);
   }
   evaluateSliceExpression(object, expr, environment) {
     if (!(object instanceof ArrayValue || object instanceof StringValue)) {
@@ -9856,13 +5190,13 @@ var Interpreter = class {
     });
     const [macroArgs, macroKwargs] = this.evaluateArguments(node.call.args, environment);
     macroArgs.push(new KeywordArgumentsValue(macroKwargs));
-    const fn2 = this.evaluate(node.call.callee, environment);
-    if (fn2.type !== "FunctionValue") {
-      throw new Error(`Cannot call something that is not a function: got ${fn2.type}`);
+    const fn = this.evaluate(node.call.callee, environment);
+    if (fn.type !== "FunctionValue") {
+      throw new Error(`Cannot call something that is not a function: got ${fn.type}`);
     }
     const newEnv = new Environment(environment);
     newEnv.setVariable("caller", callerFn);
-    return fn2.value(macroArgs, newEnv);
+    return fn.value(macroArgs, newEnv);
   }
   evaluateFilterStatement(node, environment) {
     const rendered = this.evaluateBlock(node.body, environment);
@@ -10171,7 +5505,7 @@ function formatExpression(node, parentPrec = -1) {
     }
     case "ObjectLiteral": {
       const entries = Array.from(node.value.entries()).map(
-        ([k2, v]) => `${formatExpression(k2)}: ${formatExpression(v)}`
+        ([k, v]) => `${formatExpression(k)}: ${formatExpression(v)}`
       );
       return `{${entries.join(", ")}}`;
     }
@@ -10179,8 +5513,8 @@ function formatExpression(node, parentPrec = -1) {
       const n = node;
       const s = n.start ? formatExpression(n.start) : "";
       const t = n.stop ? formatExpression(n.stop) : "";
-      const st2 = n.step ? `:${formatExpression(n.step)}` : "";
-      return `${s}:${t}${st2}`;
+      const st = n.step ? `:${formatExpression(n.step)}` : "";
+      return `${s}:${t}${st}`;
     }
     case "KeywordArgumentExpression": {
       const n = node;
@@ -10210,14 +5544,14 @@ var Template = class {
     this.parsed = parse(tokens);
   }
   render(items) {
-    const env22 = new Environment();
-    setupGlobals(env22);
+    const env2 = new Environment();
+    setupGlobals(env2);
     if (items) {
       for (const [key, value] of Object.entries(items)) {
-        env22.set(key, value);
+        env2.set(key, value);
       }
     }
-    const interpreter = new Interpreter(env22);
+    const interpreter = new Interpreter(env2);
     const result = interpreter.run(this.parsed);
     return result.value;
   }
@@ -10362,29 +5696,29 @@ var Random = class {
         n = Date.now() >>> 0;
       }
     }
-    const mt2 = this._mt;
+    const mt = this._mt;
     const u = (a, b) => Math.imul(a, b) >>> 0, key = [];
     for (let v = n || 0; v > 0; v = Math.floor(v / 4294967296)) key.push(v & 4294967295);
     if (!key.length) key.push(0);
-    mt2[0] = 19650218;
-    for (let k2 = 1; k2 < 624; ++k2) mt2[k2] = u(1812433253, mt2[k2 - 1] ^ mt2[k2 - 1] >>> 30) + k2 >>> 0;
+    mt[0] = 19650218;
+    for (let k = 1; k < 624; ++k) mt[k] = u(1812433253, mt[k - 1] ^ mt[k - 1] >>> 30) + k >>> 0;
     let i = 1, j = 0;
-    for (let k2 = Math.max(624, key.length); k2 > 0; --k2, ++i, ++j) {
+    for (let k = Math.max(624, key.length); k > 0; --k, ++i, ++j) {
       if (i >= 624) {
-        mt2[0] = mt2[623];
+        mt[0] = mt[623];
         i = 1;
       }
       if (j >= key.length) j = 0;
-      mt2[i] = (mt2[i] ^ u(mt2[i - 1] ^ mt2[i - 1] >>> 30, 1664525)) + key[j] + j >>> 0;
+      mt[i] = (mt[i] ^ u(mt[i - 1] ^ mt[i - 1] >>> 30, 1664525)) + key[j] + j >>> 0;
     }
-    for (let k2 = 623; k2 > 0; --k2, ++i) {
+    for (let k = 623; k > 0; --k, ++i) {
       if (i >= 624) {
-        mt2[0] = mt2[623];
+        mt[0] = mt[623];
         i = 1;
       }
-      mt2[i] = (mt2[i] ^ u(mt2[i - 1] ^ mt2[i - 1] >>> 30, 1566083941)) - i >>> 0;
+      mt[i] = (mt[i] ^ u(mt[i - 1] ^ mt[i - 1] >>> 30, 1566083941)) - i >>> 0;
     }
-    mt2[0] = 2147483648;
+    mt[0] = 2147483648;
     this._idx = 624;
     this._gauss_next = null;
   }
@@ -10397,15 +5731,15 @@ var Random = class {
    * @returns {number} A random integer in the range [0, 2^32 - 1].
    */
   _int32() {
-    const mt2 = this._mt;
+    const mt = this._mt;
     if (this._idx >= 624) {
-      for (let k2 = 0; k2 < 624; ++k2) {
-        const y2 = mt2[k2] & 2147483648 | mt2[(k2 + 1) % 624] & 2147483647;
-        mt2[k2] = (mt2[(k2 + 397) % 624] ^ y2 >>> 1 ^ (y2 & 1 ? 2567483615 : 0)) >>> 0;
+      for (let k = 0; k < 624; ++k) {
+        const y2 = mt[k] & 2147483648 | mt[(k + 1) % 624] & 2147483647;
+        mt[k] = (mt[(k + 397) % 624] ^ y2 >>> 1 ^ (y2 & 1 ? 2567483615 : 0)) >>> 0;
       }
       this._idx = 0;
     }
-    let y = mt2[this._idx++];
+    let y = mt[this._idx++];
     y ^= y >>> 11;
     y ^= y << 7 & 2636928640;
     y ^= y << 15 & 4022730752;
@@ -10434,14 +5768,14 @@ var Random = class {
    * @returns {number} A normally distributed random value.
    */
   gauss(mu = 0, sigma = 1) {
-    let z2 = this._gauss_next;
+    let z = this._gauss_next;
     this._gauss_next = null;
-    if (z2 === null) {
+    if (z === null) {
       const x2pi = this.random() * 2 * Math.PI, g2rad = Math.sqrt(-2 * Math.log(1 - this.random()));
-      z2 = Math.cos(x2pi) * g2rad;
+      z = Math.cos(x2pi) * g2rad;
       this._gauss_next = Math.sin(x2pi) * g2rad;
     }
-    return mu + z2 * sigma;
+    return mu + z * sigma;
   }
   /**
    * Shuffles an array in-place using the Fisher-Yates algorithm.
@@ -10453,9 +5787,9 @@ var Random = class {
    */
   shuffle(arr) {
     for (let i = arr.length - 1; i > 0; --i) {
-      const k2 = 32 - Math.clz32(i + 1);
-      let r = this._int32() >>> 32 - k2;
-      while (r > i) r = this._int32() >>> 32 - k2;
+      const k = 32 - Math.clz32(i + 1);
+      let r = this._int32() >>> 32 - k;
+      while (r > i) r = this._int32() >>> 32 - k;
       const t = arr[i];
       arr[i] = arr[r];
       arr[r] = t;
@@ -10891,35 +6225,35 @@ var CrossOriginStorage = class {
 };
 async function getCache(file_cache_dir = null) {
   let cache2 = null;
-  if (env2.useCustomCache) {
-    if (!env2.customCache) {
+  if (env.useCustomCache) {
+    if (!env.customCache) {
       throw Error("`env.useCustomCache=true`, but `env.customCache` is not defined.");
     }
-    if (!env2.customCache.match || !env2.customCache.put) {
+    if (!env.customCache.match || !env.customCache.put) {
       throw new Error(
         "`env.customCache` must be an object which implements the `match` and `put` functions of the Web Cache API. For more information, see https://developer.mozilla.org/en-US/docs/Web/API/Cache"
       );
     }
-    cache2 = env2.customCache;
+    cache2 = env.customCache;
   }
-  if (!cache2 && env2.experimental_useCrossOriginStorage && CrossOriginStorage.isAvailable()) {
+  if (!cache2 && env.experimental_useCrossOriginStorage && CrossOriginStorage.isAvailable()) {
     cache2 = new CrossOriginStorage();
   }
-  if (!cache2 && env2.useBrowserCache) {
+  if (!cache2 && env.useBrowserCache) {
     if (typeof caches === "undefined") {
       throw Error("Browser cache is not available in this environment.");
     }
     try {
-      cache2 = await caches.open(env2.cacheKey);
+      cache2 = await caches.open(env.cacheKey);
     } catch (e) {
       logger.warn("An error occurred while opening the browser cache:", e);
     }
   }
-  if (!cache2 && env2.useFSCache) {
+  if (!cache2 && env.useFSCache) {
     if (!apis.IS_FS_AVAILABLE) {
       throw Error("File System Cache is not available in this environment.");
     }
-    cache2 = new FileCache(file_cache_dir ?? env2.cacheDir);
+    cache2 = new FileCache(file_cache_dir ?? env.cacheDir);
   }
   return cache2;
 }
@@ -11013,7 +6347,7 @@ async function fetch_file_head(urlOrPath) {
   }
   const headers = getFetchHeaders(urlOrPath);
   headers.set("Range", "bytes=0-0");
-  return env2.fetch(urlOrPath, { method: "GET", headers, cache: "no-store" });
+  return env.fetch(urlOrPath, { method: "GET", headers, cache: "no-store" });
 }
 function get_file_metadata(path_or_repo_id, filename, options = {}) {
   const key = JSON.stringify([
@@ -11044,7 +6378,7 @@ async function _get_file_metadata(path_or_repo_id, filename, options) {
       fromCache: true
     };
   }
-  if (env2.allowLocalModels) {
+  if (env.allowLocalModels) {
     const isURL = isValidUrl(localPath, ["http:", "https:"]);
     if (!isURL) {
       try {
@@ -11063,7 +6397,7 @@ async function _get_file_metadata(path_or_repo_id, filename, options) {
       }
     }
   }
-  if (env2.allowRemoteModels && !options.local_files_only && validModelId) {
+  if (env.allowRemoteModels && !options.local_files_only && validModelId) {
     try {
       const rangeResponse = await fetch_file_head(remoteURL);
       if (rangeResponse && rangeResponse.status >= 200 && rangeResponse.status < 300) {
@@ -11101,12 +6435,12 @@ async function _get_file_metadata(path_or_repo_id, filename, options) {
   return { exists: false, fromCache: false };
 }
 async function getFile(urlOrPath) {
-  if (env2.useFS && !isValidUrl(urlOrPath, ["http:", "https:", "blob:"])) {
+  if (env.useFS && !isValidUrl(urlOrPath, ["http:", "https:", "blob:"])) {
     return new FileResponse(
       urlOrPath instanceof URL ? urlOrPath.protocol === "file:" ? urlOrPath.pathname : urlOrPath.toString() : urlOrPath
     );
   } else {
-    return env2.fetch(urlOrPath, {
+    return env.fetch(urlOrPath, {
       headers: getFetchHeaders(urlOrPath)
     });
   }
@@ -11116,8 +6450,8 @@ function getFetchHeaders(urlOrPath) {
   const headers = new Headers();
   if (isNode) {
     const IS_CI = !!process.env?.TESTING_REMOTELY;
-    const version2 = env2.version;
-    headers.set("User-Agent", `transformers.js/${version2}; is_ci/${IS_CI};`);
+    const version = env.version;
+    headers.set("User-Agent", `transformers.js/${version}; is_ci/${IS_CI};`);
     const isHFURL = isValidUrl(urlOrPath, ["http:", "https:"], ["huggingface.co", "hf.co"]);
     if (isHFURL) {
       const token = process.env?.HF_TOKEN ?? process.env?.HF_ACCESS_TOKEN;
@@ -11133,10 +6467,10 @@ function buildResourcePaths(path_or_repo_id, filename, options = {}, cache2 = nu
   const revision = options.revision ?? "main";
   const requestURL = pathJoin(path_or_repo_id, filename);
   const validModelId = isValidHfModelId(path_or_repo_id);
-  const localPath = validModelId ? pathJoin(env2.localModelPath, requestURL) : requestURL;
+  const localPath = validModelId ? pathJoin(env.localModelPath, requestURL) : requestURL;
   const remoteURL = pathJoin(
-    env2.remoteHost,
-    env2.remotePathTemplate.replaceAll("{model}", path_or_repo_id).replaceAll("{revision}", encodeURIComponent(revision)),
+    env.remoteHost,
+    env.remotePathTemplate.replaceAll("{model}", path_or_repo_id).replaceAll("{revision}", encodeURIComponent(revision)),
     filename
   );
   const proposedCacheKey = cache2 instanceof FileCache ? (
@@ -11208,7 +6542,7 @@ async function loadResourceFile(path_or_repo_id, filename, fatal = true, options
   if (cacheHit) {
     cacheKey = proposedCacheKey;
   } else {
-    if (env2.allowLocalModels) {
+    if (env.allowLocalModels) {
       const isURL = isValidUrl(requestURL, ["http:", "https:"]);
       if (!isURL) {
         try {
@@ -11219,14 +6553,14 @@ async function loadResourceFile(path_or_repo_id, filename, fatal = true, options
         }
       } else if (options.local_files_only) {
         throw new Error(`\`local_files_only=true\`, but attempted to load a remote file from: ${requestURL}.`);
-      } else if (!env2.allowRemoteModels) {
+      } else if (!env.allowRemoteModels) {
         throw new Error(
           `\`env.allowRemoteModels=false\`, but attempted to load a remote file from: ${requestURL}.`
         );
       }
     }
     if (response === void 0 || typeof response !== "string" && response.status === 404) {
-      if (options.local_files_only || !env2.allowRemoteModels) {
+      if (options.local_files_only || !env.allowRemoteModels) {
         if (fatal) {
           throw Error(
             `\`local_files_only=true\` or \`env.allowRemoteModels=false\` and file was not found locally at "${localPath}".`
@@ -11348,12 +6682,12 @@ async function loadResourceFile(path_or_repo_id, filename, fatal = true, options
 }
 var INFLIGHT_LOADS = /* @__PURE__ */ new Map();
 async function getModelFile(path_or_repo_id, filename, fatal = true, options = {}, return_path = false) {
-  if (!env2.allowLocalModels) {
+  if (!env.allowLocalModels) {
     if (options.local_files_only) {
       throw Error(
         "Invalid configuration detected: local models are disabled (`env.allowLocalModels=false`) but you have requested to only use local models (`local_files_only=true`)."
       );
-    } else if (!env2.allowRemoteModels) {
+    } else if (!env.allowRemoteModels) {
       throw Error(
         "Invalid configuration detected: both local and remote models are disabled. Fix by setting `env.allowLocalModels` or `env.allowRemoteModels` to `true`."
       );
@@ -11429,9 +6763,9 @@ function interpolate_data(input, [in_channels, in_height, in_width], [out_height
       const idx2 = yStride + x2;
       const idx3 = xStride + x1;
       const idx4 = xStride + x2;
-      for (let k2 = 0; k2 < in_channels; ++k2) {
-        const cOffset = k2 * inStride;
-        out_img[k2 * outStride + outOffset] = w1 * input[cOffset + idx1] + w2 * input[cOffset + idx2] + w3 * input[cOffset + idx3] + w4 * input[cOffset + idx4];
+      for (let k = 0; k < in_channels; ++k) {
+        const cOffset = k * inStride;
+        out_img[k * outStride + outOffset] = w1 * input[cOffset + idx1] + w2 * input[cOffset + idx2] + w3 * input[cOffset + idx3] + w4 * input[cOffset + idx4];
       }
     }
   }
@@ -11449,9 +6783,9 @@ function permute_data(array, dims, axes) {
   const permutedData = new array.constructor(array.length);
   for (let i = 0; i < array.length; ++i) {
     let newIndex = 0;
-    for (let j = dims.length - 1, k2 = i; j >= 0; --j) {
-      newIndex += k2 % dims[j] * invStride[j];
-      k2 = Math.floor(k2 / dims[j]);
+    for (let j = dims.length - 1, k = i; j >= 0; --j) {
+      newIndex += k % dims[j] * invStride[j];
+      k = Math.floor(k / dims[j]);
     }
     permutedData[newIndex] = array[i];
   }
@@ -11683,7 +7017,7 @@ var P2FFT = class {
       const quarterLen = len2 >>> 2;
       for (outOff = 0; outOff < size; outOff += len2) {
         const limit = outOff + quarterLen - 1;
-        for (let i = outOff, k2 = 0; i < limit; i += 2, k2 += step) {
+        for (let i = outOff, k = 0; i < limit; i += 2, k += step) {
           const A = i;
           const B = A + quarterLen;
           const C = B + quarterLen;
@@ -11696,16 +7030,16 @@ var P2FFT = class {
           const Ci = out[C + 1];
           const Dr = out[D];
           const Di = out[D + 1];
-          const tableBr = table[k2];
-          const tableBi = inv * table[k2 + 1];
+          const tableBr = table[k];
+          const tableBi = inv * table[k + 1];
           const MBr = Br * tableBr - Bi * tableBi;
           const MBi = Br * tableBi + Bi * tableBr;
-          const tableCr = table[2 * k2];
-          const tableCi = inv * table[2 * k2 + 1];
+          const tableCr = table[2 * k];
+          const tableCi = inv * table[2 * k + 1];
           const MCr = Cr * tableCr - Ci * tableCi;
           const MCi = Cr * tableCi + Ci * tableCr;
-          const tableDr = table[3 * k2];
-          const tableDi = inv * table[3 * k2 + 1];
+          const tableDr = table[3 * k];
+          const tableDi = inv * table[3 * k + 1];
           const MDr = Dr * tableDr - Di * tableDi;
           const MDi = Dr * tableDi + Di * tableDr;
           const T0r = Ar + MCr;
@@ -11820,7 +7154,7 @@ var P2FFT = class {
       const quarterLen = halfLen >>> 1;
       const hquarterLen = quarterLen >>> 1;
       for (outOff = 0; outOff < size; outOff += len2) {
-        for (let i = 0, k2 = 0; i <= hquarterLen; i += 2, k2 += step) {
+        for (let i = 0, k = 0; i <= hquarterLen; i += 2, k += step) {
           const A = outOff + i;
           const B = A + quarterLen;
           const C = B + quarterLen;
@@ -11835,16 +7169,16 @@ var P2FFT = class {
           const Di = out[D + 1];
           const MAr = Ar;
           const MAi = Ai;
-          const tableBr = table[k2];
-          const tableBi = inv * table[k2 + 1];
+          const tableBr = table[k];
+          const tableBi = inv * table[k + 1];
           const MBr = Br * tableBr - Bi * tableBi;
           const MBi = Br * tableBi + Bi * tableBr;
-          const tableCr = table[2 * k2];
-          const tableCi = inv * table[2 * k2 + 1];
+          const tableCr = table[2 * k];
+          const tableCi = inv * table[2 * k + 1];
           const MCr = Cr * tableCr - Ci * tableCi;
           const MCi = Cr * tableCi + Ci * tableCr;
-          const tableDr = table[3 * k2];
-          const tableDi = inv * table[3 * k2 + 1];
+          const tableDr = table[3 * k];
+          const tableDi = inv * table[3 * k + 1];
           const MDr = Dr * tableDr - Di * tableDi;
           const MDi = Dr * tableDi + Di * tableDr;
           const T0r = MAr + MCr;
@@ -12168,7 +7502,7 @@ var uint16_to_float32 = /* @__PURE__ */ function() {
   };
 }();
 var onnxruntime_node_exports = {};
-__export2(onnxruntime_node_exports, {
+__export(onnxruntime_node_exports, {
   default: () => onnxruntime_node_default
 });
 var onnxruntime_node_default = {};
@@ -12186,7 +7520,7 @@ async function loadAndCacheFile(url) {
   } catch (error) {
     logger.warn(`Failed to load ${fileName} from cache:`, error);
   }
-  const response = await env2.fetch(url);
+  const response = await env.fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch ${fileName}: ${response.status} ${response.statusText}`);
   }
@@ -12296,7 +7630,7 @@ if (ORT_SYMBOL in globalThis) {
   supportedDevices.push("cpu");
   defaultDevices = ["cpu"];
 } else {
-  ONNX = ort_webgpu_bundle_min_exports;
+  ONNX = ONNX_WEB;
   if (apis.IS_WEBNN_AVAILABLE) {
     supportedDevices.push("webnn-npu", "webnn-gpu", "webnn-cpu", "webnn");
   }
@@ -12306,7 +7640,7 @@ if (ORT_SYMBOL in globalThis) {
   supportedDevices.push("wasm");
   defaultDevices = ["wasm"];
 }
-var InferenceSession2 = ONNX.InferenceSession;
+var InferenceSession = ONNX.InferenceSession;
 function deviceToExecutionProviders(device = null) {
   if (!device) return defaultDevices;
   switch (device) {
@@ -12326,7 +7660,7 @@ async function ensureWasmLoaded() {
   if (wasmLoadPromise) {
     return wasmLoadPromise;
   }
-  const shouldUseWasmCache = env2.useWasmCache && typeof ONNX_ENV?.wasm?.wasmPaths === "object" && ONNX_ENV?.wasm?.wasmPaths?.wasm && ONNX_ENV?.wasm?.wasmPaths?.mjs;
+  const shouldUseWasmCache = env.useWasmCache && typeof ONNX_ENV?.wasm?.wasmPaths === "object" && ONNX_ENV?.wasm?.wasmPaths?.wasm && ONNX_ENV?.wasm?.wasmPaths?.mjs;
   if (!shouldUseWasmCache) {
     if (apis.IS_DENO_WEB_RUNTIME) {
       throw new Error(
@@ -12375,8 +7709,8 @@ async function ensureWasmLoaded() {
 }
 async function createInferenceSession(buffer_or_path, session_options, session_config) {
   await ensureWasmLoaded();
-  const logSeverityLevel = getOnnxLogSeverityLevel(env2.logLevel ?? LogLevel.WARNING);
-  const load = () => InferenceSession2.create(buffer_or_path, {
+  const logSeverityLevel = getOnnxLogSeverityLevel(env.logLevel ?? LogLevel.WARNING);
+  const load = () => InferenceSession.create(buffer_or_path, {
     // Set default log severity level, but allow overriding through session options
     logSeverityLevel,
     ...session_options
@@ -12421,8 +7755,8 @@ if (ONNX_ENV) {
   if (ONNX_ENV.webgpu) {
     ONNX_ENV.webgpu.powerPreference = "high-performance";
   }
-  setLogLevel(env2.logLevel ?? LogLevel.WARNING);
-  env2.backends.onnx = {
+  setLogLevel(env.logLevel ?? LogLevel.WARNING);
+  env.backends.onnx = {
     ...ONNX_ENV,
     setLogLevel
   };
@@ -12434,13 +7768,13 @@ var wrap = async (session_bytes, session_options, names) => {
     async (inputs) => {
       const proxied = isONNXProxy();
       const ortFeed = Object.fromEntries(
-        Object.entries(inputs).map(([k2, v]) => [k2, (proxied ? v.clone() : v).ort_tensor])
+        Object.entries(inputs).map(([k, v]) => [k, (proxied ? v.clone() : v).ort_tensor])
       );
       const outputs = await runInferenceSession(session, ortFeed);
       if (Array.isArray(names)) {
-        return names.map((n) => new Tensor22(outputs[n]));
+        return names.map((n) => new Tensor2(outputs[n]));
       } else {
-        return new Tensor22(outputs[
+        return new Tensor2(outputs[
           /** @type {string} */
           names
         ]);
@@ -13634,7 +8968,7 @@ var DataTypeMap = Object.freeze({
   uint4: Uint8Array,
   int4: Int8Array
 });
-var Tensor22 = class _Tensor {
+var Tensor2 = class _Tensor {
   /**
    * Dimensions of the tensor.
    * @type {number[]}
@@ -13683,7 +9017,7 @@ var Tensor22 = class _Tensor {
       this.ort_tensor = /** @type {ONNXTensor} */
       args[0];
     } else {
-      this.ort_tensor = new Tensor2(
+      this.ort_tensor = new Tensor(
         /** @type {DataType} */
         args[0],
         // @ts-expect-error ts(2769) Type 'number' is not assignable to type 'bigint'.
@@ -14047,22 +9381,22 @@ var Tensor22 = class _Tensor {
     if (is_bigint && p !== 1) {
       throw Error(`Expected a floating point tensor as input. Got ${this.type}`);
     }
-    let fn2, zero;
+    let fn, zero;
     if (is_bigint) {
-      fn2 = (a, b) => a + b;
+      fn = (a, b) => a + b;
       zero = 0n;
     } else {
-      fn2 = (a, b) => a + b ** p;
+      fn = (a, b) => a + b ** p;
       zero = 0;
     }
     if (dim === null) {
-      let val = this_data.reduce(fn2, zero);
+      let val = this_data.reduce(fn, zero);
       if (p !== 1) {
         val = val ** (1 / p);
       }
       return new _Tensor(this.type, [val], []);
     }
-    const [type, result, resultDims] = reduce_helper(fn2, this, dim, keepdim);
+    const [type, result, resultDims] = reduce_helper(fn, this, dim, keepdim);
     if (p !== 1) {
       for (let i = 0; i < result.length; ++i) {
         result[i] = result[i] ** (1 / p);
@@ -14425,7 +9759,7 @@ function reshape(data, dimensions) {
 }
 function permute(tensor, axes) {
   const [permutedData, shape] = permute_data(tensor.data, tensor.dims, axes);
-  return new Tensor22(tensor.type, permutedData, shape);
+  return new Tensor2(tensor.type, permutedData, shape);
 }
 function interpolate(input, [out_height, out_width], mode = "bilinear", align_corners = false) {
   const in_channels = input.dims.at(-3) ?? 1;
@@ -14439,7 +9773,7 @@ function interpolate(input, [out_height, out_width], mode = "bilinear", align_co
     mode,
     align_corners
   );
-  return new Tensor22(input.type, output, [in_channels, out_height, out_width]);
+  return new Tensor2(input.type, output, [in_channels, out_height, out_width]);
 }
 async function interpolate_4d(input, { size = null, mode = "bilinear" } = {}) {
   if (input.dims.length !== 4) {
@@ -14468,7 +9802,7 @@ async function interpolate_4d(input, { size = null, mode = "bilinear" } = {}) {
   } else {
     throw new Error(`Unsupported mode: ${mode}`);
   }
-  const sizeTensor = new Tensor22("int64", new BigInt64Array(targetDims.map(BigInt)), [targetDims.length]);
+  const sizeTensor = new Tensor2("int64", new BigInt64Array(targetDims.map(BigInt)), [targetDims.length]);
   return await op({ x: input, s: sizeTensor });
 }
 async function matmul(a, b) {
@@ -14479,19 +9813,19 @@ async function rfft(x, a) {
   const op = await TensorOpRegistry.rfft;
   return await op({ x, a });
 }
-async function topk(x, k2) {
+async function topk(x, k) {
   const op = await TensorOpRegistry.top_k;
-  if (k2 == null) {
-    k2 = x.dims.at(-1);
+  if (k == null) {
+    k = x.dims.at(-1);
   } else {
-    k2 = Math.min(k2, x.dims.at(-1));
+    k = Math.min(k, x.dims.at(-1));
   }
   return await op({
     x,
-    k: new Tensor22("int64", [BigInt(k2)], [1])
+    k: new Tensor2("int64", [BigInt(k)], [1])
   });
 }
-var arrayToIndexTensor = (array) => new Tensor22("int64", array, [array.length]);
+var arrayToIndexTensor = (array) => new Tensor2("int64", array, [array.length]);
 async function slice2(data, starts, ends, axes, steps) {
   const op = await TensorOpRegistry.slice;
   return await op({
@@ -14511,11 +9845,11 @@ function mean_pooling(last_hidden_state, attention_mask) {
   let outIndex = 0;
   for (let i = 0; i < batchSize; ++i) {
     const offset = i * embedDim * seqLength;
-    for (let k2 = 0; k2 < embedDim; ++k2) {
+    for (let k = 0; k < embedDim; ++k) {
       let sum = 0;
       let count2 = 0;
       const attnMaskOffset = i * seqLength;
-      const offset2 = offset + k2;
+      const offset2 = offset + k;
       for (let j = 0; j < seqLength; ++j) {
         const attn = Number(attentionMaskData[attnMaskOffset + j]);
         count2 += attn;
@@ -14525,7 +9859,7 @@ function mean_pooling(last_hidden_state, attention_mask) {
       returnedData[outIndex++] = avg;
     }
   }
-  return new Tensor22(last_hidden_state.type, returnedData, shape);
+  return new Tensor2(last_hidden_state.type, returnedData, shape);
 }
 function layer_norm(input, normalized_shape, { eps = 1e-5 } = {}) {
   if (input.dims.length !== 2) {
@@ -14556,7 +9890,7 @@ function layer_norm(input, normalized_shape, { eps = 1e-5 } = {}) {
       returnedData[offset2] = (inputData[offset2] - meanData[i]) / (stdData[i] + eps);
     }
   }
-  return new Tensor22(input.type, returnedData, input.dims);
+  return new Tensor2(input.type, returnedData, input.dims);
 }
 function calc_squeeze_dims(dims, dim) {
   dims = dims.slice();
@@ -14629,7 +9963,7 @@ function cat(tensors, dim = 0) {
       currentDim += dims[dim];
     }
   }
-  return new Tensor22(resultType, result, resultDims);
+  return new Tensor2(resultType, result, resultDims);
 }
 function stack(tensors, dim = 0) {
   return cat(
@@ -14673,14 +10007,14 @@ function std_mean(input, dim = null, correction = 1, keepdim = false) {
     const sum = inputData.reduce((a, b) => a + b, 0);
     const mean2 = sum / inputData.length;
     const std = Math.sqrt(inputData.reduce((a, b) => a + (b - mean2) ** 2, 0) / (inputData.length - correction));
-    const meanTensor2 = new Tensor22(
+    const meanTensor2 = new Tensor2(
       input.type,
       [mean2],
       [
         /* scalar */
       ]
     );
-    const stdTensor2 = new Tensor22(
+    const stdTensor2 = new Tensor2(
       input.type,
       [std],
       [
@@ -14701,7 +10035,7 @@ function std_mean(input, dim = null, correction = 1, keepdim = false) {
   for (let i = 0; i < result.length; ++i) {
     result[i] = Math.sqrt(result[i] / (inputDims[dim] - correction));
   }
-  const stdTensor = new Tensor22(type, result, resultDims);
+  const stdTensor = new Tensor2(type, result, resultDims);
   return [stdTensor, meanTensor];
 }
 function mean(input, dim = null, keepdim = false) {
@@ -14712,7 +10046,7 @@ function mean(input, dim = null, keepdim = false) {
   );
   if (dim === null) {
     const val = inputData.reduce((a, b) => a + b, 0);
-    return new Tensor22(
+    return new Tensor2(
       input.type,
       [val / inputData.length],
       [
@@ -14727,7 +10061,7 @@ function mean(input, dim = null, keepdim = false) {
       result[i] /= inputDims[dim];
     }
   }
-  return new Tensor22(type, result, resultDims);
+  return new Tensor2(type, result, resultDims);
 }
 function dimsToStride(dims) {
   const stride = new Array(dims.length);
@@ -14739,7 +10073,7 @@ function dimsToStride(dims) {
 }
 function fullHelper(size, fill_value, dtype, cls) {
   const numElements = size.reduce((a, b) => a * b, 1);
-  return new Tensor22(dtype, new cls(numElements).fill(fill_value), size);
+  return new Tensor2(dtype, new cls(numElements).fill(fill_value), size);
 }
 function full(size, fill_value) {
   let dtype;
@@ -14775,7 +10109,7 @@ function zeros_like(tensor) {
 }
 function rand(size) {
   const length = size.reduce((a, b) => a * b, 1);
-  return new Tensor22(
+  return new Tensor2(
     "float32",
     Float32Array.from({ length }, () => random.random()),
     size
@@ -14783,7 +10117,7 @@ function rand(size) {
 }
 function randn(size) {
   const length = size.reduce((a, b) => a * b, 1);
-  return new Tensor22(
+  return new Tensor2(
     "float32",
     Float32Array.from({ length }, () => random.gauss()),
     size
@@ -14813,7 +10147,7 @@ function quantize_embeddings(tensor, precision) {
       outputData[arrayIndex] -= 128;
     }
   }
-  return new Tensor22(dtype, outputData, [tensor.dims[0], tensor.dims[1] / 8]);
+  return new Tensor2(dtype, outputData, [tensor.dims[0], tensor.dims[1] / 8]);
 }
 async function get_tokenizer_files(modelId) {
   if (!modelId) {
@@ -15090,7 +10424,7 @@ Callable {
       }
       const dims = [encodedTokens.length, encodedTokens[0].input_ids.length];
       for (const key of Object.keys(encodedTokens[0])) {
-        result[key] = new Tensor22(
+        result[key] = new Tensor2(
           "int64",
           BigInt64Array.from(encodedTokens.flatMap((x) => x[key]).map(BigInt)),
           dims
@@ -15179,7 +10513,7 @@ Callable {
    * @returns {string[]} List of decoded sequences.
    */
   batch_decode(batch, decode_args = {}) {
-    if (batch instanceof Tensor22) {
+    if (batch instanceof Tensor2) {
       batch = batch.tolist();
     }
     return batch.map((x) => this.decode(x, decode_args));
@@ -15196,7 +10530,7 @@ Callable {
    * @throws {Error} If `token_ids` is not a non-empty array of integers.
    */
   decode(token_ids, decode_args = {}) {
-    if (token_ids instanceof Tensor22) {
+    if (token_ids instanceof Tensor2) {
       token_ids = prepareTensorForDecode(token_ids);
     }
     if (!Array.isArray(token_ids) || token_ids.length === 0 || !isIntegralNumber(token_ids[0])) {
@@ -15432,7 +10766,7 @@ function _build_translation_inputs(self2, raw_inputs, tokenizer_options, generat
   return self2._call(raw_inputs, tokenizer_options);
 }
 var tokenizers_exports = {};
-__export2(tokenizers_exports, {
+__export(tokenizers_exports, {
   AlbertTokenizer: () => AlbertTokenizer,
   AutoTokenizer: () => AutoTokenizer,
   BartTokenizer: () => BartTokenizer,
@@ -15778,7 +11112,7 @@ var WHISPER_LANGUAGES = [
 ];
 var WHISPER_LANGUAGE_MAPPING = new Map(WHISPER_LANGUAGES);
 var WHISPER_TO_LANGUAGE_CODE_MAPPING = new Map([
-  ...WHISPER_LANGUAGES.map(([k2, v]) => [v, k2]),
+  ...WHISPER_LANGUAGES.map(([k, v]) => [v, k]),
   ...[
     ["burmese", "my"],
     ["valencian", "ca"],
@@ -16065,7 +11399,7 @@ var WhisperTokenizer = class extends PreTrainedTokenizer {
       let rightMid = Math.floor((rightStop + rightStart) / 2);
       if (use_token_timestamp_sequences && max2 === 0 && leftLength > 0) {
         const lastLeftTs = left_token_timestamp_sequence[leftLength - 1][0];
-        const idx = token_timestamp_sequences[i].findIndex((ts2) => ts2[0] >= lastLeftTs);
+        const idx = token_timestamp_sequences[i].findIndex((ts) => ts[0] >= lastLeftTs);
         rightMid = idx === -1 ? rightSequence.length : idx;
       }
       totalSequence.push(...leftSequence.slice(0, leftMid));
@@ -16121,7 +11455,7 @@ var WhisperTokenizer = class extends PreTrainedTokenizer {
   decode(token_ids, decode_args) {
     let text;
     if (decode_args?.decode_with_timestamps) {
-      if (token_ids instanceof Tensor22) {
+      if (token_ids instanceof Tensor2) {
         token_ids = prepareTensorForDecode(token_ids);
       }
       text = this.decodeWithTimestamps(token_ids, decode_args);
@@ -16434,7 +11768,7 @@ var Processor = class extends Callable {
   }
 };
 var processors_exports = {};
-__export2(processors_exports, {
+__export(processors_exports, {
   ChatterboxProcessor: () => ChatterboxProcessor,
   CohereAsrProcessor: () => CohereAsrProcessor,
   Florence2Processor: () => Florence2Processor,
@@ -16510,7 +11844,7 @@ function validate_audio_inputs(audio, feature_extractor) {
   }
 }
 var feature_extractors_exports = {};
-__export2(feature_extractors_exports, {
+__export(feature_extractors_exports, {
   ASTFeatureExtractor: () => ASTFeatureExtractor,
   ChatterboxFeatureExtractor: () => ChatterboxFeatureExtractor,
   ClapFeatureExtractor: () => ClapFeatureExtractor,
@@ -16613,11 +11947,11 @@ var HERTZ_TO_MEL_MAPPING = {
   slaney: (freq, min_log_hertz = 1e3, min_log_mel = 15, logstep = 27 / Math.log(6.4)) => freq >= min_log_hertz ? min_log_mel + Math.log(freq / min_log_hertz) * logstep : 3 * freq / 200
 };
 function hertz_to_mel(freq, mel_scale = "htk") {
-  const fn2 = HERTZ_TO_MEL_MAPPING[mel_scale];
-  if (!fn2) {
+  const fn = HERTZ_TO_MEL_MAPPING[mel_scale];
+  if (!fn) {
     throw new Error('mel_scale should be one of "htk", "slaney" or "kaldi".');
   }
-  return typeof freq === "number" ? fn2(freq) : freq.map((x) => fn2(x));
+  return typeof freq === "number" ? fn(freq) : freq.map((x) => fn(x));
 }
 var MEL_TO_HERTZ_MAPPING = {
   htk: (mels) => 700 * (10 ** (mels / 2595) - 1),
@@ -16625,11 +11959,11 @@ var MEL_TO_HERTZ_MAPPING = {
   slaney: (mels, min_log_hertz = 1e3, min_log_mel = 15, logstep = Math.log(6.4) / 27) => mels >= min_log_mel ? min_log_hertz * Math.exp(logstep * (mels - min_log_mel)) : 200 * mels / 3
 };
 function mel_to_hertz(mels, mel_scale = "htk") {
-  const fn2 = MEL_TO_HERTZ_MAPPING[mel_scale];
-  if (!fn2) {
+  const fn = MEL_TO_HERTZ_MAPPING[mel_scale];
+  if (!fn) {
     throw new Error('mel_scale should be one of "htk", "slaney" or "kaldi".');
   }
-  return typeof mels === "number" ? fn2(mels) : mels.map((x) => fn2(x));
+  return typeof mels === "number" ? fn(mels) : mels.map((x) => fn(x));
 }
 function _create_triangular_filter_bank(fft_freqs, filter_freqs) {
   const filter_diff = Float64Array.from(
@@ -16875,8 +12209,8 @@ async function spectrogram(waveform, window2, frame_length, hop_length, {
   const num_mel_filters = mel_filters.length;
   let mel_spec = await matmul(
     // TODO: Make `mel_filters` a Tensor during initialization
-    new Tensor22("float32", mel_filters.flat(), [num_mel_filters, num_frequency_bins]),
-    new Tensor22("float32", transposedMagnitudeData, [num_frequency_bins, d1Max])
+    new Tensor2("float32", mel_filters.flat(), [num_mel_filters, num_frequency_bins]),
+    new Tensor2("float32", transposedMagnitudeData, [num_frequency_bins, d1Max])
   );
   if (transpose) {
     mel_spec = mel_spec.transpose(1, 0);
@@ -17156,7 +12490,7 @@ var EncodecFeatureExtractor = class extends FeatureExtractor {
       audio.length / num_channels
     ];
     return {
-      input_values: new Tensor22("float32", audio, shape)
+      input_values: new Tensor2("float32", audio, shape)
     };
   }
 };
@@ -17177,7 +12511,7 @@ var ChatterboxFeatureExtractor = class extends FeatureExtractor {
       /* num_samples */
     ];
     return {
-      input_values: new Tensor22("float32", audio, shape)
+      input_values: new Tensor2("float32", audio, shape)
     };
   }
 };
@@ -17438,7 +12772,7 @@ var ParakeetFeatureExtractor = class extends FeatureExtractor {
     mask_data.fill(1n, 0, features_length);
     return {
       input_features: features.unsqueeze_(0),
-      attention_mask: new Tensor22("int64", mask_data, [1, num_frames])
+      attention_mask: new Tensor2("int64", mask_data, [1, num_frames])
     };
   }
 };
@@ -17681,7 +13015,7 @@ var Gemma4AudioFeatureExtractor = class extends Gemma3nAudioFeatureExtractor {
         feat_data.fill(0, i * num_features, (i + 1) * num_features);
       }
     }
-    result.input_features_mask = new Tensor22("bool", frame_mask, [1, num_frames]);
+    result.input_features_mask = new Tensor2("bool", frame_mask, [1, num_frames]);
     return result;
   }
 };
@@ -17750,7 +13084,7 @@ var MoonshineFeatureExtractor = class extends FeatureExtractor {
       /* num_samples */
     ];
     return {
-      input_values: new Tensor22("float32", audio, shape)
+      input_values: new Tensor2("float32", audio, shape)
     };
   }
 };
@@ -17772,7 +13106,7 @@ var PyAnnoteFeatureExtractor = class extends FeatureExtractor {
       /* num_samples */
     ];
     return {
-      input_values: new Tensor22("float32", audio, shape)
+      input_values: new Tensor2("float32", audio, shape)
     };
   }
   /**
@@ -17928,9 +13262,9 @@ var SeamlessM4TFeatureExtractor = class extends FeatureExtractor {
         padded_data.set(data);
         padded_data.fill(this.config.padding_value, data.length);
         const numPaddedFrames = num_frames2 + pad_size;
-        features = new Tensor22(features.type, padded_data, [numPaddedFrames, num_channels2]);
+        features = new Tensor2(features.type, padded_data, [numPaddedFrames, num_channels2]);
         if (return_attention_mask) {
-          padded_attention_mask = new Tensor22("int64", new BigInt64Array(numPaddedFrames), [
+          padded_attention_mask = new Tensor2("int64", new BigInt64Array(numPaddedFrames), [
             1,
             numPaddedFrames
           ]);
@@ -17957,7 +13291,7 @@ var SeamlessM4TFeatureExtractor = class extends FeatureExtractor {
       } else {
         attention_mask_data.fill(1n);
       }
-      result.attention_mask = new Tensor22("int64", attention_mask_data, [1, reshapedNumFrames]);
+      result.attention_mask = new Tensor2("int64", attention_mask_data, [1, reshapedNumFrames]);
     }
     return result;
   }
@@ -17993,8 +13327,8 @@ var Wav2Vec2FeatureExtractor = class extends FeatureExtractor {
     }
     const shape = [1, input_values.length];
     return {
-      input_values: new Tensor22("float32", input_values, shape),
-      attention_mask: new Tensor22("int64", new BigInt64Array(input_values.length).fill(1n), shape)
+      input_values: new Tensor2("float32", input_values, shape),
+      attention_mask: new Tensor2("int64", new BigInt64Array(input_values.length).fill(1n), shape)
     };
   }
 };
@@ -18079,8 +13413,8 @@ var WeSpeakerFeatureExtractor = class extends FeatureExtractor {
         const offset2 = i * feature_size;
         for (let j = 0; j < num_frames; ++j) {
           const offset3 = offset1 + j * feature_size;
-          for (let k2 = 0; k2 < feature_size; ++k2) {
-            featuresData[offset3 + k2] -= meanData[offset2 + k2];
+          for (let k = 0; k < feature_size; ++k) {
+            featuresData[offset3 + k] -= meanData[offset2 + k];
           }
         }
       }
@@ -18792,7 +14126,7 @@ var RawImage = class _RawImage {
     return await canvas.convertToBlob({ type, quality });
   }
   toTensor(channel_format = "CHW") {
-    let tensor = new Tensor22("uint8", new Uint8Array(this.data), [this.height, this.width, this.channels]);
+    let tensor = new Tensor2("uint8", new Uint8Array(this.data), [this.height, this.width, this.channels]);
     if (channel_format === "HWC") {
     } else if (channel_format === "CHW") {
       tensor = tensor.permute(2, 0, 1);
@@ -18959,9 +14293,9 @@ function post_process_object_detection(outputs, threshold = 0.5, target_sizes = 
       let probs;
       if (is_zero_shot) {
         probs = logit.sigmoid().data;
-        for (let k2 = 0; k2 < probs.length; ++k2) {
-          if (probs[k2] > threshold) {
-            indices.push(k2);
+        for (let k = 0; k < probs.length; ++k) {
+          if (probs[k] > threshold) {
+            indices.push(k);
           }
         }
       } else {
@@ -19004,15 +14338,15 @@ function post_process_semantic_segmentation(outputs, target_sizes = null) {
       data = interpolate(data, target_size, "bilinear", false);
     }
     const [height, width] = target_size ?? data.dims.slice(-2);
-    const segmentation = new Tensor22("int32", new Int32Array(height * width), [height, width]);
+    const segmentation = new Tensor2("int32", new Int32Array(height * width), [height, width]);
     const buffer = data[0].data;
     const segmentation_data = segmentation.data;
     for (let j = 1; j < data.dims[0]; ++j) {
       const row = data[j].data;
-      for (let k2 = 0; k2 < row.length; ++k2) {
-        if (row[k2] > buffer[k2]) {
-          buffer[k2] = row[k2];
-          segmentation_data[k2] = j;
+      for (let k = 0; k < row.length; ++k) {
+        if (row[k] > buffer[k]) {
+          buffer[k] = row[k];
+          segmentation_data[k] = j;
         }
       }
     }
@@ -19047,13 +14381,13 @@ function remove_low_and_no_objects(class_logits, mask_logits, object_mask_thresh
   }
   return [mask_probs_item, pred_scores_item, pred_labels_item];
 }
-function check_segment_validity(mask_labels, mask_probs, k2, mask_threshold = 0.5, overlap_mask_area_threshold = 0.8) {
+function check_segment_validity(mask_labels, mask_probs, k, mask_threshold = 0.5, overlap_mask_area_threshold = 0.8) {
   const mask_k = [];
   let mask_k_area = 0;
   let original_area = 0;
-  const mask_probs_k_data = mask_probs[k2].data;
+  const mask_probs_k_data = mask_probs[k].data;
   for (let i = 0; i < mask_labels.length; ++i) {
-    if (mask_labels[i] === k2) {
+    if (mask_labels[i] === k) {
       mask_k.push(i);
       ++mask_k_area;
     }
@@ -19070,7 +14404,7 @@ function check_segment_validity(mask_labels, mask_probs, k2, mask_threshold = 0.
 }
 function compute_segments(mask_probs, pred_scores, pred_labels, mask_threshold, overlap_mask_area_threshold, label_ids_to_fuse = null, target_size = null) {
   const [height, width] = target_size ?? mask_probs[0].dims;
-  const segmentation = new Tensor22("int32", new Int32Array(height * width), [height, width]);
+  const segmentation = new Tensor2("int32", new Int32Array(height * width), [height, width]);
   const segments = [];
   if (target_size !== null) {
     for (let i = 0; i < mask_probs.length; ++i) {
@@ -19092,12 +14426,12 @@ function compute_segments(mask_probs, pred_scores, pred_labels, mask_threshold, 
   }
   let current_segment_id = 0;
   const segmentation_data = segmentation.data;
-  for (let k2 = 0; k2 < pred_labels.length; ++k2) {
-    const pred_class = pred_labels[k2];
+  for (let k = 0; k < pred_labels.length; ++k) {
+    const pred_class = pred_labels[k];
     const [mask_exists, mask_k] = check_segment_validity(
       mask_labels,
       mask_probs,
-      k2,
+      k,
       mask_threshold,
       overlap_mask_area_threshold
     );
@@ -19112,7 +14446,7 @@ function compute_segments(mask_probs, pred_scores, pred_labels, mask_threshold, 
       id: current_segment_id,
       label_id: pred_class,
       // was_fused: should_fuse, TODO
-      score: pred_scores[k2]
+      score: pred_scores[k]
     });
   }
   return [segmentation, segments];
@@ -19167,7 +14501,7 @@ function post_process_panoptic_segmentation(outputs, threshold = 0.5, mask_thres
     );
     if (pred_labels_item.length === 0) {
       let [height, width] = target_size ?? mask_logits.dims.slice(-2);
-      let segmentation2 = new Tensor22("int32", new Int32Array(height * width).fill(-1), [height, width]);
+      let segmentation2 = new Tensor2("int32", new Int32Array(height * width).fill(-1), [height, width]);
       toReturn.push({
         segmentation: segmentation2,
         segments_info: []
@@ -19319,8 +14653,8 @@ var ImageProcessor = class extends Callable {
         for (let j = 0; j < imageWidth; ++j) {
           const c = (a + j + left) * imageChannels;
           const d = (b + j) * imageChannels;
-          for (let k2 = 0; k2 < imageChannels; ++k2) {
-            paddedPixelData[c + k2] = pixelData[d + k2];
+          for (let k = 0; k < imageChannels; ++k) {
+            paddedPixelData[c + k] = pixelData[d + k];
           }
         }
       }
@@ -19337,8 +14671,8 @@ var ImageProcessor = class extends Callable {
             if (i < imageHeight && j < imageWidth) continue;
             const c = (a + j) * imageChannels;
             const d = (b + calculateReflectOffset(j, w1)) * imageChannels;
-            for (let k2 = 0; k2 < imageChannels; ++k2) {
-              paddedPixelData[c + k2] = pixelData[d + k2];
+            for (let k = 0; k < imageChannels; ++k) {
+              paddedPixelData[c + k] = pixelData[d + k];
             }
           }
         }
@@ -19521,7 +14855,7 @@ var ImageProcessor = class extends Callable {
         pixelData[i + 2] = temp;
       }
     }
-    const pixel_values = new Tensor22("float32", pixelData, imgDims).permute(2, 0, 1);
+    const pixel_values = new Tensor2("float32", pixelData, imgDims).permute(2, 0, 1);
     return {
       original_size: [srcHeight, srcWidth],
       reshaped_input_size,
@@ -19579,7 +14913,7 @@ var ImageProcessor = class extends Callable {
   }
 };
 var image_processors_exports = {};
-__export2(image_processors_exports, {
+__export(image_processors_exports, {
   BeitFeatureExtractor: () => BeitFeatureExtractor,
   BitImageProcessor: () => BitImageProcessor,
   CHMv2ImageProcessor: () => CHMv2ImageProcessor,
@@ -19812,8 +15146,8 @@ function patchify(hwc_data, H, W, C, patch_size, max_patches, pooling_kernel_siz
     }
   }
   return {
-    patches: new Tensor22("float32", patch_data, [max_patches, patch_dim]),
-    positions: new Tensor22("int64", pos_data, [max_patches, 2]),
+    patches: new Tensor2("float32", patch_data, [max_patches, patch_dim]),
+    positions: new Tensor2("int64", pos_data, [max_patches, 2]),
     num_soft_tokens: Math.floor(num_patches / pooling_kernel_size ** 2)
   };
 }
@@ -19924,7 +15258,7 @@ var Qwen2VLImageProcessor = class extends ImageProcessor {
       merge_size,
       patch_size
     ).permute(0, 3, 6, 4, 7, 2, 1, 5, 8).view(grid_t * grid_h * grid_w, channel * temporal_patch_size * patch_size * patch_size);
-    const image_grid_thw = new Tensor22("int64", [grid_t, grid_h, grid_w], [1, 3]);
+    const image_grid_thw = new Tensor2("int64", [grid_t, grid_h, grid_w], [1, 3]);
     return {
       pixel_values: flatten_patches,
       image_grid_thw,
@@ -20226,7 +15560,7 @@ function convert_image_to_patches(images, patch_size) {
       }
     }
   }
-  return new Tensor22("float32", result, [B, ph * pw, patch_dim]);
+  return new Tensor2("float32", result, [B, ph * pw, patch_dim]);
 }
 function pad_along_first_dim(patches, target_length) {
   const [, len2, dim] = patches.dims;
@@ -20239,9 +15573,9 @@ function pad_along_first_dim(patches, target_length) {
       /** @type {Float32Array} */
       patches.data
     );
-    padded = new Tensor22("float32", padded_data, [1, target_length, dim]);
+    padded = new Tensor2("float32", padded_data, [1, target_length, dim]);
   }
-  return { padded, mask: new Tensor22("int64", mask_data, [target_length]) };
+  return { padded, mask: new Tensor2("int64", mask_data, [target_length]) };
 }
 var Lfm2VlImageProcessor = class extends ImageProcessor {
   constructor(config) {
@@ -20377,7 +15711,7 @@ var Lfm2VlImageProcessor = class extends ImageProcessor {
     const result = {
       pixel_values: cat(all_pixel_values, 0),
       pixel_attention_mask: stack(all_pixel_masks, 0),
-      spatial_shapes: new Tensor22("int64", BigInt64Array.from(all_spatial_shapes.flat(), BigInt), [
+      spatial_shapes: new Tensor2("int64", BigInt64Array.from(all_spatial_shapes.flat(), BigInt), [
         all_spatial_shapes.length,
         2
       ])
@@ -20550,7 +15884,7 @@ var Phi3VImageProcessor = class extends ImageProcessor {
     }
     const pixel_values = stack(all_pixel_values, 0);
     const sizes = reshaped_input_sizes.map((x) => x.map((y) => IMAGE_SIZE * ceil(y / IMAGE_SIZE)));
-    const image_sizes = new Tensor22("int64", sizes.flat(), [num_images, 2]);
+    const image_sizes = new Tensor2("int64", sizes.flat(), [num_images, 2]);
     const num_img_tokens = sizes.map(
       ([height, width]) => this.calc_num_image_tokens_from_image_size(width, height)
     );
@@ -20616,14 +15950,14 @@ var SamImageProcessor = class extends ImageProcessor {
       const [reshapedHeight, reshapedWidth] = reshaped_input_sizes[i];
       const resizeFactors = [reshapedWidth / originalWidth, reshapedHeight / originalHeight];
       for (let j = 0; j < input_points[i].length; ++j) {
-        for (let k2 = 0; k2 < input_points[i][j].length; ++k2) {
-          for (let w = 0; w < input_points[i][j][k2].length; ++w) {
-            input_points[i][j][k2][w] *= resizeFactors[w % 2];
+        for (let k = 0; k < input_points[i][j].length; ++k) {
+          for (let w = 0; w < input_points[i][j][k].length; ++w) {
+            input_points[i][j][k][w] *= resizeFactors[w % 2];
           }
         }
       }
     }
-    return new Tensor22("float32", Float32Array.from(input_points.flat(Infinity)), shape);
+    return new Tensor2("float32", Float32Array.from(input_points.flat(Infinity)), shape);
   }
   /**
    *
@@ -20644,7 +15978,7 @@ var SamImageProcessor = class extends ImageProcessor {
     if (shape.some((x, i) => x !== input_points.dims[i])) {
       throw Error(`The first ${shape.length} dimensions of 'input_points' and 'input_labels' must be the same.`);
     }
-    return new Tensor22("int64", input_labels.flat(Infinity).map(BigInt), shape);
+    return new Tensor2("int64", input_labels.flat(Infinity).map(BigInt), shape);
   }
   /**
    * @param {any[]} images The URL(s) of the image(s) to extract features from.
@@ -20727,7 +16061,7 @@ var SamImageProcessor = class extends ImageProcessor {
             binarizedMaskData[i2] = 1;
           }
         }
-        interpolated_mask = new Tensor22("bool", binarizedMaskData, interpolated_mask.dims);
+        interpolated_mask = new Tensor2("bool", binarizedMaskData, interpolated_mask.dims);
       }
       output_masks.push(interpolated_mask);
     }
@@ -21321,7 +16655,7 @@ var GraniteSpeechProcessor = class extends Processor {
       audio_inputs["input_features"] = input_features;
       const audio_embed_size = this._get_num_audio_features(audio.length);
       const mask_data = new Uint8Array(audio_embed_size).fill(1);
-      audio_inputs["input_features_mask"] = new Tensor22("bool", mask_data, [1, audio_embed_size]);
+      audio_inputs["input_features_mask"] = new Tensor2("bool", mask_data, [1, audio_embed_size]);
       const audio_token = this.config.audio_token ?? "<|audio|>";
       if (!text.includes(audio_token)) {
         throw new Error(`The input text does not contain the audio token ${audio_token}.`);
@@ -21574,10 +16908,10 @@ var VLChatProcessor = class extends Processor {
     }
     const dims = [1, input_ids.length];
     const final = {
-      input_ids: new Tensor22("int64", input_ids, dims),
-      attention_mask: new Tensor22("int64", new Array(input_ids.length).fill(1), dims),
-      images_seq_mask: new Tensor22("bool", images_seq_mask, dims),
-      images_emb_mask: new Tensor22("bool", new Array(num_images * this.num_image_tokens).fill(true), [
+      input_ids: new Tensor2("int64", input_ids, dims),
+      attention_mask: new Tensor2("int64", new Array(input_ids.length).fill(1), dims),
+      images_seq_mask: new Tensor2("bool", images_seq_mask, dims),
+      images_emb_mask: new Tensor2("bool", new Array(num_images * this.num_image_tokens).fill(true), [
         1,
         num_images,
         this.num_image_tokens
@@ -21630,8 +16964,8 @@ var Lfm2VlProcessor = class extends Processor {
         /** @type {Record<string, any>} */
         this.image_processor.config
       );
-      const ds2 = (s) => Math.ceil(Math.floor(s / encoder_patch_size) / downsample_factor);
-      const tokens_per_tile = ds2(tile_size) ** 2;
+      const ds = (s) => Math.ceil(Math.floor(s / encoder_patch_size) / downsample_factor);
+      const tokens_per_tile = ds(tile_size) ** 2;
       const image_start = this.config.image_start_token ?? "<|image_start|>";
       const image_end = this.config.image_end_token ?? "<|image_end|>";
       const thumbnail_token = this.config.image_thumbnail ?? "<|img_thumbnail|>";
@@ -21643,7 +16977,7 @@ var Lfm2VlProcessor = class extends Processor {
           const idx = image_idx++;
           const [h, w] = image_sizes[idx];
           const rows = image_rows[idx], cols = image_cols[idx];
-          const tokens_for_image = ds2(h) * ds2(w);
+          const tokens_for_image = ds(h) * ds(w);
           let expanded = image_start;
           if (rows > 1 || cols > 1) {
             const tile_str = image_token.repeat(tokens_per_tile);
@@ -22195,7 +17529,7 @@ var VoxtralRealtimeProcessor = class extends Processor {
         const num_input_tokens = 1 + num_pad_tokens;
         const input_ids_data = new BigInt64Array(num_input_tokens).fill(BigInt(STREAMING_PAD_TOKEN_ID));
         input_ids_data[0] = 1n;
-        const input_ids = new Tensor22("int64", input_ids_data, [1, num_input_tokens]);
+        const input_ids = new Tensor2("int64", input_ids_data, [1, num_input_tokens]);
         return {
           input_ids,
           ...audio_encoding
@@ -22858,7 +18192,7 @@ async function constructSessions(pretrained_model_name_or_path, names, options, 
 function replaceTensors(obj) {
   for (let prop in obj) {
     if (isONNXTensor(obj[prop])) {
-      obj[prop] = new Tensor22(obj[prop]);
+      obj[prop] = new Tensor2(obj[prop]);
     } else if (typeof obj[prop] === "object") {
       replaceTensors(obj[prop]);
     }
@@ -22869,7 +18203,7 @@ async function sessionRun(session, inputs) {
   const checkedInputs = validateInputs(session, inputs);
   try {
     const ortFeed = Object.fromEntries(
-      Object.entries(checkedInputs).map(([k2, v]) => {
+      Object.entries(checkedInputs).map(([k, v]) => {
         const tensor = (
           /** @type {any} */
           v.ort_tensor
@@ -22879,14 +18213,14 @@ async function sessionRun(session, inputs) {
             tensor.cpuData = new Uint16Array(tensor.cpuData.buffer);
           }
         }
-        return [k2, tensor];
+        return [k, tensor];
       })
     );
     const output = await runInferenceSession(session, ortFeed);
     return replaceTensors(output);
   } catch (e) {
     const formatted = Object.fromEntries(
-      Object.entries(checkedInputs).map(([k2, tensor]) => {
+      Object.entries(checkedInputs).map(([k, tensor]) => {
         const unpacked = {
           type: tensor.type,
           dims: tensor.dims,
@@ -22895,7 +18229,7 @@ async function sessionRun(session, inputs) {
         if (unpacked.location !== "gpu-buffer") {
           unpacked.data = tensor.data;
         }
-        return [k2, unpacked];
+        return [k, unpacked];
       })
     );
     logger.error(`An error occurred during model execution: "${e}".`);
@@ -22908,7 +18242,7 @@ function validateInputs(session, inputs) {
   const missingInputs = [];
   for (const inputName of session.inputNames) {
     const tensor = inputs[inputName];
-    if (!(tensor instanceof Tensor22)) {
+    if (!(tensor instanceof Tensor2)) {
       missingInputs.push(inputName);
       continue;
     }
@@ -23267,8 +18601,8 @@ var NoRepeatNGramLogitsProcessor = class extends LogitsProcessor {
     const ngrams = [];
     for (let j = 0; j < curLen + 1 - this.no_repeat_ngram_size; ++j) {
       const ngram = [];
-      for (let k2 = 0; k2 < this.no_repeat_ngram_size; ++k2) {
-        ngram.push(prevInputIds[j + k2]);
+      for (let k = 0; k < this.no_repeat_ngram_size; ++k) {
+        ngram.push(prevInputIds[j + k]);
       }
       ngrams.push(ngram.map(Number));
     }
@@ -24117,11 +19451,11 @@ var MultinomialSampler = class extends LogitsSampler {
    * @returns {Promise<[bigint, number][]>}
    */
   async sample(logits) {
-    let k2 = logits.dims.at(-1);
+    let k = logits.dims.at(-1);
     if (this.generation_config.top_k > 0) {
-      k2 = Math.min(this.generation_config.top_k, k2);
+      k = Math.min(this.generation_config.top_k, k);
     }
-    const [v, i] = await topk(logits, k2);
+    const [v, i] = await topk(logits, k);
     const probabilities = softmax(
       /** @type {Float32Array} */
       v.data
@@ -24144,11 +19478,11 @@ var BeamSearchSampler = class extends LogitsSampler {
    * @returns {Promise<[bigint, number][]>}
    */
   async sample(logits) {
-    let k2 = logits.dims.at(-1);
+    let k = logits.dims.at(-1);
     if (this.generation_config.top_k > 0) {
-      k2 = Math.min(this.generation_config.top_k, k2);
+      k = Math.min(this.generation_config.top_k, k);
     }
-    const [v, i] = await topk(logits, k2);
+    const [v, i] = await topk(logits, k);
     const probabilities = softmax(
       /** @type {Float32Array} */
       v.data
@@ -24175,7 +19509,7 @@ var _DynamicCache = class {
         throw new TypeError(`Key "${key}" conflicts with an existing property on DynamicCache`);
       }
       const value = entries[key];
-      if (!(value instanceof Tensor22)) {
+      if (!(value instanceof Tensor2)) {
         throw new TypeError(`Expected a Tensor for key "${key}", got ${typeof value}`);
       }
       this[key] = value;
@@ -24477,7 +19811,7 @@ function registerTaskMappings(mappings) {
   MODEL_MAPPING_NAMES = mappings;
 }
 function toI64Tensor(items) {
-  if (items instanceof Tensor22) {
+  if (items instanceof Tensor2) {
     return items;
   }
   if (items.length === 0) {
@@ -24489,16 +19823,16 @@ function toI64Tensor(items) {
         "Unable to create tensor, you should probably activate truncation and/or padding with 'padding=True' and/or 'truncation=True' to have batched tensors with the same length."
       );
     }
-    return new Tensor22("int64", BigInt64Array.from(items.flat().map((x) => BigInt(x))), [
+    return new Tensor2("int64", BigInt64Array.from(items.flat().map((x) => BigInt(x))), [
       items.length,
       items[0].length
     ]);
   } else {
-    return new Tensor22("int64", BigInt64Array.from(items.map((x) => BigInt(x))), [1, items.length]);
+    return new Tensor2("int64", BigInt64Array.from(items.map((x) => BigInt(x))), [1, items.length]);
   }
 }
 function boolTensor(value) {
-  return new Tensor22("bool", [value], [1]);
+  return new Tensor2("bool", [value], [1]);
 }
 var MODEL_RUNTIME_CONFIG = {
   [MODEL_TYPES.DecoderOnly]: {
@@ -24894,7 +20228,7 @@ var PreTrainedModel = class extends Callable {
    */
   _update_model_kwargs_for_generation({ generated_input_ids, outputs, model_inputs, is_encoder_decoder }) {
     model_inputs["past_key_values"] = getPastKeyValues(outputs, model_inputs.past_key_values);
-    model_inputs["input_ids"] = new Tensor22("int64", generated_input_ids.flat(), [generated_input_ids.length, 1]);
+    model_inputs["input_ids"] = new Tensor2("int64", generated_input_ids.flat(), [generated_input_ids.length, 1]);
     if (!is_encoder_decoder) {
       model_inputs.attention_mask = cat(
         [model_inputs.attention_mask, ones([model_inputs.attention_mask.dims[0], 1])],
@@ -24985,7 +20319,7 @@ var PreTrainedModel = class extends Callable {
     generation_config
   }) {
     let { decoder_input_ids, ...model_inputs } = model_kwargs;
-    if (!(decoder_input_ids instanceof Tensor22)) {
+    if (!(decoder_input_ids instanceof Tensor2)) {
       if (!decoder_input_ids) {
         decoder_start_token_id ??= bos_token_id;
         if (this.config.model_type === "musicgen") {
@@ -25137,7 +20471,7 @@ var PreTrainedModel = class extends Callable {
     if (streamer) {
       streamer.end();
     }
-    const sequences = new Tensor22("int64", all_input_ids.flat(), [all_input_ids.length, all_input_ids[0].length]);
+    const sequences = new Tensor2("int64", all_input_ids.flat(), [all_input_ids.length, all_input_ids[0].length]);
     const past_key_values = getPastKeyValues(outputs, model_inputs.past_key_values);
     const cachedTensors = new Set(Object.values(past_key_values));
     for (const tensor of Object.values(outputs)) {
@@ -25290,7 +20624,7 @@ function addPastKeyValues(self2, decoderFeeds, pastKeyValues) {
     const shape = resolveCacheShape(meta.shape, symbols);
     const size = shape.reduce((a, b) => a * b, 1);
     const cls = DataTypeMap[meta.type];
-    const t = new Tensor22(meta.type, new cls(size), shape);
+    const t = new Tensor2(meta.type, new cls(size), shape);
     decoderFeeds[meta.name] = t;
     entries[meta.name] = t;
   }
@@ -25313,7 +20647,7 @@ async function decoder_forward(self2, model_inputs, is_encoder_decoder = false) 
     new_model_inputs.position_ids = create_position_ids(new_model_inputs, past_key_values, start_index);
   }
   if (session.inputNames.includes("num_logits_to_keep") && !new_model_inputs.num_logits_to_keep) {
-    new_model_inputs.num_logits_to_keep = new Tensor22("int64", [0n], []);
+    new_model_inputs.num_logits_to_keep = new Tensor2("int64", [0n], []);
   }
   addPastKeyValues(self2, new_model_inputs, past_key_values);
   const fixed = pick(new_model_inputs, session.inputNames);
@@ -25446,7 +20780,7 @@ function cumsum_masked_fill(attention_mask, start_index = 0) {
 function create_position_ids(model_inputs, past_key_values = null, start_index = 0) {
   const { input_ids, inputs_embeds, attention_mask } = model_inputs;
   const { data, dims } = cumsum_masked_fill(attention_mask, start_index);
-  let position_ids = new Tensor22("int64", data, dims);
+  let position_ids = new Tensor2("int64", data, dims);
   if (past_key_values) {
     const offset = -(input_ids ?? inputs_embeds).dims.at(1);
     position_ids = position_ids.slice(null, [offset, null]);
@@ -25457,7 +20791,7 @@ function decoder_prepare_inputs_for_generation(self2, input_ids, model_inputs, g
   const past_length = model_inputs.past_key_values ? model_inputs.past_key_values.get_seq_length() : 0;
   const session = self2.sessions["decoder_model_merged"] ?? self2.sessions["model"];
   if (session?.inputNames.includes("num_logits_to_keep") && !model_inputs.num_logits_to_keep) {
-    model_inputs.num_logits_to_keep = new Tensor22("int64", [1n], []);
+    model_inputs.num_logits_to_keep = new Tensor2("int64", [1n], []);
   }
   if (!model_inputs.attention_mask) {
     let dims;
@@ -25567,7 +20901,7 @@ async function get_optional_configs(pretrained_model_name_or_path, names, option
   );
 }
 var models_exports = {};
-__export2(models_exports, {
+__export(models_exports, {
   ASTForAudioClassification: () => ASTForAudioClassification,
   ASTModel: () => ASTModel,
   ASTPreTrainedModel: () => ASTPreTrainedModel,
@@ -26468,14 +21802,14 @@ var ChatterboxModel = class extends ChatterboxPreTrainedModel {
       const expected_inputs = this.sessions["embed_tokens"].inputNames;
       const embed_model_inputs = { input_ids };
       if (expected_inputs.includes("exaggeration")) {
-        if (!(exaggeration instanceof Tensor22)) {
+        if (!(exaggeration instanceof Tensor2)) {
           const batch_size = input_ids.dims[0];
           if (exaggeration == null) {
             exaggeration = full([batch_size], 0.5);
           } else if (typeof exaggeration === "number") {
             exaggeration = full([batch_size], exaggeration);
           } else if (Array.isArray(exaggeration)) {
-            exaggeration = new Tensor22("float32", exaggeration, [batch_size]);
+            exaggeration = new Tensor2("float32", exaggeration, [batch_size]);
           } else {
             throw new Error("Unsupported type for `exaggeration` input");
           }
@@ -26527,14 +21861,14 @@ var ChatterboxModel = class extends ChatterboxPreTrainedModel {
           },
           (_, i) => input_ids[i].length - input_ids[i].findLastIndex((x) => x == START_SPEECH_TOKEN) - 1
         );
-        model_inputs.position_ids = new Tensor22("int64", position_ids, [input_ids.length, 1]);
+        model_inputs.position_ids = new Tensor2("int64", position_ids, [input_ids.length, 1]);
       } else {
         const batched_input_ids = model_inputs.input_ids.tolist();
         const position_ids_list = batched_input_ids.map((ids) => {
           let position = 0;
           return ids.map((id) => id >= START_SPEECH_TOKEN ? 0 : position++);
         });
-        model_inputs.position_ids = new Tensor22("int64", position_ids_list.flat(), model_inputs.input_ids.dims);
+        model_inputs.position_ids = new Tensor2("int64", position_ids_list.flat(), model_inputs.input_ids.dims);
       }
     }
     if (model_inputs.input_ids.dims[1] === 1) {
@@ -27595,8 +22929,8 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
         (_, i) => max(data.subarray(dims[1] * i, dims[1] * (i + 1)))[0] + 1n + BigInt(dims[1])
       );
       return [
-        new Tensor22("int64", position_ids, [3, ...dims]),
-        new Tensor22("int64", mrope_position_deltas, [mrope_position_deltas.length, 1])
+        new Tensor2("int64", position_ids, [3, ...dims]),
+        new Tensor2("int64", mrope_position_deltas, [mrope_position_deltas.length, 1])
       ];
     } else {
       const [batch_size, seq_length] = input_ids.dims;
@@ -27604,7 +22938,7 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
         { length: 3 * batch_size * seq_length },
         (_, i) => BigInt(Math.floor(i % seq_length / batch_size))
       );
-      return [new Tensor22("int64", position_ids, [3, ...input_ids.dims]), zeros([batch_size, 1])];
+      return [new Tensor2("int64", position_ids, [3, ...input_ids.dims]), zeros([batch_size, 1])];
     }
   }
   /**
@@ -27624,8 +22958,8 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
     for (let x = 0; x < 3; ++x) {
       for (const val of llm_pos_ids_list) {
         const seg_len = val.length / 3;
-        for (let z2 = x * seg_len; z2 < (x + 1) * seg_len; ++z2) {
-          llm_positions[index++] = val[z2];
+        for (let z = x * seg_len; z < (x + 1) * seg_len; ++z) {
+          llm_positions[index++] = val[z];
         }
       }
     }
@@ -27668,12 +23002,12 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
     const image_nums = vision_tokens.filter((x) => x == image_token_id).length;
     const video_nums = vision_tokens.filter((x) => x == video_token_id).length;
     const llm_pos_ids_list = [];
-    let st2 = 0;
+    let st = 0;
     let remain_images = image_nums;
     let remain_videos = video_nums;
     for (let j = 0; j < vision_tokens.length; ++j) {
-      const next_image_token = ids.findIndex((x, i) => i > st2 && x == image_token_id);
-      const next_video_token = ids.findIndex((x, i) => i > st2 && x == video_token_id);
+      const next_image_token = ids.findIndex((x, i) => i > st && x == image_token_id);
+      const next_video_token = ids.findIndex((x, i) => i > st && x == video_token_id);
       const ed_image = remain_images > 0 && next_image_token !== -1 ? next_image_token : ids.length + 1;
       const ed_video = remain_videos > 0 && next_video_token !== -1 ? next_video_token : ids.length + 1;
       let ed;
@@ -27694,7 +23028,7 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
         Math.floor(Number(h) / spatial_merge_size),
         Math.floor(Number(w) / spatial_merge_size)
       ];
-      const text_len = ed - st2;
+      const text_len = ed - st;
       const st_idx = llm_pos_ids_list.length > 0 ? max(llm_pos_ids_list.at(-1))[0] + 1 : 0;
       llm_pos_ids_list.push(Array.from({ length: 3 * text_len }, (_, i) => st_idx + i % text_len));
       const offset = text_len + st_idx;
@@ -27709,11 +23043,11 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
       );
       const w_index = Array.from({ length: grid_size }, (_, i) => offset + i % llm_grid_w);
       llm_pos_ids_list.push([t_index, h_index, w_index].flat());
-      st2 = ed + grid_size;
+      st = ed + grid_size;
     }
-    if (st2 < ids.length) {
+    if (st < ids.length) {
       const st_idx = llm_pos_ids_list.length > 0 ? max(llm_pos_ids_list.at(-1))[0] + 1 : 0;
-      const text_len = ids.length - st2;
+      const text_len = ids.length - st;
       llm_pos_ids_list.push(Array.from({ length: 3 * text_len }, (_, i) => st_idx + i % text_len));
     }
     return llm_pos_ids_list;
@@ -27785,8 +23119,8 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
         mrope_position_deltas.push(max(llm_positions)[0] + 1 - total_input_ids[i].length);
       }
       return [
-        new Tensor22("int64", position_ids_list.flat(Infinity), [3, input_ids.dims[0], input_ids.dims[1]]),
-        new Tensor22("int64", mrope_position_deltas, [mrope_position_deltas.length, 1])
+        new Tensor2("int64", position_ids_list.flat(Infinity), [3, input_ids.dims[0], input_ids.dims[1]]),
+        new Tensor2("int64", mrope_position_deltas, [mrope_position_deltas.length, 1])
       ];
     } else {
       return this._get_text_only_rope_index(input_ids, attention_mask);
@@ -28656,12 +23990,12 @@ var MultiModalityCausalLM = class extends MultiModalityPreTrainedModel {
       const num_text_tokens = 1;
       const has_image = num_img_tokens > 0 ? 1 : 0;
       const batch_size = 1;
-      model_inputs.images_seq_mask = new Tensor22(
+      model_inputs.images_seq_mask = new Tensor2(
         "bool",
         new Array(num_img_tokens + num_text_tokens).fill(true).fill(false, 0, num_text_tokens),
         [batch_size, num_img_tokens + num_text_tokens]
       );
-      model_inputs.images_emb_mask = new Tensor22("bool", new Array(num_img_tokens).fill(!!has_image), [
+      model_inputs.images_emb_mask = new Tensor2("bool", new Array(num_img_tokens).fill(!!has_image), [
         batch_size,
         1,
         num_img_tokens
@@ -28743,7 +24077,7 @@ var MusicgenForConditionalGeneration = class extends PreTrainedModel {
     }
     const batch_size = Math.floor(bs_x_codebooks / num_codebooks);
     const inferred = newDataSize / (batch_size * num_codebooks);
-    return new Tensor22(outputs.type, outputs.data.slice(0, newDataSize), [batch_size, num_codebooks, inferred]);
+    return new Tensor2(outputs.type, outputs.data.slice(0, newDataSize), [batch_size, num_codebooks, inferred]);
   }
   prepare_inputs_for_generation(input_ids, model_inputs, generation_config) {
     const pad_token_id = BigInt(this.config.decoder.pad_token_id);
@@ -28982,7 +24316,7 @@ var Phi3VForCausalLM = class extends Phi3VPreTrainedModel {
         }));
       } else {
         const hidden_size = this.config.normalized_config.hidden_size;
-        image_features = new Tensor22("float32", [], [0, hidden_size]);
+        image_features = new Tensor2("float32", [], [0, hidden_size]);
       }
       ({ inputs_embeds } = await sessionRun(this.sessions["prepare_inputs_embeds"], {
         input_ids,
@@ -29510,7 +24844,7 @@ var SpeechT5ForTextToSpeech = class extends SpeechT5PreTrainedModel {
       if (decoder_outputs) {
         output_sequence = decoder_outputs.output_sequence_out;
       } else {
-        output_sequence = new Tensor22("float32", new Float32Array(num_mel_bins), [1, 1, num_mel_bins]);
+        output_sequence = new Tensor2("float32", new Float32Array(num_mel_bins), [1, 1, num_mel_bins]);
       }
       let decoderFeeds = {
         use_cache_branch,
@@ -29625,7 +24959,7 @@ var SupertonicForConditionalGeneration = class extends SupertonicPreTrainedModel
     for (let i = 0; i < batch_size; ++i) {
       latentMaskData.fill(1n, i * maxLatentLen, i * maxLatentLen + latentLengths[i]);
     }
-    const latent_mask = new Tensor22("int64", latentMaskData, [batch_size, maxLatentLen]);
+    const latent_mask = new Tensor2("int64", latentMaskData, [batch_size, maxLatentLen]);
     const latentChannels = latent_dim * chunk_compress_factor;
     const latentStride = latentChannels * maxLatentLen;
     let noisy_latents = randn([batch_size, latentChannels, maxLatentLen]);
@@ -29888,10 +25222,10 @@ function createEncoderState(model, input_features) {
     const shape = resolveCacheShape(meta.shape, enc_symbols);
     const size = shape.reduce((a, b) => a * b, 1);
     const cls = DataTypeMap[meta.type];
-    enc_kv_cache[meta.name] = new Tensor22(meta.type, new cls(size), shape);
+    enc_kv_cache[meta.name] = new Tensor2(meta.type, new cls(size), shape);
   }
   const padding_cls = DataTypeMap[padding_type];
-  const enc_padding_cache = new Tensor22(
+  const enc_padding_cache = new Tensor2(
     padding_type,
     new padding_cls(PADDING_CACHE_CHANNELS * CONV1_LEFT_PAD),
     [1, PADDING_CACHE_CHANNELS, CONV1_LEFT_PAD]
@@ -29917,7 +25251,7 @@ function createEncoderState(model, input_features) {
 async function encodeChunk(s, chunk_features) {
   const audio_seq_len = chunk_features.dims[2];
   const conv2_output_len = Math.floor((CONV2_LEFT_PAD + audio_seq_len - 3) / 2) + 1;
-  const position_ids = new Tensor22(
+  const position_ids = new Tensor2(
     "int64",
     BigInt64Array.from({ length: conv2_output_len }, (_, i) => BigInt(s.enc_past_seq_len + i)),
     [1, conv2_output_len]
@@ -30254,7 +25588,7 @@ var WhisperForConditionalGeneration = class extends WhisperPreTrainedModel {
     ...kwargs
   }) {
     generation_config = this._prepare_generation_config(generation_config, kwargs);
-    const init_tokens = kwargs.decoder_input_ids instanceof Tensor22 ? prepareTensorForDecode(kwargs.decoder_input_ids) : kwargs.decoder_input_ids ?? this._retrieve_init_tokens(generation_config);
+    const init_tokens = kwargs.decoder_input_ids instanceof Tensor2 ? prepareTensorForDecode(kwargs.decoder_input_ids) : kwargs.decoder_input_ids ?? this._retrieve_init_tokens(generation_config);
     if (generation_config.return_timestamps) {
       logits_processor ??= new LogitsProcessorList();
       logits_processor.push(new WhisperTimeStampLogitsProcessor(generation_config, init_tokens));
@@ -30341,7 +25675,7 @@ var WhisperForConditionalGeneration = class extends WhisperPreTrainedModel {
         for (let m = 0; m < n_mels; ++m) {
           padded_data.set(src.subarray(m * segment_frames, (m + 1) * segment_frames), m * num_segment_frames);
         }
-        segment_features = new Tensor22("float32", padded_data, [1, n_mels, num_segment_frames]);
+        segment_features = new Tensor2("float32", padded_data, [1, n_mels, num_segment_frames]);
       } else {
         segment_features = segment_input;
       }
@@ -30423,15 +25757,15 @@ var WhisperForConditionalGeneration = class extends WhisperPreTrainedModel {
     allTokens.push(eos_token_id);
     const full_sequence = [...init_tokens, ...allTokens];
     if (return_token_timestamps) {
-      const sequences = new Tensor22("int64", full_sequence.map(BigInt), [1, full_sequence.length]);
+      const sequences = new Tensor2("int64", full_sequence.map(BigInt), [1, full_sequence.length]);
       const full_timestamps = [...new Array(init_tokens.length).fill(0), ...allTokenTimestamps, 0];
-      const token_timestamps = new Tensor22("float32", new Float32Array(full_timestamps), [
+      const token_timestamps = new Tensor2("float32", new Float32Array(full_timestamps), [
         1,
         full_timestamps.length
       ]);
       return { sequences, token_timestamps };
     }
-    return new Tensor22("int64", full_sequence.map(BigInt), [1, full_sequence.length]);
+    return new Tensor2("int64", full_sequence.map(BigInt), [1, full_sequence.length]);
   }
   /**
    * Calculates token-level timestamps using the encoder-decoder cross-attentions and
@@ -30502,7 +25836,7 @@ var WhisperForConditionalGeneration = class extends WhisperPreTrainedModel {
     const croppedWeights = num_input_ids > 0 ? smoothedWeights.slice(null, null, [num_input_ids, smoothedWeights.dims[2]], null) : smoothedWeights;
     const batchedMatrices = [mean(croppedWeights, 1)];
     const timestampsShape = generate_outputs.sequences.dims;
-    const timestamps = new Tensor22(
+    const timestamps = new Tensor2(
       "float32",
       new Float32Array(timestampsShape[0] * timestampsShape[1]),
       timestampsShape
@@ -31517,7 +26851,7 @@ Pipeline {
     });
     const outputs = await this.model(model_inputs);
     const { problem_type, id2label } = this.model.config;
-    const function_to_apply = problem_type === "multi_label_classification" ? (batch) => batch.sigmoid() : (batch) => new Tensor22("float32", softmax(batch.data), batch.dims);
+    const function_to_apply = problem_type === "multi_label_classification" ? (batch) => batch.sigmoid() : (batch) => new Tensor2("float32", softmax(batch.data), batch.dims);
     const toReturn = [];
     for (const batch of outputs.logits) {
       const output = function_to_apply(batch);
@@ -31650,8 +26984,8 @@ Pipeline {
       end_scores[0][0] = 0;
       const options = product(start_scores, end_scores).filter((x) => x[0][1] <= x[1][1]).map((x) => [x[0][1], x[1][1], x[0][0] * x[1][0]]).sort((a, b) => b[2] - a[2]);
       const sampleResults = [];
-      for (let k2 = 0; k2 < Math.min(options.length, top_k); ++k2) {
-        const [start2, end2, score] = options[k2];
+      for (let k = 0; k < Math.min(options.length, top_k); ++k) {
+        const [start2, end2, score] = options[k];
         const answer_tokens = ids.slice(start2, end2 + 1);
         const answer = this.tokenizer.decode(answer_tokens, {
           skip_special_tokens: true
@@ -31694,7 +27028,7 @@ Pipeline {
         throw Error(`Mask token (${mask_token}) not found in text.`);
       }
       const itemLogits = logits[i][mask_token_index];
-      const scores = await topk(new Tensor22("float32", softmax(itemLogits.data), itemLogits.dims), top_k);
+      const scores = await topk(new Tensor2("float32", softmax(itemLogits.data), itemLogits.dims), top_k);
       const values = scores[0].tolist();
       const indices = scores[1].tolist();
       toReturn.push(
@@ -31894,7 +27228,7 @@ Pipeline {
       Object.entries(
         /** @type {any} */
         this.model.config.label2id
-      ).map(([k2, v]) => [k2.toLowerCase(), v])
+      ).map(([k, v]) => [k.toLowerCase(), v])
     );
     this.entailment_id = this.label2id["entailment"];
     if (this.entailment_id === void 0) {
@@ -31961,7 +27295,7 @@ Pipeline {
       const inputs = await this.processor(aud);
       const output = await this.model(inputs);
       const logits = output.logits[0];
-      const scores = await topk(new Tensor22("float32", softmax(logits.data), logits.dims), top_k);
+      const scores = await topk(new Tensor2("float32", softmax(logits.data), logits.dims), top_k);
       const values = scores[0].tolist();
       const indices = scores[1].tolist();
       const vals = indices.map((x, i) => ({
@@ -32217,11 +27551,11 @@ Pipeline {
   }
   async _prepare_speaker_embeddings(speaker_embeddings, batch_size) {
     if (typeof speaker_embeddings === "string" || speaker_embeddings instanceof URL) {
-      speaker_embeddings = new Float32Array(await (await env2.fetch(speaker_embeddings)).arrayBuffer());
+      speaker_embeddings = new Float32Array(await (await env.fetch(speaker_embeddings)).arrayBuffer());
     }
     if (speaker_embeddings instanceof Float32Array) {
-      speaker_embeddings = new Tensor22("float32", speaker_embeddings, [speaker_embeddings.length]);
-    } else if (!(speaker_embeddings instanceof Tensor22)) {
+      speaker_embeddings = new Tensor2("float32", speaker_embeddings, [speaker_embeddings.length]);
+    } else if (!(speaker_embeddings instanceof Tensor2)) {
       throw new Error("Speaker embeddings must be a `Tensor`, `Float32Array`, `string`, or `URL`.");
     }
     if (batch_size > 1) {
@@ -32349,7 +27683,7 @@ Pipeline {
     const { id2label } = this.model.config;
     const toReturn = [];
     for (const batch of output.logits) {
-      const scores = await topk(new Tensor22("float32", softmax(batch.data), batch.dims), top_k);
+      const scores = await topk(new Tensor2("float32", softmax(batch.data), batch.dims), top_k);
       const values = scores[0].tolist();
       const indices = scores[1].tolist();
       const vals = indices.map((x, i) => ({
@@ -32403,13 +27737,13 @@ Pipeline {
       inputs[newName] = inputs.pixel_values;
     }
     const output = await this.model(inputs);
-    let fn2 = null;
+    let fn = null;
     if (subtask !== null) {
-      fn2 = SUBTASKS_MAPPING[subtask];
+      fn = SUBTASKS_MAPPING[subtask];
     } else if (this.processor.image_processor) {
       for (const [task, func] of Object.entries(SUBTASKS_MAPPING)) {
         if (func in this.processor.image_processor) {
-          fn2 = this.processor.image_processor[func].bind(this.processor.image_processor);
+          fn = this.processor.image_processor[func].bind(this.processor.image_processor);
           subtask = task;
           break;
         }
@@ -32434,7 +27768,7 @@ Pipeline {
         });
       }
     } else if (subtask === "panoptic" || subtask === "instance") {
-      const processed = fn2(
+      const processed = fn(
         output,
         threshold,
         mask_threshold,
@@ -32459,7 +27793,7 @@ Pipeline {
         });
       }
     } else if (subtask === "semantic") {
-      const { segmentation, labels } = fn2(output, target_sizes ?? imageSizes)[0];
+      const { segmentation, labels } = fn(output, target_sizes ?? imageSizes)[0];
       for (const label of labels) {
         const maskData = new Uint8ClampedArray(segmentation.data.length);
         for (let i = 0; i < segmentation.data.length; ++i) {
@@ -33349,7 +28683,7 @@ async function load_video(src, { num_frames = null, fps = null } = {}) {
   }
   await new Promise((resolve) => video.onloadedmetadata = resolve);
   if (video.seekable.start(0) === video.seekable.end(0)) {
-    const response = await env2.fetch(video.src);
+    const response = await env.fetch(video.src);
     const blob = await response.blob();
     video.src = URL.createObjectURL(blob);
     await new Promise((resolve) => video.onloadedmetadata = resolve);
@@ -34561,7 +29895,7 @@ export {
   TableTransformerObjectDetectionOutput,
   TableTransformerPreTrainedModel,
   TemperatureLogitsWarper,
-  Tensor22 as Tensor,
+  Tensor2 as Tensor,
   Text2TextGenerationPipeline,
   TextClassificationPipeline,
   TextGenerationPipeline,
@@ -34679,7 +30013,7 @@ export {
   cat,
   cos_sim,
   dot,
-  env2 as env,
+  env,
   full,
   full_like,
   interpolate,
@@ -34710,12 +30044,3 @@ export {
   zeros,
   zeros_like
 };
-/*! Bundled license information:
-
-onnxruntime-web/dist/ort.webgpu.bundle.min.mjs:
-  (*!
-   * ONNX Runtime Web v1.26.0-dev.20260416-b7804b056c
-   * Copyright (c) Microsoft Corporation. All rights reserved.
-   * Licensed under the MIT License.
-   *)
-*/

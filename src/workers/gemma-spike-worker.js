@@ -16,14 +16,21 @@
 // keeps `onnxruntime-web/webgpu` + `onnxruntime-common` as *bare* static
 // imports — which a module worker cannot resolve, so importing it directly
 // dies with an opaque worker `error` Event before any code runs. So we
-// pre-bundle it once with esbuild into a self-contained ESM file:
+// pre-bundle it once with esbuild — but onnxruntime must stay EXTERNAL:
+// re-bundling onnxruntime-web through esbuild corrupts its lazy __esm
+// init and leaves InferenceSession undefined. So onnxruntime is marked
+// external and its two specifiers rewritten (in the bundle header) to
+// relative paths into onnxruntime's own already-working bundles:
 //
 //   npx esbuild node_modules/@huggingface/transformers/dist/transformers.web.js \
-//     --bundle --format=esm --outfile=workers/gemma-transformers.bundle.js
+//     --bundle --format=esm --external:onnxruntime-web/webgpu \
+//     --external:onnxruntime-common --outfile=workers/gemma-transformers.bundle.js
+//   # then rewrite the two bare imports at the top of the bundle to
+//   # ../node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs
+//   # and ../node_modules/onnxruntime-common/dist/esm/index.js
 //
-// The real backend (#85) will need an equivalent bundling step in the
-// build pipeline. The bundle is committed here only because the whole
-// spike is throwaway.
+// The real backend (#85) will need an equivalent build step. The bundle
+// is committed here only because the whole spike is throwaway.
 
 import { pipeline, TextStreamer, env } from "./gemma-transformers.bundle.js";
 

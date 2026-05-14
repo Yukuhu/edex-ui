@@ -22,29 +22,55 @@
 // The real backend (#85) faces the same nodeIntegrationInWorker tension
 // and will need an equivalent shim (or a non-node-integrated worker).
 
+// There are TWO independent node-detections to defuse:
+//
+//  1. transformers.js: IS_NODE_ENV = process.release.name === "node".
+//     Misfires -> onnxruntime-node branch (stubbed empty here).
+//
+//  2. onnxruntime-web's Emscripten wasm glue: it runs
+//       m = isNode && ("renderer" != globalThis.process?.type)
+//       if (m) { require("worker_threads"); global.Worker = ... }
+//     A nodeIntegrationInWorker worker has process.type === "worker",
+//     so m is true and the glue tries to import the Node-only
+//     "worker_threads" module — which a module worker can't resolve
+//     ("Failed to resolve module specifier 'worker_threads'").
+//     Emscripten added that `"renderer" != process.type` clause as an
+//     Electron-renderer escape hatch, so we take it: set process.type
+//     to "renderer". (The worker also sets wasm.numThreads = 1, so no
+//     pthread pool is spawned in the first place.)
+
+function patch(obj, key, want) {
+    try { obj[key] = want; } catch (_) {}
+    if (obj[key] !== want) {
+        try {
+            Object.defineProperty(obj, key, { value: want, configurable: true, writable: true });
+        } catch (_) {}
+    }
+    return obj[key];
+}
+
 let nodeNameAfterPatch = "(no process)";
+let processTypeAfterPatch = "(no process)";
 try {
     const p = globalThis.process;
-    if (p && p.release && p.release.name === "node") {
-        // Try increasingly forceful overrides — `process.release` may be
-        // a plain writable object, a frozen one, or a non-writable prop.
-        try { p.release.name = "electron"; } catch (_) {}
-        if (p.release.name === "node") {
-            try { p.release = Object.assign({}, p.release, { name: "electron" }); } catch (_) {}
+    if (p) {
+        if (p.release && p.release.name === "node") {
+            // process.release may be frozen/non-writable — try the prop,
+            // then a fresh object, then a forced redefine.
+            try { p.release.name = "electron"; } catch (_) {}
+            if (p.release.name === "node") {
+                try { p.release = Object.assign({}, p.release, { name: "electron" }); } catch (_) {}
+            }
+            if (p.release.name === "node") {
+                patch(p, "release", Object.assign({}, p.release, { name: "electron" }));
+            }
         }
-        if (p.release.name === "node") {
-            try {
-                Object.defineProperty(p, "release", {
-                    value: Object.assign({}, p.release, { name: "electron" }),
-                    configurable: true, writable: true
-                });
-            } catch (_) {}
-        }
+        nodeNameAfterPatch = p.release ? p.release.name : "(no process.release)";
+        processTypeAfterPatch = patch(p, "type", "renderer");
     }
-    nodeNameAfterPatch = p && p.release ? p.release.name : "(no process.release)";
 } catch (e) {
     nodeNameAfterPatch = "(patch threw: " + (e && e.message) + ")";
 }
 
-// Exported so the worker can log whether the patch actually took.
-export const ortEnvProbe = { nodeNameAfterPatch };
+// Exported so the worker can log whether the patches actually took.
+export const ortEnvProbe = { nodeNameAfterPatch, processTypeAfterPatch };

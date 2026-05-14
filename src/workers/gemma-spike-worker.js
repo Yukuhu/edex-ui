@@ -50,6 +50,11 @@ import { pipeline, TextStreamer, env } from "./gemma-transformers.bundle.js";
 try {
     const wasmDir = new URL("../node_modules/onnxruntime-web/dist/", import.meta.url).href;
     env.backends.onnx.wasm.wasmPaths = wasmDir;
+    // Single-threaded wasm: no Emscripten pthread pool is spawned, so the
+    // glue never needs Node's worker_threads or a nested browser Worker.
+    // WebGPU does the heavy compute anyway; wasm is just the fallback EP.
+    env.backends.onnx.wasm.numThreads = 1;
+    env.backends.onnx.wasm.proxy = false;
 } catch (_) {
     // Fall back to defaults if URL resolution somehow fails.
 }
@@ -88,7 +93,7 @@ async function handleRun(prompt) {
     if (!adapter) {
         throw new Error("WebGPU requestAdapter() returned null");
     }
-    status(`WebGPU adapter OK (process.release.name=${ortEnvProbe.nodeNameAfterPatch}). Loading ${MODEL_ID} (dtype q4f16)…`);
+    status(`WebGPU adapter OK (process.release.name=${ortEnvProbe.nodeNameAfterPatch}, process.type=${ortEnvProbe.processTypeAfterPatch}). Loading ${MODEL_ID} (dtype q4f16)…`);
 
     // --- Load: text-generation pipeline, WebGPU device ---
     // Progress logging has to cope with HuggingFace serving the big

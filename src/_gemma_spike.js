@@ -126,7 +126,18 @@
             }
         });
         worker.addEventListener("error", (err) => {
-            logLine("WORKER ERROR: " + (err.message || err));
+            // A module worker that fails to *load* (e.g. an unresolved
+            // import) fires a bare Event with no detail — surface every
+            // field we can so it isn't an opaque "[object Event]".
+            const parts = [];
+            if (err.message) parts.push(err.message);
+            if (err.filename) parts.push("@ " + err.filename + ":" + err.lineno + ":" + err.colno);
+            if (!parts.length) parts.push("bare " + err.type + " event (module worker likely failed to load — check DevTools console for the import error)");
+            logLine("WORKER ERROR: " + parts.join(" "));
+            finish();
+        });
+        worker.addEventListener("messageerror", (e) => {
+            logLine("WORKER MESSAGEERROR: " + (e && e.type));
             finish();
         });
 

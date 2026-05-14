@@ -11,11 +11,21 @@
 // Must be loaded as an ES module worker:
 //   new Worker("workers/gemma-spike-worker.js", { type: "module" })
 //
-// Mirrors src/workers/tts-worker-web.js: imports the *web* transformers
-// build (onnxruntime-web + WebGPU/JSEP) by relative path, because module
-// workers can't resolve bare specifiers.
+// SPIKE FINDING (#84): unlike kokoro-js (whose kokoro.web.js ships fully
+// pre-bundled), @huggingface/transformers v4's own dist/transformers.web.js
+// keeps `onnxruntime-web/webgpu` + `onnxruntime-common` as *bare* static
+// imports — which a module worker cannot resolve, so importing it directly
+// dies with an opaque worker `error` Event before any code runs. So we
+// pre-bundle it once with esbuild into a self-contained ESM file:
+//
+//   npx esbuild node_modules/@huggingface/transformers/dist/transformers.web.js \
+//     --bundle --format=esm --outfile=workers/gemma-transformers.bundle.js
+//
+// The real backend (#85) will need an equivalent bundling step in the
+// build pipeline. The bundle is committed here only because the whole
+// spike is throwaway.
 
-import { pipeline, TextStreamer, env } from "../node_modules/@huggingface/transformers/dist/transformers.web.js";
+import { pipeline, TextStreamer, env } from "./gemma-transformers.bundle.js";
 
 // Point onnxruntime-web at the local ort-wasm files — the default is a
 // CDN URL the renderer's CSP blocks. NOTE (spike finding #84): unlike

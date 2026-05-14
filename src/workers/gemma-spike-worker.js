@@ -79,7 +79,13 @@ async function handleRun(prompt) {
     status(`WebGPU adapter OK. Loading ${MODEL_ID} (dtype q4f16)…`);
 
     // --- Load: text-generation pipeline, WebGPU device ---
-    let lastPct = -1;
+    // Progress logging has to cope with HuggingFace serving the big
+    // *.onnx_data weight files WITHOUT a content-length header — so
+    // `e.progress`/`e.total` are undefined and a percentage-only logger
+    // goes dark for minutes on the multi-GB files. Track per-file state
+    // and fall back to "MB downloaded" + throttle by time, not by %.
+    const MB = 1024 * 1024;
+    const fileState = new Map(); // file -> { lastPct, lastLoggedMs, lastBytes }
     const loadStart = performance.now();
     if (!generator) {
         generator = await pipeline("text-generation", MODEL_ID, {
@@ -87,13 +93,30 @@ async function handleRun(prompt) {
             device: "webgpu",
             progress_callback: (e) => {
                 self.postMessage({ type: "load-progress", event: e });
-                if (e.status === "progress" && typeof e.progress === "number") {
+                if (e.status !== "progress" || !e.file) return;
+                const st = fileState.get(e.file) || { lastPct: -1, lastLoggedMs: 0, lastBytes: 0 };
+                const now = performance.now();
+                if (typeof e.progress === "number" && typeof e.total === "number" && e.total > 0) {
+                    // content-length known: log on 10% boundaries.
                     const pct = Math.floor(e.progress);
-                    if (pct !== lastPct && pct % 5 === 0) {
-                        lastPct = pct;
-                        status(`Downloading ${e.file || ""} ${pct}%`);
+                    if (pct !== st.lastPct && pct % 10 === 0) {
+                        st.lastPct = pct;
+                        status(`${e.file} ${pct}% (${(e.total / MB).toFixed(0)} MB)`);
+                    }
+                } else if (typeof e.loaded === "number") {
+                    // content-length unknown: log MB every ~2s so the big
+                    // weight files don't look stalled.
+                    if (now - st.lastLoggedMs > 2000) {
+                        const mb = e.loaded / MB;
+                        const rate = st.lastLoggedMs
+                            ? ((e.loaded - st.lastBytes) / MB) / ((now - st.lastLoggedMs) / 1000)
+                            : 0;
+                        st.lastLoggedMs = now;
+                        st.lastBytes = e.loaded;
+                        status(`${e.file} ${mb.toFixed(0)} MB${rate ? ` (${rate.toFixed(1)} MB/s)` : ""}`);
                     }
                 }
+                fileState.set(e.file, st);
             }
         });
     }

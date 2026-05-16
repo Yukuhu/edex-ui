@@ -955,11 +955,19 @@ window.openSettings = async () => {
                                 // probe's reason in the tooltip. Leaving it
                                 // visible (rather than removing it) keeps the
                                 // dropdown consistent across machines and lets
-                                // users see why the backend is gated.
+                                // users see why the backend is gated. When the
+                                // saved backend is `gemma-local` AND it's
+                                // disabled, we'd otherwise put a disabled
+                                // option at the top of the list — push it to
+                                // the end in that case so the dropdown opens
+                                // on the selectable claude-cli option instead.
                                 const av = window.gemmaEngine?.availability;
                                 const gemmaDown = av?.state === "unavailable";
                                 const reason = gemmaDown ? (av.reason || "WebGPU not supported.") : "";
-                                return ordered.map(b => {
+                                const renderOrder = gemmaDown
+                                    ? [...ordered.filter(b => b.id !== "gemma-local"), ...ordered.filter(b => b.id === "gemma-local")]
+                                    : ordered;
+                                return renderOrder.map(b => {
                                     const disable = gemmaDown && b.id === "gemma-local";
                                     const title = disable ? ` title="${window._escapeHtml(reason)}"` : "";
                                     const suffix = disable ? " — unavailable" : "";

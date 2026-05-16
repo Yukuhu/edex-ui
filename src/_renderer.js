@@ -1284,10 +1284,18 @@ const SHORTCUTS_DEFINITION = {
     "WEBAPP_TO_TAB": "(Inside a WebApp) Promote the WebApp into a terminal tab slot. Bound to <code>Ctrl+Shift+T</code>. Placeholder until issue #29 lands the tab-bar refactor."
 };
 
+// Coerce a shortcuts.json field to a string. The file is user-editable
+// so a malformed entry (null, number, object) could otherwise throw
+// from `startsWith` / `_escapeHtml` mid-forEach and take out the whole
+// shortcuts help modal.
+const _shortcutField = (v) => String(v ?? "");
+
 const _renderShortcutsAppList = (shortcuts) => {
     let html = "";
     shortcuts.filter(e => e.type === "app").forEach(cut => {
-        const action = cut.action.startsWith("TAB_") ? "TAB_X" : cut.action;
+        const trigger = _shortcutField(cut.trigger);
+        const rawAction = _shortcutField(cut.action);
+        const action = rawAction.startsWith("TAB_") ? "TAB_X" : rawAction;
         // SHORTCUTS_DEFINITION entries contain intentional inline HTML
         // (<strong>, <code>, <br>) so they are emitted unescaped. The
         // ?? fallback handles user-edited shortcuts.json entries whose
@@ -1296,7 +1304,7 @@ const _renderShortcutsAppList = (shortcuts) => {
         const description = SHORTCUTS_DEFINITION[action] ?? window._escapeHtml(action);
         html += `<tr>
                         <td>${cut.enabled ? 'YES' : 'NO'}</td>
-                        <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(cut.trigger)}"></td>
+                        <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(trigger)}"></td>
                         <td>${description}</td>
                     </tr>`;
     });
@@ -1306,11 +1314,13 @@ const _renderShortcutsAppList = (shortcuts) => {
 const _renderShortcutsCustomList = (shortcuts) => {
     let html = "";
     shortcuts.filter(e => e.type === "shell").forEach(cut => {
+        const trigger = _shortcutField(cut.trigger);
+        const action = _shortcutField(cut.action);
         html += `<tr>
                             <td>${cut.enabled ? 'YES' : 'NO'}</td>
-                            <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(cut.trigger)}"></td>
+                            <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(trigger)}"></td>
                             <td>
-                                <input disabled type="text" placeholder="Run terminal command..." value="${window._escapeHtml(cut.action)}">
+                                <input disabled type="text" placeholder="Run terminal command..." value="${window._escapeHtml(action)}">
                                 <input disabled type="checkbox" name="shortcutsHelpNew_Enter" ${cut.linebreak ? 'checked' : ''}>
                                 <label for="shortcutsHelpNew_Enter">Enter</label>
                             </td>

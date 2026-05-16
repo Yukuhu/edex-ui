@@ -114,7 +114,7 @@ class ClaudeChat {
     // around Sources/References/Citations + the rest of the string.
     // `INLINE_LINK_RE` matches `[label](url)` markdown links.
     // `BARE_URL_RE` matches standalone http(s) URLs.
-    static SOURCES_BLOCK_RE = /\n+\s*(?:[#*_]+\s*)?(?:Sources?|References?|Citations?)\s*(?:[*_]+)?\s*:?\s*\n[\s\S]*$/i;
+    static SOURCES_BLOCK_RE = /\n+\s*[#*_]*\s*(?:Source|Reference|Citation)s?\s*[*_]*\s*:?\s*\n[\s\S]*$/i;
     static INLINE_LINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;
     static BARE_URL_RE = /https?:\/\/\S+/g;
 

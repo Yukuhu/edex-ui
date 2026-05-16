@@ -139,11 +139,8 @@ class ClaudeChat {
     }
 
     constructor() {
-        const ipc = require("electron").ipcRenderer;
-        const { randomUUID } = require("crypto");
-
-        this.ipc = ipc;
-        this.sessionId = randomUUID();
+        this.ipc = require("electron").ipcRenderer;
+        this.sessionId = require("crypto").randomUUID();
         this.firstTurn = true;
         this.pendingReqId = null;
         this.activeAssistantBubble = null;
@@ -152,6 +149,28 @@ class ClaudeChat {
         this.voiceEnabled = false;
         this.avatar = null;
 
+        this._initStreamingState();
+        this._initPerfObserver();
+        this._buildAndShowModal();
+        this._captureModalElements();
+        this._refreshTtsConfigDisplay();
+
+        this.avatar = new AIAvatar(this.avatarCanvas);
+        this.avatar.setState("idle");
+
+        this._initChatBackend();
+        this._refreshBackendButton();
+        this._wireHeaderButtons();
+        this._wireTtsEngineListeners();
+        this._wireGemmaEngineListeners();
+        this._wireGemmaAvailability();
+        this._wireSubmitInputs();
+        this._wireIpc();
+
+        setTimeout(() => { try { this.input.focus(); } catch (_) {} }, 50);
+    }
+
+    _initStreamingState() {
         // Streaming TTS — the heavy lifting (worker, splitter, queue,
         // playback, fallback) lives in window.ttsEngine. The chat only
         // tracks the slice of the rolling assistant buffer it has
@@ -169,11 +188,13 @@ class ClaudeChat {
         this._streamLastT = 0;
         this._streamCarry = 0;          // sub-char accumulator across frames
         this._streamHorizonMs = 250;    // try to drain the pending buffer within ~250ms
+    }
 
-        // Perf: PerformanceObserver flags any main-thread task longer
-        // than 50ms (browser default for the "longtask" entry type).
-        // We feed the worst one per turn into the perf summary so we
-        // can see if the worker is actually keeping the UI thread free.
+    _initPerfObserver() {
+        // PerformanceObserver flags any main-thread task longer than
+        // 50ms (browser default for the "longtask" entry type). We
+        // feed the worst one per turn into the perf summary so we can
+        // see if the worker is actually keeping the UI thread free.
         this._perf = null;
         try {
             if (typeof PerformanceObserver !== "undefined") {
@@ -190,10 +211,14 @@ class ClaudeChat {
         } catch (_) {
             // Not all environments support longtask. Skip silently.
         }
+    }
 
-        const detachKeyboard = (typeof window !== "undefined" && window.keyboard?.detach) ? () => window.keyboard.detach() : () => {};
-        const attachKeyboard = (typeof window !== "undefined" && window.keyboard?.attach) ? () => window.keyboard.attach() : () => {};
-        detachKeyboard();
+    _buildAndShowModal() {
+        // Stash keyboard attach/detach so _onModalClose can re-attach
+        // without re-querying the global; detach happens immediately.
+        this._kbDetach = (typeof window !== "undefined" && window.keyboard?.detach) ? () => window.keyboard.detach() : () => {};
+        this._kbAttach = (typeof window !== "undefined" && window.keyboard?.attach) ? () => window.keyboard.attach() : () => {};
+        this._kbDetach();
 
         this.modal = new Modal({
             type: "custom",
@@ -226,16 +251,20 @@ class ClaudeChat {
                     </div>
                 </div>`,
             buttons: []
-        }, () => {
-            this._teardown();
-            attachKeyboard();
-            if (window.term && window.currentTerm !== undefined && window.term[window.currentTerm]) {
-                try { window.term[window.currentTerm].term.focus(); } catch (_) {}
-            }
-        });
+        }, () => this._onModalClose());
         this.modal._isClaudeChat = true;
         window.modals[this.modal.id]._isClaudeChat = true;
+    }
 
+    _onModalClose() {
+        this._teardown();
+        this._kbAttach();
+        if (window.term && window.currentTerm !== undefined && window.term[window.currentTerm]) {
+            try { window.term[window.currentTerm].term.focus(); } catch (_) {}
+        }
+    }
+
+    _captureModalElements() {
         this.scrollback = document.getElementById("claudeChat_scrollback");
         this.input = document.getElementById("claudeChat_input");
         this.sendBtn = document.getElementById("claudeChat_send");
@@ -247,12 +276,10 @@ class ClaudeChat {
         this.ttsConfigEl = document.getElementById("claudeChat_ttsConfig");
         this.voiceToggle = document.getElementById("claudeChat_voiceToggle");
         this.backendToggle = document.getElementById("claudeChat_backendToggle");
-        this._refreshTtsConfigDisplay();
         this.avatarCanvas = document.getElementById("claudeChat_avatar");
+    }
 
-        this.avatar = new AIAvatar(this.avatarCanvas);
-        this.avatar.setState("idle");
-
+    _initChatBackend() {
         // Chat backend selection. "claude-cli" preserves existing
         // behaviour (claude CLI subprocess via IPC); "gemma-local"
         // routes turns through window.gemmaEngine + local WebGPU
@@ -269,11 +296,14 @@ class ClaudeChat {
         // the most recent one completed normally (assistant reply was
         // appended, so the user turn stays).
         this._pendingGemmaUserTurn = null;
-        this._refreshBackendButton();
+    }
 
+    _wireHeaderButtons() {
         this.voiceToggle.addEventListener("click", () => this._toggleVoice());
         this.backendToggle.addEventListener("click", () => this._toggleBackend());
+    }
 
+    _wireTtsEngineListeners() {
         // Engine → chat UI bindings. Avatar, status line, and the
         // download-progress bar are chat-owned; the engine owns the
         // audio. Stored as a map so _teardown can iterate it once.
@@ -317,7 +347,9 @@ class ClaudeChat {
         for (const [name, fn] of Object.entries(this._engineListeners)) {
             window.ttsEngine.addEventListener(name, fn);
         }
+    }
 
+    _wireGemmaEngineListeners() {
         // GemmaEngine → chat UI bindings. Mirrors the TTS listener
         // shape (same event names for the shared load-progress flow);
         // adds delta / done / error for streamed generation. The
@@ -402,7 +434,9 @@ class ClaudeChat {
                 window.gemmaEngine.addEventListener(name, fn);
             }
         }
+    }
 
+    _wireGemmaAvailability() {
         // Track the WebGPU availability probe. Updates the backend
         // toggle's enabled/tooltip state and, if the user happens to
         // be on Gemma when the probe reports unavailable, falls back
@@ -429,7 +463,9 @@ class ClaudeChat {
                 this._onGemmaAvailability();
             }
         }
+    }
 
+    _wireSubmitInputs() {
         this.sendBtn.addEventListener("click", () => this._submit());
         this.input.addEventListener("keydown", e => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -440,8 +476,10 @@ class ClaudeChat {
             }
             // Esc is handled globally by Modal._ensureGlobalEsc().
         });
+    }
 
-        // IPC subscriptions — keep references so we can remove on close
+    _wireIpc() {
+        // IPC subscriptions — keep references so _teardown can remove them.
         this._onDelta = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
             if (this._perf?.firstDeltaT === null) {
@@ -510,7 +548,6 @@ class ClaudeChat {
                 this.status.innerText = `Done. ${total} tokens (in ${u.input_tokens || 0} / out ${u.output_tokens || 0}).`;
             }
         };
-
         this._onModel = (e, payload) => {
             if (!this.pendingReqId || payload.reqId !== this.pendingReqId) return;
             if (payload.model && payload.model !== this.model) {
@@ -519,13 +556,11 @@ class ClaudeChat {
             }
         };
 
-        ipc.on("claude:delta", this._onDelta);
-        ipc.on("claude:done", this._onDone);
-        ipc.on("claude:error", this._onError);
-        ipc.on("claude:result", this._onResult);
-        ipc.on("claude:model", this._onModel);
-
-        setTimeout(() => { try { this.input.focus(); } catch (_) {} }, 50);
+        this.ipc.on("claude:delta", this._onDelta);
+        this.ipc.on("claude:done", this._onDone);
+        this.ipc.on("claude:error", this._onError);
+        this.ipc.on("claude:result", this._onResult);
+        this.ipc.on("claude:model", this._onModel);
     }
 
     _submit() {

@@ -231,6 +231,9 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Fixed
 
+- **Augmented-ui stylesheet 404 on fresh install**: `augmented-ui` v2
+  renamed its dist file from `augmented.css` to `augmented-ui.css`.
+  Updated the `<link>` in `ui.html`. (Closes #94)
 - **Terminal no longer crashes on init under xterm v5**: the
   ligatures addon's `registerCharacterJoiner` moved behind a proposed-
   API opt-in flag in xterm 5.x. Without it, fresh installs threw

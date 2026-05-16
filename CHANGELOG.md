@@ -17,6 +17,27 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **Persistent FS cache for the Gemma model** under
+  `<userData>/gemma-cache/`. The engine resolves this path via
+  `@electron/remote`, ensures the directory exists, and passes it to
+  the worker in the `load` message; the worker sets
+  `env.cacheDir = cacheDir` before calling the transformers.js
+  pipeline. Without this pin, transformers.js falls back to an
+  in-process default that lives in transient locations under
+  Electron and re-downloaded the multi-GB shards on every launch.
+  The stable cache lets HF Hub's resumable-download machinery pick
+  up a partial shard after a kill / network drop and continue from
+  the existing bytes instead of restarting from zero. The TTS
+  workers are untouched — they still set `env.useFSCache = false` on
+  purpose. (Closes #89)
+- **Disk-space pre-check before kicking off a cold Gemma download**.
+  Refuses to start when the cache drive doesn't have enough headroom
+  for the requested dtype (~5 GB for `q4f16`, ~9 GB for `q8` —
+  documented weights + ~1 GB cushion for `.incomplete` shards and ORT
+  session scratch). Fires the existing `loaderror` event so the chat
+  modal surfaces it through the same error path as any other load
+  failure, with a message that names the cache dir and the actual
+  free-bytes count.
 - **`chatBackend` and `gemmaDtype` settings rows** in the in-app
   settings editor (`Ctrl+Shift+S`). Both keys were already in
   `_boot.js` defaults and the `writeSettingsFile` serializer as

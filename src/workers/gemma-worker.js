@@ -73,7 +73,7 @@ function enqueueDispatch(msg) {
 async function dispatch(msg) {
     try {
         if (msg.type === "load") {
-            await handleLoad(msg.dtype);
+            await handleLoad(msg);
         } else if (msg.type === "generate") {
             await handleGenerate(msg);
         }
@@ -170,7 +170,8 @@ async function loadTransformersWithPatches() {
     }
 }
 
-async function handleLoad(dtype = "q4f16") {
+async function handleLoad(msg) {
+    const dtype = msg.dtype || "q4f16";
     if (generator && loadedDtype === dtype) {
         self.postMessage({ type: "load-ready", loadMs: 0, dtype, backend: "webgpu", cached: true });
         return;
@@ -187,6 +188,15 @@ async function handleLoad(dtype = "q4f16") {
     if (!adapter) {
         throw new Error("WebGPU requestAdapter() returned null");
     }
+
+    // Pin the FS cache to a stable directory under the app's userData
+    // path (passed in by GemmaEngine). Without this, transformers.js
+    // falls back to its in-process default (relative to CWD, OS-
+    // dependent), which can land in transient locations under Electron
+    // and silently re-download on the next launch. The same setting
+    // lets HF Hub's resumable-download machinery find a partially-
+    // downloaded shard and continue from the existing bytes.
+    if (msg.cacheDir) env.cacheDir = msg.cacheDir;
 
     const loadStart = performance.now();
     generator = await pipeline(

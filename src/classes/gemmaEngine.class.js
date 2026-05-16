@@ -64,7 +64,12 @@ class GemmaEngine extends EventTarget {
         //   "available"   — a GPUAdapter was returned
         //   "unavailable" — no API, no adapter, or the probe threw
         this.availability = { state: "unknown" };
-        this._probeAvailability();
+        // Hold on to the probe promise so _ensureLoaded can await it
+        // before booting the worker. Without that, a fast caller can
+        // win the race against the async `requestAdapter()` call and
+        // spawn the worker on a machine that's about to be marked
+        // unavailable.
+        this._availabilityProbe = this._probeAvailability();
     }
 
     async _probeAvailability() {
@@ -281,6 +286,14 @@ class GemmaEngine extends EventTarget {
     }
 
     _ensureLoaded(dtype) {
+        // Hold off until the WebGPU probe has resolved — between
+        // construction and the microtask flip there's a window where
+        // `state` is still "unknown" but the machine has no adapter.
+        // Re-enter once the probe lands so the unavailable branch
+        // below catches it.
+        if (this.availability?.state === "unknown" && this._availabilityProbe) {
+            return this._availabilityProbe.then(() => this._ensureLoaded(dtype));
+        }
         if (this._loadedDtype === dtype && this._loadPromise === null) {
             return Promise.resolve();
         }

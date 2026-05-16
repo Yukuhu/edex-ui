@@ -100,6 +100,11 @@ class Terminal {
             this.term = new this.xTerm({
                 cols: 80,
                 rows: 24,
+                // xterm v5 moved registerCharacterJoiner (used by the
+                // ligatures addon, loaded a few lines down) behind an
+                // opt-in flag. Without this, addon activation throws
+                // "You must set the allowProposedApi option to true".
+                allowProposedApi: true,
                 cursorBlink: window.theme.terminal.cursorBlink || true,
                 cursorStyle: window.theme.terminal.cursorStyle || "block",
                 allowTransparency: window.theme.terminal.allowTransparency || false,

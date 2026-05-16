@@ -54,23 +54,29 @@ class GemmaEngine extends EventTarget {
         // the multi-GB model files manually).
         this._cacheDir = null;
 
-        // WebGPU availability probe — `navigator.gpu` only tells us the
-        // API surface is present; `requestAdapter()` is what reveals
+        // WebGPU availability probe state. `navigator.gpu` only tells us
+        // the API surface is present; `requestAdapter()` is what reveals
         // whether a real adapter is reachable (driver enabled, GPU
-        // visible to the renderer, ANGLE/Vulkan path negotiated). We
-        // run it once at construction, cache the result, and fire
-        // `availabilitychange` so consumers can refresh their UI.
+        // visible to the renderer, ANGLE/Vulkan path negotiated). The
+        // probe is kicked off by `beginAvailabilityProbe()` — called
+        // explicitly from _renderer.js at boot so the UI can gate the
+        // Gemma backend before the user clicks, and implicitly by
+        // `_ensureLoaded()` if a caller goes straight to load/generate.
         // States:
         //   "unknown"     — probe hasn't completed yet
         //   "available"   — a GPUAdapter was returned
         //   "unavailable" — no API, no adapter, or the probe threw
         this.availability = { state: "unknown" };
-        // Hold on to the probe promise so _ensureLoaded can await it
-        // before booting the worker. Without that, a fast caller can
-        // win the race against the async `requestAdapter()` call and
-        // spawn the worker on a machine that's about to be marked
-        // unavailable.
+        this._availabilityProbe = null;
+    }
+
+    // Kick off the WebGPU availability probe. Idempotent — re-calls
+    // return the existing promise. Resolves with no value; the result
+    // lands on `availability` and fires `availabilitychange`.
+    beginAvailabilityProbe() {
+        if (this._availabilityProbe != null) return this._availabilityProbe;
         this._availabilityProbe = this._probeAvailability();
+        return this._availabilityProbe;
     }
 
     async _probeAvailability() {
@@ -292,13 +298,13 @@ class GemmaEngine extends EventTarget {
         // `state` is still "unknown" but the machine has no adapter.
         // Re-enter once the probe lands so the unavailable branch
         // below catches it.
-        // Nullish check, not a Promise-truthiness check — the probe is
-        // always either null or a Promise reference; we want "is the
-        // probe in flight?", not "did the probe resolve to a truthy
-        // value?". `!= null` keeps Sonar's S6544 happy and reads
-        // explicitly.
-        if (this.availability?.state === "unknown" && this._availabilityProbe != null) {
-            return this._availabilityProbe.then(() => this._ensureLoaded(dtype));
+        // If the probe hasn't completed (or hasn't been kicked off yet),
+        // wait for it before deciding whether to spawn the worker.
+        // `beginAvailabilityProbe()` is idempotent, so this also serves
+        // as the lazy probe kick-off for callers that go straight to
+        // load/generate without warming up the probe.
+        if (this.availability?.state === "unknown") {
+            return this.beginAvailabilityProbe().then(() => this._ensureLoaded(dtype));
         }
         if (this._loadedDtype === dtype && this._loadPromise === null) {
             return Promise.resolve();

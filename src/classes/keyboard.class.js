@@ -615,622 +615,334 @@ class Keyboard {
             }, 100);
         };
     }
+    static CIRCUM_MAP = {
+        "a": "â",
+        "A": "Â",
+        "z": "ẑ",
+        "Z": "Ẑ",
+        "e": "ê",
+        "E": "Ê",
+        "y": "ŷ",
+        "Y": "Ŷ",
+        "u": "û",
+        "U": "Û",
+        "i": "î",
+        "I": "Î",
+        "o": "ô",
+        "O": "Ô",
+        "s": "ŝ",
+        "S": "Ŝ",
+        "g": "ĝ",
+        "G": "Ĝ",
+        "h": "ĥ",
+        "H": "Ĥ",
+        "j": "ĵ",
+        "J": "Ĵ",
+        "w": "ŵ",
+        "W": "Ŵ",
+        "c": "ĉ",
+        "C": "Ĉ",
+        "1": "¹",
+        "2": "²",
+        "3": "³",
+        "4": "⁴",
+        "5": "⁵",
+        "6": "⁶",
+        "7": "⁷",
+        "8": "⁸",
+        "9": "⁹",
+        "0": "⁰",
+    };
     addCircum(char) {
-        switch(char) {
-            case "a":
-                return "â";
-            case "A":
-                return "Â";
-            case "z":
-                return "ẑ";
-            case "Z":
-                return "Ẑ";
-            case "e":
-                return "ê";
-            case "E":
-                return "Ê";
-            case "y":
-                return "ŷ";
-            case "Y":
-                return "Ŷ";
-            case "u":
-                return "û";
-            case "U":
-                return "Û";
-            case "i":
-                return "î";
-            case "I":
-                return "Î";
-            case "o":
-                return "ô";
-            case "O":
-                return "Ô";
-            case "s":
-                return "ŝ";
-            case "S":
-                return "Ŝ";
-            case "g":
-                return "ĝ";
-            case "G":
-                return "Ĝ";
-            case "h":
-                return "ĥ";
-            case "H":
-                return "Ĥ";
-            case "j":
-                return "ĵ";
-            case "J":
-                return "Ĵ";
-            case "w":
-                return "ŵ";
-            case "W":
-                return "Ŵ";
-            case "c":
-                return "ĉ";
-            case "C":
-                return "Ĉ";
-            // the circumflex can also be used for superscript numbers
-            case "1":
-                return "¹";
-            case "2":
-                return "²";
-            case "3":
-                return "³";
-            case "4":
-                return "⁴";
-            case "5":
-                return "⁵";
-            case "6":
-                return "⁶";
-            case "7":
-                return "⁷";
-            case "8":
-                return "⁸";
-            case "9":
-                return "⁹";
-            case "0":
-                return "⁰";
-            default:
-                return char;
-        }
+        return Keyboard.CIRCUM_MAP[char] ?? char;
     }
+    static TREMA_MAP = {
+        "a": "ä",
+        "A": "Ä",
+        "e": "ë",
+        "E": "Ë",
+        "t": "ẗ",
+        "y": "ÿ",
+        "Y": "Ÿ",
+        "u": "ü",
+        "U": "Ü",
+        "i": "ï",
+        "I": "Ï",
+        "o": "ö",
+        "O": "Ö",
+        "h": "ḧ",
+        "H": "Ḧ",
+        "w": "ẅ",
+        "W": "Ẅ",
+        "x": "ẍ",
+        "X": "Ẍ",
+    };
     addTrema(char) {
-        switch(char) {
-            case "a":
-                return "ä";
-            case "A":
-                return "Ä";
-            case "e":
-                return "ë";
-            case "E":
-                return "Ë";
-            case "t":
-                return "ẗ";
-            // My keyboard says no uppercase ẗ
-            case "y":
-                return "ÿ";
-            case "Y":
-                return "Ÿ";
-            case "u":
-                return "ü";
-            case "U":
-                return "Ü";
-            case "i":
-                return "ï";
-            case "I":
-                return "Ï";
-            case "o":
-                return "ö";
-            case "O":
-                return "Ö";
-            case "h":
-                return "ḧ";
-            case "H":
-                return "Ḧ";
-            case "w":
-                return "ẅ";
-            case "W":
-                return "Ẅ";
-            case "x":
-                return "ẍ";
-            case "X":
-                return "Ẍ";
-            default:
-                return char;
-        }
+        return Keyboard.TREMA_MAP[char] ?? char;
     }
+    static ACUTE_MAP = {
+        "a": "á",
+        "A": "Á",
+        "c": "ć",
+        "C": "Ć",
+        "e": "é",
+        "E": "E",
+        "g": "ǵ",
+        "G": "Ǵ",
+        "i": "í",
+        "I": "Í",
+        "j": "ȷ́",
+        "J": "J́",
+        "k": "ḱ",
+        "K": "Ḱ",
+        "l": "ĺ",
+        "L": "Ĺ",
+        "m": "ḿ",
+        "M": "Ḿ",
+        "n": "ń",
+        "N": "Ń",
+        "o": "ó",
+        "O": "Ó",
+        "p": "ṕ",
+        "P": "Ṕ",
+        "r": "ŕ",
+        "R": "Ŕ",
+        "s": "ś",
+        "S": "Ś",
+        "u": "ú",
+        "U": "Ú",
+        "v": "v́",
+        "V": "V́",
+        "w": "ẃ",
+        "W": "Ẃ",
+        "y": "ý",
+        "Y": "Ý",
+        "z": "ź",
+        "Z": "Ź",
+        "ê": "ế",
+        "Ê": "Ế",
+        "ç": "ḉ",
+        "Ç": "Ḉ",
+    };
     addAcute(char) {
-        switch(char) {
-            case "a":
-                return "á";
-            case "A":
-                return "Á";
-            case "c":
-                return "ć";
-            case "C":
-                return "Ć";
-            case "e":
-                return "é";
-            case "E":
-                return "E";
-            case "g":
-                return "ǵ";
-            case "G":
-                return "Ǵ";
-            case "i":
-                return "í";
-            case "I":
-                return "Í";
-            case "j":
-                return "ȷ́";
-            case "J":
-                return "J́";
-            case "k":
-                return "ḱ";
-            case "K":
-                return "Ḱ";
-            case "l":
-                return "ĺ";
-            case "L":
-                return "Ĺ";
-            case "m":
-                return "ḿ";
-            case "M":
-                return "Ḿ";
-            case "n":
-                return "ń";
-            case "N":
-                return "Ń";
-            case "o":
-                return "ó";
-            case "O":
-                return "Ó";
-            case "p":
-                return "ṕ";
-            case "P":
-                return "Ṕ";
-            case "r":
-                return "ŕ";
-            case "R":
-                return "Ŕ";
-            case "s":
-                return "ś";
-            case "S":
-                return "Ś";
-            case "u":
-                return "ú";
-            case "U":
-                return "Ú";
-            case "v":
-                return "v́";
-            case "V":
-                return "V́";
-            case "w":
-                return "ẃ";
-            case "W":
-                return "Ẃ";
-            case "y":
-                return "ý";
-            case "Y":
-                return "Ý";
-            case "z":
-                return "ź";
-            case "Z":
-                return "Ź";
-            case "ê":
-                return "ế";
-            case "Ê":
-                return "Ế";
-            case "ç":
-                return "ḉ";
-            case "Ç":
-                return "Ḉ";
-            default:
-                return char;
-        }
+        return Keyboard.ACUTE_MAP[char] ?? char;
     }
+    static GRAVE_MAP = {
+        "a": "à",
+        "A": "À",
+        "e": "è",
+        "E": "È",
+        "i": "ì",
+        "I": "Ì",
+        "m": "m̀",
+        "M": "M̀",
+        "n": "ǹ",
+        "N": "Ǹ",
+        "o": "ò",
+        "O": "Ò",
+        "u": "ù",
+        "U": "Ù",
+        "v": "v̀",
+        "V": "V̀",
+        "w": "ẁ",
+        "W": "Ẁ",
+        "y": "ỳ",
+        "Y": "Ỳ",
+        "ê": "ề",
+        "Ê": "Ề",
+    };
     addGrave(char) {
-        switch (char) {
-            case "a":
-                return "à";
-            case "A":
-                return "À";
-            case "e":
-                return "è";
-            case "E":
-                return "È";
-            case "i":
-                return "ì";
-            case "I":
-                return "Ì";
-            case "m":
-                return "m̀";
-            case "M":
-                return "M̀";
-            case "n":
-                return "ǹ";
-            case "N":
-                return "Ǹ";
-            case "o":
-                return "ò";
-            case "O":
-                return "Ò";
-            case "u":
-                return "ù";
-            case "U":
-                return "Ù";
-            case "v":
-                return "v̀";
-            case "V":
-                return "V̀";
-            case "w":
-                return "ẁ";
-            case "W":
-                return "Ẁ";
-            case "y":
-                return "ỳ";
-            case "Y":
-                return "Ỳ";
-            case "ê":
-                return "ề";
-            case "Ê":
-                return "Ề";
-            default:
-                return char;
-        }
+        return Keyboard.GRAVE_MAP[char] ?? char;
     }
+    static CARON_MAP = {
+        "a": "ǎ",
+        "A": "Ǎ",
+        "c": "č",
+        "C": "Č",
+        "d": "ď",
+        "D": "Ď",
+        "e": "ě",
+        "E": "Ě",
+        "g": "ǧ",
+        "G": "Ǧ",
+        "h": "ȟ",
+        "H": "Ȟ",
+        "i": "ǐ",
+        "I": "Ǐ",
+        "j": "ǰ",
+        "k": "ǩ",
+        "K": "Ǩ",
+        "l": "ľ",
+        "L": "Ľ",
+        "n": "ň",
+        "N": "Ň",
+        "o": "ǒ",
+        "O": "Ǒ",
+        "r": "ř",
+        "R": "Ř",
+        "s": "š",
+        "S": "Š",
+        "t": "ť",
+        "T": "Ť",
+        "u": "ǔ",
+        "U": "Ǔ",
+        "z": "ž",
+        "Z": "Ž",
+        "1": "₁",
+        "2": "₂",
+        "3": "₃",
+        "4": "₄",
+        "5": "₅",
+        "6": "₆",
+        "7": "₇",
+        "8": "₈",
+        "9": "₉",
+        "0": "₀",
+    };
     addCaron(char) {
-        switch (char) {
-            case "a":
-                return "ǎ";
-            case "A":
-                return "Ǎ";
-            case "c":
-                return "č";
-            case "C":
-                return "Č";
-            case "d":
-                return "ď";
-            case "D":
-                return "Ď";
-            case "e":
-                return "ě";
-            case "E":
-                return "Ě";
-            case "g":
-                return "ǧ";
-            case "G":
-                return "Ǧ";
-            case "h":
-                return "ȟ";
-            case "H":
-                return "Ȟ";
-            case "i":
-                return "ǐ";
-            case "I":
-                return "Ǐ";
-            case "j":
-                return "ǰ";
-            case "k":
-                return "ǩ";
-            case "K":
-                return "Ǩ";
-            case "l":
-                return "ľ";
-            case "L":
-                return "Ľ";
-            case "n":
-                return "ň";
-            case "N":
-                return "Ň";
-            case "o":
-                return "ǒ";
-            case "O":
-                return "Ǒ";
-            case "r":
-                return "ř";
-            case "R":
-                return "Ř";
-            case "s":
-                return "š";
-            case "S":
-                return "Š";
-            case "t":
-                return "ť";
-            case "T":
-                return "Ť";
-            case "u":
-                return "ǔ";
-            case "U":
-                return "Ǔ";
-            case "z":
-                return "ž";
-            case "Z":
-                return "Ž";
-            // caron can also be used for subscript numbers
-            case "1":
-                return "₁";
-            case "2":
-                return "₂";
-            case "3":
-                return "₃";
-            case "4":
-                return "₄";
-            case "5":
-                return "₅";
-            case "6":
-                return "₆";
-            case "7":
-                return "₇";
-            case "8":
-                return "₈";
-            case "9":
-                return "₉";
-            case "0":
-                return "₀";
-            default:
-                return char;
-        }
+        return Keyboard.CARON_MAP[char] ?? char;
     }
+    static BAR_MAP = {
+        "a": "ⱥ",
+        "A": "Ⱥ",
+        "b": "ƀ",
+        "B": "Ƀ",
+        "c": "ȼ",
+        "C": "Ȼ",
+        "d": "đ",
+        "D": "Đ",
+        "e": "ɇ",
+        "E": "Ɇ",
+        "g": "ǥ",
+        "G": "Ǥ",
+        "h": "ħ",
+        "H": "Ħ",
+        "i": "ɨ",
+        "I": "Ɨ",
+        "j": "ɉ",
+        "J": "Ɉ",
+        "l": "ł",
+        "L": "Ł",
+        "o": "ø",
+        "O": "Ø",
+        "p": "ᵽ",
+        "P": "Ᵽ",
+        "r": "ɍ",
+        "R": "Ɍ",
+        "t": "ŧ",
+        "T": "Ŧ",
+        "u": "ʉ",
+        "U": "Ʉ",
+        "y": "ɏ",
+        "Y": "Ɏ",
+        "z": "ƶ",
+        "Z": "Ƶ",
+    };
     addBar(char) {
-        switch (char) {
-            case "a":
-                return "ⱥ";
-            case "A":
-                return "Ⱥ";
-            case "b":
-                return "ƀ";
-            case "B":
-                return "Ƀ";
-            case "c":
-                return "ȼ";
-            case "C":
-                return "Ȼ";
-            case "d":
-                return "đ";
-            case "D":
-                return "Đ";
-            case "e":
-                return "ɇ";
-            case "E":
-                return "Ɇ";
-            case "g":
-                return "ǥ";
-            case "G":
-                return "Ǥ";
-            case "h":
-                return "ħ";
-            case "H":
-                return "Ħ";
-            case "i":
-                return "ɨ";
-            case "I":
-                return "Ɨ";
-            case "j":
-                return "ɉ";
-            case "J":
-                return "Ɉ";
-            case "l":
-                return "ł";
-            case "L":
-                return "Ł";
-            case "o":
-                return "ø";
-            case "O":
-                return "Ø";
-            case "p":
-                return "ᵽ";
-            case "P":
-                return "Ᵽ";
-            case "r":
-                return "ɍ";
-            case "R":
-                return "Ɍ";
-            case "t":
-                return "ŧ";
-            case "T":
-                return "Ŧ";
-            case "u":
-                return "ʉ";
-            case "U":
-                return "Ʉ";
-            case "y":
-                return "ɏ";
-            case "Y":
-                return "Ɏ";
-            case "z":
-                return "ƶ";
-            case "Z":
-                return "Ƶ";
-            default:
-                return char;
-        }
+        return Keyboard.BAR_MAP[char] ?? char;
     }
+    static BREVE_MAP = {
+        "a": "ă",
+        "A": "Ă",
+        "e": "ĕ",
+        "E": "Ĕ",
+        "g": "ğ",
+        "G": "Ğ",
+        "i": "ĭ",
+        "I": "Ĭ",
+        "o": "ŏ",
+        "O": "Ŏ",
+        "u": "ŭ",
+        "U": "Ŭ",
+        "à": "ằ",
+        "À": "Ằ",
+    };
     addBreve(char) {
-        switch (char) {
-            case "a":
-                return "ă";
-            case "A":
-                return "Ă";
-            case "e":
-                return "ĕ";
-            case "E":
-                return "Ĕ";
-            case "g":
-                return "ğ";
-            case "G":
-                return "Ğ";
-            case "i":
-                return "ĭ";
-            case "I":
-                return "Ĭ";
-            case "o":
-                return "ŏ";
-            case "O":
-                return "Ŏ";
-            case "u":
-                return "ŭ";
-            case "U":
-                return "Ŭ";
-            case "à":
-                return "ằ";
-            case "À":
-                return "Ằ";
-            default:
-                return char;
-        }
+        return Keyboard.BREVE_MAP[char] ?? char;
     }
+    static TILDE_MAP = {
+        "a": "ã",
+        "A": "Ã",
+        "e": "ẽ",
+        "E": "Ẽ",
+        "i": "ĩ",
+        "I": "Ĩ",
+        "n": "ñ",
+        "N": "Ñ",
+        "o": "õ",
+        "O": "Õ",
+        "u": "ũ",
+        "U": "Ũ",
+        "v": "ṽ",
+        "V": "Ṽ",
+        "y": "ỹ",
+        "Y": "Ỹ",
+        "ê": "ễ",
+        "Ê": "Ễ",
+    };
     addTilde(char) {
-        switch (char) {
-            case "a":
-                return "ã";
-            case "A":
-                return "Ã";
-            case "e":
-                return "ẽ";
-            case "E":
-                return "Ẽ";
-            case "i":
-                return "ĩ";
-            case "I":
-                return "Ĩ";
-            case "n":
-                return "ñ";
-            case "N":
-                return "Ñ";
-            case "o":
-                return "õ";
-            case "O":
-                return "Õ";
-            case "u":
-                return "ũ";
-            case "U":
-                return "Ũ";
-            case "v":
-                return "ṽ";
-            case "V":
-                return "Ṽ";
-            case "y":
-                return "ỹ";
-            case "Y":
-                return "Ỹ";
-            case "ê":
-                return "ễ";
-            case "Ê":
-                return "Ễ";
-            default:
-                return char;
-        }
+        return Keyboard.TILDE_MAP[char] ?? char;
     }
+    static MACRON_MAP = {
+        "a": "ā",
+        "A": "Ā",
+        "e": "ē",
+        "E": "Ē",
+        "g": "ḡ",
+        "G": "Ḡ",
+        "i": "ī",
+        "I": "Ī",
+        "o": "ō",
+        "O": "Ō",
+        "u": "ū",
+        "U": "Ū",
+        "y": "ȳ",
+        "Y": "Ȳ",
+        "é": "ḗ",
+        "É": "Ḗ",
+        "è": "ḕ",
+        "È": "Ḕ",
+    };
     addMacron(char) {
-        switch (char) {
-            case "a":
-                return "ā";
-            case "A":
-                return "Ā";
-            case "e":
-                return "ē";
-            case "E":
-                return "Ē";
-            case "g":
-                return "ḡ";
-            case "G":
-                return "Ḡ";
-            case "i":
-                return "ī";
-            case "I":
-                return "Ī";
-            case "o":
-                return "ō";
-            case "O":
-                return "Ō";
-            case "u":
-                return "ū";
-            case "U":
-                return "Ū";
-            case "y":
-                return "ȳ";
-            case "Y":
-                return "Ȳ";
-            case "é":
-                return "ḗ";
-            case "É":
-                return "Ḗ";
-            case "è":
-                return "ḕ";
-            case "È":
-                return "Ḕ";
-            default:
-                return char;
-        }
+        return Keyboard.MACRON_MAP[char] ?? char;
     }
+    static CEDILLA_MAP = {
+        "c": "ç",
+        "C": "Ç",
+        "d": "ḑ",
+        "D": "Ḑ",
+        "e": "ȩ",
+        "E": "Ȩ",
+        "g": "ģ",
+        "G": "Ģ",
+        "h": "ḩ",
+        "H": "Ḩ",
+        "k": "ķ",
+        "K": "Ķ",
+        "l": "ļ",
+        "L": "Ļ",
+        "n": "ņ",
+        "N": "Ņ",
+        "r": "ŗ",
+        "R": "Ŗ",
+        "s": "ş",
+        "S": "Ş",
+        "t": "ţ",
+        "T": "Ţ",
+    };
     addCedilla(char) {
-        switch (char) {
-            case "c":
-                return "ç";
-            case "C":
-                return "Ç";
-            case "d":
-                return "ḑ";
-            case "D":
-                return "Ḑ";
-            case "e":
-                return "ȩ";
-            case "E":
-                return "Ȩ";
-            case "g":
-                return "ģ";
-            case "G":
-                return "Ģ";
-            case "h":
-                return "ḩ";
-            case "H":
-                return "Ḩ";
-            case "k":
-                return "ķ";
-            case "K":
-                return "Ķ";
-            case "l":
-                return "ļ";
-            case "L":
-                return "Ļ";
-            case "n":
-                return "ņ";
-            case "N":
-                return "Ņ";
-            case "r":
-                return "ŗ";
-            case "R":
-                return "Ŗ";
-            case "s":
-                return "ş";
-            case "S":
-                return "Ş";
-            case "t":
-                return "ţ";
-            case "T":
-                return "Ţ";
-            default:
-                return char;
-        }
+        return Keyboard.CEDILLA_MAP[char] ?? char;
     }
+    static OVERRING_MAP = {
+        "a": "å",
+        "A": "Å",
+        "u": "ů",
+        "U": "Ů",
+        "w": "ẘ",
+        "y": "ẙ",
+    };
     addOverring(char) {
-        switch (char) {
-            case "a":
-                return "å";
-            case "A":
-                return "Å";
-            case "u":
-                return "ů";
-            case "U":
-                return "Ů";
-            case "w":
-                return "ẘ"; // capital w with overring not supported on bépo layout apparently
-            case "y":
-                return "ẙ"; // same for capital y with overring
-            default:
-                return char;
-        }
+        return Keyboard.OVERRING_MAP[char] ?? char;
     }
     toGreek(char) {
         switch (char) {
@@ -1310,31 +1022,20 @@ class Keyboard {
                 return char;
         }
     }
+    static IOTASUB_MAP = {
+        "o": "ǫ",
+        "O": "Ǫ",
+        "a": "ą",
+        "A": "Ą",
+        "u": "ų",
+        "U": "Ų",
+        "i": "į",
+        "I": "Į",
+        "e": "ę",
+        "E": "Ę",
+    };
     addIotasub(char) {
-        switch (char) {
-            case "o":
-                return "ǫ";
-            case "O":
-                return "Ǫ";
-            case "a":
-                return "ą";
-            case "A":
-                return "Ą";
-            case "u":
-                return "ų";
-            case "U":
-                return "Ų";
-            case "i":
-                return "į";
-            case "I":
-                return "Į";
-            case "e":
-                return "ę";
-            case "E":
-                return "Ę";
-            default:
-                return char;
-        }
+        return Keyboard.IOTASUB_MAP[char] ?? char;
     }
 }
 

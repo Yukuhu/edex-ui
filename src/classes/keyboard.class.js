@@ -1,4 +1,31 @@
 class Keyboard {
+    // Maps physical-keyboard event codes to the `data-cmd` attribute
+    // value of the corresponding on-screen key. Used by `findKey` to
+    // animate the right on-screen element when a physical key is
+    // pressed. `Enter` is special-cased in `findKey` because it maps
+    // to multiple elements via querySelectorAll.
+    //
+    // The arrow / Escape / Backspace values are the raw control bytes
+    // that the on-screen keyboard layout JSON also uses (and the
+    // terminal expects on stdin) — `\x1B` is ESC, `\x08` is BS. The
+    // pre-fork source had these as invisible bytes inline; using the
+    // escape form keeps them visible in the diff and in editors.
+    static KEY_CODE_TO_DATA_CMD = {
+        "ShiftLeft":    "ESCAPED|-- SHIFT: LEFT",
+        "ShiftRight":   "ESCAPED|-- SHIFT: RIGHT",
+        "ControlLeft":  "ESCAPED|-- CTRL: LEFT",
+        "ControlRight": "ESCAPED|-- CTRL: RIGHT",
+        "AltLeft":      "ESCAPED|-- FN: ON",
+        "AltRight":     "ESCAPED|-- ALT: RIGHT",
+        "CapsLock":     "ESCAPED|-- CAPSLCK: ON",
+        "Escape":       "\x1B",
+        "Backspace":    "\x08",
+        "ArrowUp":      "\x1BOA",
+        "ArrowLeft":    "\x1BOD",
+        "ArrowDown":    "\x1BOB",
+        "ArrowRight":   "\x1BOC"
+    };
+
     constructor(opts) {
         if (!opts.layout || !opts.container) throw "Missing options";
 
@@ -263,21 +290,15 @@ class Keyboard {
             let key = document.querySelector('div.keyboard_key[data-cmd="'+physkey+'"]');
             if (key === null) key = document.querySelector('div.keyboard_key[data-shift_cmd="'+physkey+'"]');
 
-            // Find special keys (shift, control, arrows, etc.)
-            if (key === null && e.code === "ShiftLeft") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- SHIFT: LEFT"]');
-            if (key === null && e.code === "ShiftRight") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- SHIFT: RIGHT"]');
-            if (key === null && e.code === "ControlLeft") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- CTRL: LEFT"]');
-            if (key === null && e.code === "ControlRight") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- CTRL: RIGHT"]');
-            if (key === null && e.code === "AltLeft") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- FN: ON"]');
-            if (key === null && e.code === "AltRight") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- ALT: RIGHT"]');
-            if (key === null && e.code === "CapsLock") key = document.querySelector('div.keyboard_key[data-cmd="ESCAPED|-- CAPSLCK: ON"]');
-            if (key === null && e.code === "Escape") key = document.querySelector('div.keyboard_key[data-cmd=""]');
-            if (key === null && e.code === "Backspace") key = document.querySelector('div.keyboard_key[data-cmd=""]');
-            if (key === null && e.code === "ArrowUp") key = document.querySelector('div.keyboard_key[data-cmd="OA"]');
-            if (key === null && e.code === "ArrowLeft") key = document.querySelector('div.keyboard_key[data-cmd="OD"]');
-            if (key === null && e.code === "ArrowDown") key = document.querySelector('div.keyboard_key[data-cmd="OB"]');
-            if (key === null && e.code === "ArrowRight") key = document.querySelector('div.keyboard_key[data-cmd="OC"]');
-            if (key === null && e.code === "Enter") key = document.querySelectorAll('div.keyboard_key.keyboard_enter');
+            // Find special keys (shift, control, arrows, etc.) via lookup table.
+            if (key === null) {
+                const specialCmd = Keyboard.KEY_CODE_TO_DATA_CMD[e.code];
+                if (specialCmd !== undefined) {
+                    key = document.querySelector('div.keyboard_key[data-cmd="' + specialCmd + '"]');
+                } else if (e.code === "Enter") {
+                    key = document.querySelectorAll('div.keyboard_key.keyboard_enter');
+                }
+            }
 
             // Find "rare" keys (ctrl and alt symbols)
             if (key === null) key = document.querySelector('div.keyboard_key[data-ctrl_cmd="'+e.key+'"]');

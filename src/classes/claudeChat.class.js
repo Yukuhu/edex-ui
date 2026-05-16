@@ -319,13 +319,17 @@ class ClaudeChat {
             done: ev => {
                 this._drainPending();
                 const detail = ev.detail || {};
-                // Persist the assistant reply into the transcript so the
-                // next turn ships full context (no --resume on Gemma).
-                if (this.activeAssistantBuf) {
+                // Persist the assistant reply into the transcript so
+                // the next turn ships full context (no --resume on
+                // Gemma). Skip on cancellation so partial output
+                // doesn't pollute future prompts.
+                if (!detail.cancelled && this.activeAssistantBuf) {
                     this.transcript.push({ role: "assistant", content: this.activeAssistantBuf });
                 }
                 this._finalizeAssistant();
-                this.firstTurn = false;
+                // `this.firstTurn` is the CLI's session-resume flag —
+                // do NOT flip it from the Gemma path (CLI/Gemma
+                // contexts are independent per #87 spec).
                 if (detail.cancelled) {
                     this.status.innerText = "Cancelled.";
                 } else {
@@ -451,7 +455,13 @@ class ClaudeChat {
         const prompt = this.input.value.trim();
         if (!prompt) return;
         if (this.pendingReqId) return; // CLI already in flight
-        if (this.chatBackend === "gemma" && window.gemmaEngine?.isGenerating) return;
+        // Block on any in-flight Gemma generation regardless of the
+        // current backend selection — switching from gemma to cli
+        // leaves the previous turn briefly wrapping up (the stopping
+        // criteria fires after the current token, so one or two more
+        // delta events can land after cancel()), and a new CLI submit
+        // would race them and append to the new bubble.
+        if (window.gemmaEngine?.isGenerating) return;
 
         // Cancel any TTS still in flight from the previous turn — both
         // playing audio and the streaming consumer.
@@ -510,14 +520,29 @@ class ClaudeChat {
             if (this.avatar) this.avatar.setState("error");
             return;
         }
-        this.transcript.push({ role: "user", content: prompt });
+        const userTurn = { role: "user", content: prompt };
+        this.transcript.push(userTurn);
         this.status.innerText = "Generating…";
         if (this.avatar) this.avatar.setState("thinking");
-        // delta / done / error all flow back through `_gemmaListeners`
-        // and update the UI; the returned promise is only useful for
-        // synchronous rejects (busy-guard, engine terminate, etc.).
+        // Normal delta / done / error flow back through `_gemmaListeners`.
+        // This catch covers synchronous rejects (busy-guard, terminate,
+        // "Generation aborted before start") and any load failure
+        // whose `loaderror` event also rejects _loadPromise. The
+        // listener has already closed out the bubble for the
+        // event-driven cases, so only surface the error if the
+        // bubble is still pending — and roll back the just-pushed
+        // user turn so it doesn't sit unanswered in context.
         window.gemmaEngine.generate(this.transcript).catch(err => {
             console.warn("[ClaudeChat] gemmaEngine.generate rejected:", err);
+            if (this.transcript[this.transcript.length - 1] === userTurn) {
+                this.transcript.pop();
+            }
+            if (this.activeAssistantBubble) {
+                this._appendErrorLine(err?.message || "Gemma request failed.");
+                this._finalizeAssistant();
+                this.status.innerText = "Error.";
+                if (this.avatar) this.avatar.setState("error");
+            }
         });
     }
 

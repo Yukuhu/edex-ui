@@ -19,6 +19,17 @@
 class GemmaEngine extends EventTarget {
     static DEFAULT_DTYPE = "q4f16";
 
+    // Minimum free disk space required before kicking off a cold model
+    // download, by dtype. Numbers are the documented per-tier weights
+    // plus a ~1 GB cushion for in-flight `.incomplete` files and ORT
+    // session scratch. A short fall-through default protects future
+    // tiers added without an explicit entry.
+    static MIN_FREE_BYTES_BY_DTYPE = {
+        "q4f16": 5 * 1024 * 1024 * 1024,  // ~3.6 GB on disk + cushion
+        "q8":    9 * 1024 * 1024 * 1024   // ~6.8 GB on disk + cushion
+    };
+    static MIN_FREE_BYTES_DEFAULT = 5 * 1024 * 1024 * 1024;
+
     constructor() {
         super();
 
@@ -33,6 +44,61 @@ class GemmaEngine extends EventTarget {
         this._loadReject = null;
         this._generatePending = null; // { id, resolve, reject }
         this._genNextId = 1;
+        // Resolved on first use and memoised. Lives under the app's
+        // userData path so the cache survives across launches and is
+        // visible to the user (and `rm -rf`-able if they want to wipe
+        // the multi-GB model files manually).
+        this._cacheDir = null;
+    }
+
+    // Path under userData where transformers.js stores Gemma model
+    // shards. Stable across launches so HF Hub's resumable downloads
+    // can pick up a partial shard. Lazy because @electron/remote
+    // round-trips into main, and the engine is constructed before
+    // anyone needs the directory.
+    _resolveCacheDir() {
+        if (this._cacheDir) return this._cacheDir;
+        try {
+            const path = require("path");
+            const userData = require("@electron/remote").app.getPath("userData");
+            this._cacheDir = path.join(userData, "gemma-cache");
+            try {
+                require("fs").mkdirSync(this._cacheDir, { recursive: true });
+            } catch (_) { /* exists or unwritable — let the worker surface the real error */ }
+        } catch (err) {
+            console.warn("[Gemma] couldn't resolve cache dir, falling back to transformers.js default:", err);
+            this._cacheDir = null;
+        }
+        return this._cacheDir;
+    }
+
+    // Throws a user-readable error if the cache drive doesn't have
+    // enough headroom for the requested dtype's weights. Skipped when
+    // we couldn't resolve a cache dir (the fallback path is whatever
+    // transformers.js picks; let it surface its own errors there).
+    _assertDiskSpace(dtype) {
+        const cacheDir = this._resolveCacheDir();
+        if (!cacheDir) return;
+        let free;
+        try {
+            const { bsize, bavail } = require("fs").statfsSync(cacheDir);
+            free = bsize * bavail;
+        } catch (err) {
+            // statfsSync is Node 19+; Electron 42 ships Node 22+. If
+            // it somehow fails we treat the check as inconclusive
+            // rather than blocking the user.
+            console.warn("[Gemma] disk-space pre-check skipped:", err);
+            return;
+        }
+        const needed = GemmaEngine.MIN_FREE_BYTES_BY_DTYPE[dtype]
+            ?? GemmaEngine.MIN_FREE_BYTES_DEFAULT;
+        if (free < needed) {
+            const gb = (n) => (n / (1024 ** 3)).toFixed(1);
+            throw new Error(
+                `Not enough disk space for Gemma ${dtype}: need ~${gb(needed)} GB free `
+                + `at ${cacheDir}, have ${gb(free)} GB.`
+            );
+        }
     }
 
     // WebGPU is required for the model to fit (q4f16 is ~4 GB; WASM's
@@ -159,18 +225,33 @@ class GemmaEngine extends EventTarget {
     }
 
     _ensureLoaded(dtype) {
-        this._ensureWorker();
         if (this._loadedDtype === dtype && this._loadPromise === null) {
             return Promise.resolve();
         }
         if (this._loadPromise !== null) return this._loadPromise;
 
+        // Cheap up-front sanity check: bail before we spawn a worker
+        // and start fetching multi-GB shards if the cache drive can't
+        // even hold them. Errors here fire `loaderror` (matching the
+        // worker-side load-error event shape) and reject _loadPromise
+        // so the chat modal surfaces them through its existing handler.
+        const cacheDir = this._resolveCacheDir();
+        try {
+            this._assertDiskSpace(dtype);
+        } catch (err) {
+            this.dispatchEvent(new CustomEvent("loaderror", {
+                detail: { message: err.message }
+            }));
+            return Promise.reject(err);
+        }
+
+        this._ensureWorker();
         this.dispatchEvent(new CustomEvent("loadstart", { detail: { dtype } }));
         this._loadPromise = new Promise((resolve, reject) => {
             this._loadResolve = resolve;
             this._loadReject = reject;
         });
-        this._worker.postMessage({ type: "load", dtype });
+        this._worker.postMessage({ type: "load", dtype, cacheDir });
         return this._loadPromise;
     }
 

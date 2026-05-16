@@ -939,10 +939,15 @@ window.openSettings = async () => {
                                 const curRaw = window.settings.chatBackend;
                                 // Migrate pre-#88 short names so the dropdown
                                 // shows the right option even before the user
-                                // saves through this editor.
-                                const cur = curRaw === "gemma" ? "gemma-local"
-                                    : curRaw === "cli" ? "claude-cli"
-                                    : (curRaw || "claude-cli");
+                                // saves through this editor. Intentionally
+                                // looser than ClaudeChat._migrateBackend so an
+                                // unknown value already saved on disk still
+                                // shows up as the selected option (instead of
+                                // being silently masked as claude-cli).
+                                let cur;
+                                if (curRaw === "gemma") cur = "gemma-local";
+                                else if (curRaw === "cli") cur = "claude-cli";
+                                else cur = curRaw || "claude-cli";
                                 const list = (typeof ClaudeChat !== "undefined" && ClaudeChat.CHAT_BACKENDS)
                                     ? ClaudeChat.CHAT_BACKENDS
                                     : [{id: cur, label: cur}];

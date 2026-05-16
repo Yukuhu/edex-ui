@@ -307,6 +307,29 @@ div.modal_popup .claudeChat_voiceLine button#claudeChat_voiceToggle.on {
     color: var(--color_light_black);
 }
 
+div.modal_popup .claudeChat_backendLine {
+    font-family: var(--font_main_light);
+    font-size: 1.35vh;
+    letter-spacing: 0.12vh;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+}
+
+div.modal_popup .claudeChat_backendLine button#claudeChat_backendToggle {
+    margin-left: 0;
+    padding: 0.3vh 1vh;
+    font-size: 1.4vh;
+    font-family: var(--font_main_light);
+    letter-spacing: 0.12vh;
+}
+
+div.modal_popup .claudeChat_backendLine button#claudeChat_backendToggle.gemma {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    color: var(--color_light_black);
+}
+
 /* Scrollbar in scrollback */
 div.modal_popup .claudeChat_scrollback::-webkit-scrollbar {
     width: 0.6vh;

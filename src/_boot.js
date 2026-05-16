@@ -115,6 +115,7 @@ if (!fs.existsSync(settingsFile)) {
         ttsVoice: "af_heart",
         ttsDtype: "q8",
         gemmaDtype: "q4f16",
+        chatBackend: "cli",
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

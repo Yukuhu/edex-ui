@@ -1172,9 +1172,11 @@ window.writeSettingsFile = () => {
         modalCloseButton: (document.getElementById("settingsEditor-modalCloseButton").value === "true"),
         ttsVoice: document.getElementById("settingsEditor-ttsVoice").value,
         ttsDtype: document.getElementById("settingsEditor-ttsDtype").value,
-        // Pass-through until #88 adds an editor row. Carries the existing
-        // value (or undefined → GemmaEngine.DEFAULT_DTYPE) through writes.
+        // Pass-throughs until #88 adds editor rows. Carries the
+        // existing values through saves so the user's choices survive
+        // a settings-editor write even before the UI rows exist.
         gemmaDtype: window.settings.gemmaDtype,
+        chatBackend: window.settings.chatBackend,
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };

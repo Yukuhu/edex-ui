@@ -17,6 +17,21 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **Chat backend toggle in the Claude Chat modal**: header now has a
+  `CLAUDE CLI` ↔ `LOCAL GEMMA` button that routes turns to either the
+  existing `claude` CLI subprocess (default, unchanged) or the local
+  WebGPU `GemmaEngine`. The active backend persists via
+  `window.settings.chatBackend` (default `"cli"`, added to `_boot.js`
+  defaults and `writeSettingsFile` pass-through). On the Gemma path
+  the chat maintains an in-renderer transcript and ships it whole
+  each turn (no `--resume` equivalent on the local model); CLI and
+  Gemma contexts are independent. Switching backend mid-turn cancels
+  the in-flight request cleanly — `claude:cancel` on the CLI side or
+  `gemmaEngine.cancel()` on the Gemma side. Token deltas flow into
+  the existing typewriter pipeline (`_appendAssistantText`) and the
+  shared progress bar (`_onTtsProgress`) is reused for Gemma's
+  multi-GB model download. Avatar/status-line states wire to the
+  same lifecycle events. (Closes #87)
 - **`GemmaEngine` singleton** (`src/classes/gemmaEngine.class.js`,
   `window.gemmaEngine`): clean abstraction over the gemma-worker so
   callers don't poke the worker directly. Mirrors `TtsEngine`'s

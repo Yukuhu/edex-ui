@@ -17,6 +17,21 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **`GemmaEngine` singleton** (`src/classes/gemmaEngine.class.js`,
+  `window.gemmaEngine`): clean abstraction over the gemma-worker so
+  callers don't poke the worker directly. Mirrors `TtsEngine`'s
+  shape (extends `EventTarget`, lazy worker spawn, idempotent
+  `load(dtype)`, single-in-flight `generate(messages, options)`,
+  `cancel()`, `terminate()`, plus `isAvailable` / `isGenerating` /
+  `currentDtype` / `currentBackend` getters). Event names and
+  payload shapes for `progress` / `loadstart` / `loadready` /
+  `loaderror` match `TtsEngine` exactly so the chat modal's existing
+  progress-bar UI reuses without modification; generation streams
+  via `delta` events and terminates with a `done` event carrying
+  `{ tokens, genMs, tokensPerSec, cancelled }`. Reads
+  `window.settings.gemmaDtype` (default `q4f16`). Instantiated
+  alongside `window.ttsEngine` in `_renderer.js`; not wired into
+  chat yet — that's the next sub-issue. (Closes #86)
 - **Gemma 4 E4B text-generation worker** (`src/workers/gemma-worker.js`):
   module web worker that loads `onnx-community/gemma-4-E4B-it-ONNX`
   via `@huggingface/transformers` v4 under WebGPU and streams tokens

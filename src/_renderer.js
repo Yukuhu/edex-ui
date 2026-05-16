@@ -287,6 +287,12 @@ window.audioManager = new AudioManager();
 // first use, so creating the instance here is cheap.
 window.ttsEngine = new TtsEngine();
 
+// Init shared Gemma chat engine — singleton consumed by ClaudeChat
+// when the chat backend is switched to local-Gemma. The transformers.js
+// pipeline + WebGPU session are loaded lazily on first use; spawning
+// the engine here is cheap (no worker spun up until load()/generate()).
+window.gemmaEngine = new GemmaEngine();
+
 // See #223
 remote.app.focus();
 

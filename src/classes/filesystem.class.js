@@ -430,71 +430,92 @@ class FilesystemDisplay {
     async render(originBlockList, isDiskView) {
         const blockList = JSON.parse(JSON.stringify(originBlockList));
         if (this.failed === true) return false;
-        if (isDiskView) {
-            this.filesContainer.setAttribute("class", "fs_pane_container disks");
-        } else {
-            this.filesContainer.setAttribute("class", "fs_pane_container");
-        }
+        this.filesContainer.setAttribute("class", isDiskView ? "fs_pane_container disks" : "fs_pane_container");
 
         let filesDOM = "";
         blockList.forEach((entry, blockIndex) => {
-            const hidden = entry.hidden ? " hidden" : "";
-            let icon = "";
-            let typeLabel = "";
-
-            switch (entry.type) {
-                case "showDisks":      icon = this.icons.showDisks; typeLabel = "--"; entry.category = "showDisks"; break;
-                case "up":             icon = this.icons.up;        typeLabel = "--"; entry.category = "up";        break;
-                case "symlink":        icon = this.icons.symlink; break;
-                case "disk":           icon = this.icons.disk;    break;
-                case "rom":            icon = this.icons.rom;     break;
-                case "usb":            icon = this.icons.usb;     break;
-                case "edex-theme":         icon = this.edexIcons.theme;        typeLabel = "nDEX-UI theme"; break;
-                case "edex-kblayout":      icon = this.edexIcons.kblayout;     typeLabel = "nDEX-UI keyboard layout"; break;
-                case "edex-settings":
-                case "edex-shortcuts":     icon = this.edexIcons.settings;     typeLabel = "nDEX-UI config file"; break;
-                case "system":             icon = this.edexIcons.settings; break;
-                case "edex-themesDir":     icon = this.edexIcons.themesDir;    typeLabel = "nDEX-UI themes folder"; break;
-                case "edex-kblayoutsDir":  icon = this.edexIcons.kblayoutsDir; typeLabel = "nDEX-UI keyboards folder"; break;
-                default: {
-                    const iconName = this.fileIconsMatcher(entry.name);
-                    icon = this.icons[iconName];
-                    if (typeof icon === "undefined") {
-                        if (entry.type === "file") icon = this.icons.file;
-                        if (entry.type === "dir") { icon = this.icons.dir; typeLabel = "folder"; }
-                        if (typeof icon === "undefined") icon = this.icons.other;
-                    } else if (entry.category !== "dir") {
-                        typeLabel = iconName.replace("icon-", "");
-                    } else {
-                        typeLabel = "special folder";
-                    }
-                }
-            }
-            if (typeLabel === "") typeLabel = entry.type;
+            const { icon, typeLabel } = this._resolveIconAndType(entry);
             entry.type = typeLabel;
-
             // Promote known media types so click routes to openMedia.
-            if (entry.type === "video" || entry.type === "audio" || entry.type === "image") {
+            if (this._isMediaType(entry.type)) {
                 this.cwd[blockIndex].type = entry.type;
             }
+            filesDOM += this._buildItemHTML(entry, blockIndex, icon, typeLabel);
+        });
+        this.filesContainer.innerHTML = filesDOM;
 
-            const sizeStr = typeof entry.size === "number" ? this._formatBytes(entry.size) : "--";
-            const lastStr = typeof entry.lastAccessed === "number" ? new Date(entry.lastAccessed).toLocaleString() : "--";
+        await this._playRenderAnimation();
+    }
 
-            // Real files/dirs are draggable; special entries (up, showDisks, system) are not.
-            const draggable = entry.path && entry.type !== "up" && entry.type !== "--" && entry.category !== "showDisks" && entry.category !== "up";
+    // Returns { icon, typeLabel } for a given filesystem entry. typeLabel
+    // defaults to entry.type when no special label applies, matching the
+    // original `if (typeLabel === "") typeLabel = entry.type` fallback.
+    // May mutate `entry.category` for the showDisks / up pseudo-entries.
+    _resolveIconAndType(entry) {
+        switch (entry.type) {
+            case "showDisks":         entry.category = "showDisks"; return { icon: this.icons.showDisks, typeLabel: "--" };
+            case "up":                entry.category = "up";        return { icon: this.icons.up,        typeLabel: "--" };
+            case "symlink":           return { icon: this.icons.symlink, typeLabel: entry.type };
+            case "disk":              return { icon: this.icons.disk,    typeLabel: entry.type };
+            case "rom":               return { icon: this.icons.rom,     typeLabel: entry.type };
+            case "usb":               return { icon: this.icons.usb,     typeLabel: entry.type };
+            case "edex-theme":        return { icon: this.edexIcons.theme,        typeLabel: "nDEX-UI theme" };
+            case "edex-kblayout":     return { icon: this.edexIcons.kblayout,     typeLabel: "nDEX-UI keyboard layout" };
+            case "edex-settings":
+            case "edex-shortcuts":    return { icon: this.edexIcons.settings,     typeLabel: "nDEX-UI config file" };
+            case "system":            return { icon: this.edexIcons.settings,     typeLabel: entry.type };
+            case "edex-themesDir":    return { icon: this.edexIcons.themesDir,    typeLabel: "nDEX-UI themes folder" };
+            case "edex-kblayoutsDir": return { icon: this.edexIcons.kblayoutsDir, typeLabel: "nDEX-UI keyboards folder" };
+            default: return this._resolveDefaultIcon(entry);
+        }
+    }
 
-            filesDOM += `<div class="fs_pane_item fs_disp_${entry.type}${hidden} animationWait" data-idx="${blockIndex}"${draggable ? ' draggable="true"' : ""}>
+    _resolveDefaultIcon(entry) {
+        const iconName = this.fileIconsMatcher(entry.name);
+        let icon = this.icons[iconName];
+        let typeLabel = "";
+        if (typeof icon === "undefined") {
+            if (entry.type === "file") icon = this.icons.file;
+            if (entry.type === "dir") { icon = this.icons.dir; typeLabel = "folder"; }
+            if (typeof icon === "undefined") icon = this.icons.other;
+        } else if (entry.category !== "dir") {
+            typeLabel = iconName.replace("icon-", "");
+        } else {
+            typeLabel = "special folder";
+        }
+        if (typeLabel === "") typeLabel = entry.type;
+        return { icon, typeLabel };
+    }
+
+    _isMediaType(t) {
+        return t === "video" || t === "audio" || t === "image";
+    }
+
+    // Real files/dirs are draggable; the up / showDisks / system pseudo-
+    // entries and anything without a backing path are not.
+    _isDraggable(entry) {
+        if (!entry.path) return false;
+        if (entry.type === "up" || entry.type === "--") return false;
+        if (entry.category === "showDisks" || entry.category === "up") return false;
+        return true;
+    }
+
+    _buildItemHTML(entry, blockIndex, icon, typeLabel) {
+        const hidden = entry.hidden ? " hidden" : "";
+        const sizeStr = typeof entry.size === "number" ? this._formatBytes(entry.size) : "--";
+        const lastStr = typeof entry.lastAccessed === "number" ? new Date(entry.lastAccessed).toLocaleString() : "--";
+        const draggable = this._isDraggable(entry);
+        return `<div class="fs_pane_item fs_disp_${entry.type}${hidden} animationWait" data-idx="${blockIndex}"${draggable ? ' draggable="true"' : ""}>
                             <svg viewBox="0 0 ${icon.width} ${icon.height}" fill="${this.iconcolor}">${icon.svg}</svg>
                             <h3>${entry.name}</h3>
                             <h4>${typeLabel}</h4>
                             <h4>${sizeStr}</h4>
                             <h4>${lastStr}</h4>
                         </div>`;
-        });
-        this.filesContainer.innerHTML = filesDOM;
+    }
 
-        // Render animation — fade items in with a small audible tick.
+    // Fade items in with a small audible tick per visible row.
+    async _playRenderAnimation() {
         let id = 0;
         while (this.filesContainer.childNodes[id]) {
             const el = this.filesContainer.childNodes[id];

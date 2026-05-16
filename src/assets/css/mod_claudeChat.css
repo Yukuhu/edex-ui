@@ -330,6 +330,15 @@ div.modal_popup .claudeChat_backendLine button#claudeChat_backendToggle.gemma-lo
     color: var(--color_light_black);
 }
 
+/* WebGPU probe came back unavailable — see _refreshBackendButton.
+   The click handler stays wired so users still get a status-line
+   explanation; this visual just signals "you can't switch here". */
+div.modal_popup .claudeChat_backendLine button#claudeChat_backendToggle.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
 /* Scrollbar in scrollback */
 div.modal_popup .claudeChat_scrollback::-webkit-scrollbar {
     width: 0.6vh;

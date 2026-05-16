@@ -403,6 +403,33 @@ class ClaudeChat {
             }
         }
 
+        // Track the WebGPU availability probe. Updates the backend
+        // toggle's enabled/tooltip state and, if the user happens to
+        // be on Gemma when the probe reports unavailable, falls back
+        // to claude-cli so the next submit doesn't head straight into
+        // an error path. Probe is one-shot, but we keep the listener
+        // registered for the modal's lifetime in case the engine ever
+        // re-probes (future-proofing — current implementation does
+        // not).
+        this._onGemmaAvailability = () => {
+            const av = window.gemmaEngine?.availability;
+            if (av?.state === "unavailable" && this.chatBackend === "gemma-local") {
+                this.chatBackend = "claude-cli";
+                if (!window.settings) window.settings = {};
+                window.settings.chatBackend = "claude-cli";
+                this.status.innerText = `Local Gemma unavailable: ${av.reason} Switched to Claude CLI.`;
+            }
+            this._refreshBackendButton();
+        };
+        if (window.gemmaEngine) {
+            window.gemmaEngine.addEventListener("availabilitychange", this._onGemmaAvailability);
+            // If the probe already resolved before the modal opened (it
+            // races construction in _renderer.js), apply the result now.
+            if (window.gemmaEngine.availability?.state !== "unknown") {
+                this._onGemmaAvailability();
+            }
+        }
+
         this.sendBtn.addEventListener("click", () => this._submit());
         this.input.addEventListener("keydown", e => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -564,7 +591,9 @@ class ClaudeChat {
 
     _submitGemma(prompt) {
         if (!window.gemmaEngine?.isAvailable) {
-            this._appendErrorLine("WebGPU is not available — local Gemma backend disabled.");
+            const reason = window.gemmaEngine?.availability?.reason
+                || "WebGPU is not available — local Gemma backend disabled.";
+            this._appendErrorLine(reason);
             this._finalizeAssistant();
             this.status.innerText = "Error.";
             if (this.avatar) this.avatar.setState("error");
@@ -610,6 +639,20 @@ class ClaudeChat {
 
     _toggleBackend() {
         const next = this.chatBackend === "gemma-local" ? "claude-cli" : "gemma-local";
+        // Refuse to switch to Gemma when the WebGPU probe came back
+        // unavailable — the button is also marked disabled visually
+        // via _refreshBackendButton, but the click handler is still
+        // wired, so reject here and surface the reason in the status
+        // line. Switching the other way (gemma-local → claude-cli) is
+        // always permitted: it's the safe direction even if Gemma was
+        // somehow active.
+        if (next === "gemma-local") {
+            const av = window.gemmaEngine?.availability;
+            if (av?.state === "unavailable") {
+                this.status.innerText = `Local Gemma unavailable: ${av.reason}`;
+                return;
+            }
+        }
         // Cancel any in-flight request on the OLD backend cleanly so
         // the switch doesn't leave an orphaned subprocess turn or an
         // active WebGPU generate fighting the user's new context.
@@ -646,6 +689,19 @@ class ClaudeChat {
         const onGemma = this.chatBackend === "gemma-local";
         this.backendToggle.textContent = onGemma ? "LOCAL GEMMA" : "CLAUDE CLI";
         this.backendToggle.classList.toggle("gemma-local", onGemma);
+
+        // When the WebGPU probe reports unavailable, mark the toggle as
+        // disabled with the probe's reason in the tooltip. We do NOT
+        // disable the underlying click handler — `_toggleBackend`
+        // refuses the switch and surfaces the reason in the status
+        // line, which is more discoverable than a silent button that
+        // does nothing.
+        const av = window.gemmaEngine?.availability;
+        const unavailable = av?.state === "unavailable";
+        this.backendToggle.classList.toggle("disabled", unavailable);
+        this.backendToggle.title = unavailable
+            ? `Local Gemma unavailable: ${av.reason}`
+            : "";
     }
 
     _toggleVoice() {
@@ -984,6 +1040,15 @@ class ClaudeChat {
     }
 
     _attachSourcesIcon(bubble, sources) {
+        // Sources/Citations are byproducts of the Claude CLI's
+        // WebSearch/WebFetch tools; the Gemma backend has no
+        // equivalent and routes its `done` events through the
+        // `_gemmaListeners.done` path, which never calls this method.
+        // This is defence-in-depth so the invariant ("the 🔗 icon
+        // never decorates a Gemma reply") is enforced at the only
+        // place that could possibly violate it, not just inferred
+        // from the call graph.
+        if (this.chatBackend !== "claude-cli") return;
         const icon = document.createElement("button");
         icon.className = "claudeChat_sourcesIcon";
         icon.type = "button";
@@ -1105,6 +1170,9 @@ class ClaudeChat {
             for (const [name, fn] of Object.entries(this._gemmaListeners)) {
                 window.gemmaEngine.removeEventListener(name, fn);
             }
+        }
+        if (window.gemmaEngine && this._onGemmaAvailability) {
+            window.gemmaEngine.removeEventListener("availabilitychange", this._onGemmaAvailability);
         }
         if (this._longTaskObserver) {
             try { this._longTaskObserver.disconnect(); } catch (_) {}

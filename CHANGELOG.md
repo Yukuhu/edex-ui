@@ -17,6 +17,27 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **WebGPU capability probe + UI gating for the local Gemma backend**.
+  `GemmaEngine` now runs an async `navigator.gpu.requestAdapter()`
+  probe at construction (an existence check on `navigator.gpu` only
+  reports the API surface, not whether a real adapter is reachable),
+  caches the result on `availability = { state, reason? }`, and fires
+  an `availabilitychange` event when the probe resolves. The Claude
+  Chat modal listens for that event: when the result is
+  `"unavailable"` the backend toggle is greyed out with the probe's
+  reason in its tooltip, `_toggleBackend` refuses to switch to
+  `gemma-local` (and surfaces the reason in the status line), and a
+  modal that happened to open on Gemma falls back to `claude-cli` so
+  the next submit doesn't head straight into the error path. The
+  settings editor's `chatBackend` dropdown disables the `gemma-local`
+  option with the same tooltip. `_ensureLoaded` short-circuits with a
+  `loaderror` carrying the probe reason before spawning the worker,
+  so a stray `load()` from a future caller can't bypass the gating.
+  Defence-in-depth guard in `_attachSourcesIcon` enforces the "🔗
+  source-count icon never decorates a Gemma reply" invariant at the
+  only call site that could violate it (Sources/Citations come from
+  the CLI's WebSearch/WebFetch tool outputs and have no analogue on
+  the Gemma path). (Closes #90)
 - **Persistent FS cache for the Gemma model** under
   `<userData>/gemma-cache/`. The engine resolves this path via
   `@electron/remote`, ensures the directory exists, and passes it to

@@ -45,7 +45,8 @@ class GemmaEngine extends EventTarget {
         this._loadPromise = null;
         this._loadResolve = null;
         this._loadReject = null;
-        this._generatePending = null; // { id, resolve, reject }
+        // When a generation is in flight: holds the pending id plus its resolve/reject. null otherwise.
+        this._generatePending = null;
         this._genNextId = 1;
         // Resolved on first use and memoised. Lives under the app's
         // userData path so the cache survives across launches and is
@@ -109,11 +110,11 @@ class GemmaEngine extends EventTarget {
     _resolveCacheDir() {
         if (this._cacheDir) return this._cacheDir;
         try {
-            const path = require("path");
+            const path = require("node:path");
             const userData = require("@electron/remote").app.getPath("userData");
             this._cacheDir = path.join(userData, "gemma-cache");
             try {
-                require("fs").mkdirSync(this._cacheDir, { recursive: true });
+                require("node:fs").mkdirSync(this._cacheDir, { recursive: true });
             } catch (_) { /* exists or unwritable — let the worker surface the real error */ }
         } catch (err) {
             console.warn("[Gemma] couldn't resolve cache dir, falling back to transformers.js default:", err);
@@ -131,7 +132,7 @@ class GemmaEngine extends EventTarget {
         if (!cacheDir) return;
         let free;
         try {
-            const { bsize, bavail } = require("fs").statfsSync(cacheDir);
+            const { bsize, bavail } = require("node:fs").statfsSync(cacheDir);
             free = bsize * bavail;
         } catch (err) {
             // statfsSync is Node 19+; Electron 42 ships Node 22+. If
@@ -291,7 +292,12 @@ class GemmaEngine extends EventTarget {
         // `state` is still "unknown" but the machine has no adapter.
         // Re-enter once the probe lands so the unavailable branch
         // below catches it.
-        if (this.availability?.state === "unknown" && this._availabilityProbe) {
+        // Nullish check, not a Promise-truthiness check — the probe is
+        // always either null or a Promise reference; we want "is the
+        // probe in flight?", not "did the probe resolve to a truthy
+        // value?". `!= null` keeps Sonar's S6544 happy and reads
+        // explicitly.
+        if (this.availability?.state === "unknown" && this._availabilityProbe != null) {
             return this._availabilityProbe.then(() => this._ensureLoaded(dtype));
         }
         if (this._loadedDtype === dtype && this._loadPromise === null) {

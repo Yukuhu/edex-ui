@@ -950,7 +950,21 @@ window.openSettings = async () => {
                                     list.find(b => b.id === cur) || {id: cur, label: cur},
                                     ...list.filter(b => b.id !== cur)
                                 ];
-                                return ordered.map(b => `<option value="${b.id}">${b.label}</option>`).join("");
+                                // If the WebGPU probe came back unavailable,
+                                // grey out the gemma-local option with the
+                                // probe's reason in the tooltip. Leaving it
+                                // visible (rather than removing it) keeps the
+                                // dropdown consistent across machines and lets
+                                // users see why the backend is gated.
+                                const av = window.gemmaEngine?.availability;
+                                const gemmaDown = av?.state === "unavailable";
+                                const reason = gemmaDown ? (av.reason || "WebGPU not supported.") : "";
+                                return ordered.map(b => {
+                                    const disable = gemmaDown && b.id === "gemma-local";
+                                    const title = disable ? ` title="${window._escapeHtml(reason)}"` : "";
+                                    const suffix = disable ? " — unavailable" : "";
+                                    return `<option value="${b.id}"${disable ? " disabled" : ""}${title}>${b.label}${suffix}</option>`;
+                                }).join("");
                             })()}
                         </select></td>
                     </tr>

@@ -8,13 +8,16 @@
 //
 // Events (all CustomEvent; see dispatchEvent call sites for detail
 // shapes):
-//   progress    — { ...transformers progress event }   ← same as TtsEngine
-//   loadstart   — { dtype }                            ← same as TtsEngine
-//   loadready   — { dtype, backend, loadMs }           ← same as TtsEngine
-//   loaderror   — { message }                          ← same as TtsEngine
-//   delta       — { text }                             ← per streamed chunk
-//   done        — { tokens, genMs, tokensPerSec, cancelled }
-//   error       — { message }                          ← generation failures
+//   progress           — { ...transformers progress event }   ← same as TtsEngine
+//   loadstart          — { dtype }                            ← same as TtsEngine
+//   loadready          — { dtype, backend, loadMs }           ← same as TtsEngine
+//   loaderror          — { message }                          ← same as TtsEngine
+//   delta              — { text }                             ← per streamed chunk
+//   done               — { tokens, genMs, tokensPerSec, cancelled }
+//   error              — { message }                          ← generation failures
+//   availabilitychange — { state, reason? }                   ← fires once when the
+//                                                               WebGPU adapter probe
+//                                                               resolves
 
 class GemmaEngine extends EventTarget {
     static DEFAULT_DTYPE = "q4f16";
@@ -49,6 +52,48 @@ class GemmaEngine extends EventTarget {
         // visible to the user (and `rm -rf`-able if they want to wipe
         // the multi-GB model files manually).
         this._cacheDir = null;
+
+        // WebGPU availability probe — `navigator.gpu` only tells us the
+        // API surface is present; `requestAdapter()` is what reveals
+        // whether a real adapter is reachable (driver enabled, GPU
+        // visible to the renderer, ANGLE/Vulkan path negotiated). We
+        // run it once at construction, cache the result, and fire
+        // `availabilitychange` so consumers can refresh their UI.
+        // States:
+        //   "unknown"     — probe hasn't completed yet
+        //   "available"   — a GPUAdapter was returned
+        //   "unavailable" — no API, no adapter, or the probe threw
+        this.availability = { state: "unknown" };
+        this._probeAvailability();
+    }
+
+    async _probeAvailability() {
+        let next;
+        if (typeof navigator === "undefined" || !navigator.gpu) {
+            next = {
+                state: "unavailable",
+                reason: "WebGPU is not exposed in this runtime — the local Gemma backend needs `navigator.gpu`."
+            };
+        } else {
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) {
+                    next = {
+                        state: "unavailable",
+                        reason: "No WebGPU adapter is available on this machine (no compatible GPU, drivers missing, or WebGPU disabled by policy)."
+                    };
+                } else {
+                    next = { state: "available" };
+                }
+            } catch (err) {
+                next = {
+                    state: "unavailable",
+                    reason: `WebGPU adapter probe failed: ${err?.message || String(err)}`
+                };
+            }
+        }
+        this.availability = next;
+        this.dispatchEvent(new CustomEvent("availabilitychange", { detail: next }));
     }
 
     // Path under userData where transformers.js stores Gemma model
@@ -104,7 +149,18 @@ class GemmaEngine extends EventTarget {
     // WebGPU is required for the model to fit (q4f16 is ~4 GB; WASM's
     // ~4 GB address-space cap leaves no room). Consumers should hide
     // the Gemma backend in their UI when this returns false.
+    //
+    // Two layers of detection:
+    //   - the async probe in `_probeAvailability` is authoritative once
+    //     it has resolved (calls `requestAdapter()` and remembers the
+    //     answer in `this.availability`);
+    //   - until then we fall back to the sync `navigator.gpu` API
+    //     surface check so the very first read (which happens before
+    //     the probe's microtask runs) doesn't spuriously report
+    //     unavailable on supported machines.
     get isAvailable() {
+        if (this.availability?.state === "available") return true;
+        if (this.availability?.state === "unavailable") return false;
         return typeof navigator !== "undefined" && !!navigator.gpu;
     }
     get isGenerating() { return this._generatePending !== null; }
@@ -229,6 +285,17 @@ class GemmaEngine extends EventTarget {
             return Promise.resolve();
         }
         if (this._loadPromise !== null) return this._loadPromise;
+
+        // Refuse to spin up the worker if the WebGPU probe came back
+        // unavailable — the in-worker `requestAdapter()` call would
+        // throw anyway, but doing it here keeps the error message
+        // user-facing (probe reason) rather than the generic worker
+        // error and avoids the boot-time transformers.js download.
+        if (this.availability?.state === "unavailable") {
+            const message = this.availability.reason || "WebGPU is not available on this machine.";
+            this.dispatchEvent(new CustomEvent("loaderror", { detail: { message } }));
+            return Promise.reject(new Error(message));
+        }
 
         // Cheap up-front sanity check: bail before we spawn a worker
         // and start fetching multi-GB shards if the cache drive can't

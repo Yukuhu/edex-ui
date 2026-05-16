@@ -231,6 +231,13 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Fixed
 
+- **Terminal no longer crashes on init under xterm v5**: the
+  ligatures addon's `registerCharacterJoiner` moved behind a proposed-
+  API opt-in flag in xterm 5.x. Without it, fresh installs threw
+  `You must set the allowProposedApi option to true to use proposed
+  API` from `LigaturesAddon.activate` and never reached UI ready.
+  Added `allowProposedApi: true` to the `xTerm` constructor in
+  `terminal.class.js`. (Closes #95)
 - **EPIPE no longer pops the "nDEX-UI crashed" dialog**: the main
   process's `uncaughtException` handler now skips the dialog for
   `e.code === "EPIPE"`, which is benign collateral when killing the

@@ -310,9 +310,8 @@ class Keyboard {
             }
 
             // See #516
-            if (e.repeat === false || (e.repeat === true && !e.code.startsWith('Shift') && !e.code.startsWith('Alt') && !e.code.startsWith('Control') && !e.code.startsWith('Caps'))) {
-                if(this.container.dataset.passwordMode == "false")
-                    window.audioManager.stdin.play();
+            if (this._shouldPlayTypingSound(e)) {
+                window.audioManager.stdin.play();
             }
         };
 
@@ -560,6 +559,21 @@ class Keyboard {
         this.container.dataset.passwordMode = d;
         window.passwordMode = d;
         return d;
+    }
+
+    // Whether keydown should play the typing tick. Silent in password
+    // mode, and on repeats of pure-modifier keys (#516: Shift/Alt/Ctrl/
+    // Caps held down doesn't tick once per OS repeat). Mirrors the
+    // original strict `=== true` / `=== false` checks so non-boolean
+    // `e.repeat` values fall through to "don't play" exactly as before.
+    _shouldPlayTypingSound(e) {
+        if (this.container.dataset.passwordMode !== "false") return false;
+        if (e.repeat === false) return true;
+        if (e.repeat !== true) return false;
+        return !e.code.startsWith("Shift")
+            && !e.code.startsWith("Alt")
+            && !e.code.startsWith("Control")
+            && !e.code.startsWith("Caps");
     }
     addCircum(char) {
         switch(char) {

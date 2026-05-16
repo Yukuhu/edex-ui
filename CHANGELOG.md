@@ -36,8 +36,8 @@ original author Gabriel "Squared" SAILLARD — see the README
   documented weights + ~1 GB cushion for `.incomplete` shards and ORT
   session scratch). Fires the existing `loaderror` event so the chat
   modal surfaces it through the same error path as any other load
-  failure, with a message that names the cache dir and the actual
-  free-bytes count.
+  failure, with a message that names the cache dir and reports the
+  available free space (in rounded GB, matching the runtime payload).
 - **`chatBackend` and `gemmaDtype` settings rows** in the in-app
   settings editor (`Ctrl+Shift+S`). Both keys were already in
   `_boot.js` defaults and the `writeSettingsFile` serializer as

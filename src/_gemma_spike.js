@@ -43,12 +43,24 @@
         const body = document.getElementById("gemma-spike-body");
         body.textContent += line + "\n";
         panel.scrollTop = panel.scrollHeight;
+        console.log("[gemma-spike]", line);
     }
+    let rawBuf = "";
     function writeRaw(text) {
         ensurePanel();
         const body = document.getElementById("gemma-spike-body");
         body.textContent += text;
         panel.scrollTop = panel.scrollHeight;
+        // Buffer streamed tokens and flush a single console line per
+        // newline (and at end-of-run via a final write()) so the console
+        // mirrors the overlay without one-line-per-token spam.
+        rawBuf += text;
+        const nl = rawBuf.lastIndexOf("\n");
+        if (nl >= 0) {
+            const flush = rawBuf.slice(0, nl);
+            rawBuf = rawBuf.slice(nl + 1);
+            console.log("[gemma-spike]", flush);
+        }
     }
 
     window.gemmaSpike = async function gemmaSpike(prompt) {
@@ -76,12 +88,31 @@
 
         const done = new Promise((resolve, reject) => {
             worker.addEventListener("error", (err) => {
-                write(`[worker:error] ${err.message || err}`);
-                reject(err);
+                const detail = [
+                    err.message || "(no message)",
+                    err.filename ? `at ${err.filename}:${err.lineno || "?"}:${err.colno || "?"}` : null,
+                    err.error ? `(${err.error.stack || err.error.message || err.error})` : null
+                ].filter(Boolean).join(" ");
+                write(`[worker:error] ${detail}`);
+                console.error("[gemma-spike] worker error event:", err);
+                reject(new Error(detail));
+            });
+            worker.addEventListener("messageerror", (err) => {
+                write(`[worker:messageerror] ${err}`);
+                console.error("[gemma-spike] worker messageerror:", err);
             });
             worker.addEventListener("message", (ev) => {
                 const m = ev.data || {};
                 switch (m.type) {
+                    case "boot": {
+                        let line = `[boot] ${m.phase}`;
+                        if (m.version) line += ` v${m.version}`;
+                        if (m.envKeys) line += ` env=[${m.envKeys.join(",")}]`;
+                        if (m.onnxKeys) line += ` onnx=[${m.onnxKeys.join(",")}]`;
+                        if (m.wasmDir) line += ` wasm=${m.wasmDir}`;
+                        write(line);
+                        break;
+                    }
                     case "load-progress": {
                         const e = m.event || {};
                         if (e.status === "progress" && typeof e.progress === "number") {

@@ -2,51 +2,30 @@
 // WebGPU via @huggingface/transformers v4 and streams a few tokens
 // back. NOT production wiring — no graceful fallback, no resumable
 // download, no progress modal. Triggered from a dev-console launcher
-// (see src/_gemma_spike.js) to answer:
-//
-//   1. Does `onnx-community/gemma-4-E4B-it-ONNX` (q4f16) actually load
-//      and stream under WebGPU inside Electron 42's renderer?
-//   2. Does `@huggingface/transformers` v4 work in a module worker
-//      alongside the kokoro-js@1.2.1 nested v3 install?
+// (see src/_gemma_spike.js).
 //
 // Must be loaded as an ES module worker:
 //   new Worker("workers/gemma-spike-worker.js", { type: "module" })
 //
-// Message protocol (one-shot, throwaway):
-//   in:  { type: "load" }
-//        { type: "generate", prompt: "..." }
-//   out: { type: "load-progress", event }
-//        { type: "load-ready", loadMs, backend }
-//        { type: "token", text }            // streamed chunk
-//        { type: "generate-done", genMs, tokens, tokensPerSec }
-//        { type: "error", phase, message }
+// Heavy diagnostic instrumentation: every phase posts a `boot` message
+// so we can tell exactly where things die. The transformers import is
+// dynamic (and try/catched) instead of a static `import` so an import
+// failure surfaces a real error message instead of the silent
+// no-message worker error event.
 
-import {
-    pipeline,
-    TextStreamer,
-    env
-} from "../node_modules/@huggingface/transformers/dist/transformers.web.js";
+self.postMessage({ type: "boot", phase: "worker-script-started" });
 
-// Gemma is multi-GB — keep FS caching ON so a relaunch is fast.
-// (Kokoro workers disable this; we deliberately diverge.)
-env.useFSCache = true;
-env.useBrowserCache = true;
+// Register the message listener BEFORE the top-level `await import`.
+// The renderer fires worker.postMessage({type:"load"}) immediately after
+// constructing the worker; if the listener isn't yet attached when the
+// message dispatches, the event is dropped silently. Queue early
+// messages and drain them once boot finishes.
+let pipeline, TextStreamer, env;
+let bootReady = false;
+const pendingMessages = [];
 
-// Point ORT at the local copy of ort-wasm-simd-threaded — same CSP
-// rationale as tts-worker-web.js.
-try {
-    const wasmDir = new URL(
-        "../node_modules/@huggingface/transformers/dist/",
-        import.meta.url
-    ).href;
-    env.backends.onnx.wasm.wasmPaths = wasmDir;
-} catch (_) { /* fall back to defaults */ }
-
-let generator = null;
-
-self.addEventListener("message", async (event) => {
-    if (event.origin && event.origin !== self.location.origin) return; // S2819
-    const msg = event.data || {};
+async function dispatch(msg) {
+    self.postMessage({ type: "boot", phase: `message-received-${msg.type}` });
     try {
         if (msg.type === "load") {
             await handleLoad();
@@ -57,12 +36,97 @@ self.addEventListener("message", async (event) => {
         self.postMessage({
             type: "error",
             phase: msg.type,
-            message: err?.message ? err.message : String(err)
+            message: err?.stack || err?.message || String(err)
         });
     }
+}
+
+self.addEventListener("message", (event) => {
+    const msg = event.data || {};
+    if (!bootReady) {
+        self.postMessage({ type: "boot", phase: `message-queued-${msg.type}` });
+        pendingMessages.push(msg);
+        return;
+    }
+    dispatch(msg);
 });
 
+try {
+    // Use transformers.min.js (the standalone-bundled build) rather
+    // than transformers.web.js (the bundler-target build). The .web.*
+    // variants emit `import "onnxruntime-web/webgpu"` — a bare
+    // specifier that module workers can't resolve. .min.js inlines
+    // ORT directly so it just loads.
+    const m = await import("../node_modules/@huggingface/transformers/dist/transformers.min.js");
+    pipeline = m.pipeline;
+    TextStreamer = m.TextStreamer;
+    env = m.env;
+    self.postMessage({
+        type: "boot",
+        phase: "transformers-imported",
+        version: m.env?.version || "?",
+        hasPipeline: typeof pipeline === "function",
+        hasStreamer: typeof TextStreamer === "function"
+    });
+} catch (importErr) {
+    self.postMessage({
+        type: "error",
+        phase: "import",
+        message: importErr?.stack || importErr?.message || String(importErr)
+    });
+    throw importErr;
+}
+
+// Gemma is multi-GB — keep FS caching ON so a relaunch is fast.
+// (Kokoro workers disable this; we deliberately diverge.)
+try {
+    // Best-effort env config — v4's transformers.min.js bundles ORT
+    // inline, so wasmPaths is usually unnecessary. Only set fields
+    // that actually exist; never throw on a missing nested object.
+    if ("useFSCache" in env) env.useFSCache = true;
+    if ("useFS" in env) env.useFS = true;
+    if ("useBrowserCache" in env) env.useBrowserCache = true;
+    const onnxBackend = env?.backends?.onnx;
+    let wasmDir = null;
+    if (onnxBackend?.wasm && typeof onnxBackend.wasm === "object") {
+        wasmDir = new URL(
+            "../node_modules/@huggingface/transformers/dist/",
+            import.meta.url
+        ).href;
+        onnxBackend.wasm.wasmPaths = wasmDir;
+    }
+    self.postMessage({
+        type: "boot",
+        phase: "env-configured",
+        wasmDir,
+        envKeys: Object.keys(env).slice(0, 20),
+        onnxKeys: onnxBackend ? Object.keys(onnxBackend) : null
+    });
+} catch (envErr) {
+    self.postMessage({
+        type: "error",
+        phase: "env-config",
+        message: envErr?.stack || envErr?.message || String(envErr)
+    });
+    throw envErr;
+}
+
+let generator = null;
+
+bootReady = true;
+self.postMessage({
+    type: "boot",
+    phase: "ready-for-messages",
+    queued: pendingMessages.length
+});
+
+// Drain any messages that arrived during top-level await.
+while (pendingMessages.length > 0) {
+    dispatch(pendingMessages.shift());
+}
+
 async function handleLoad() {
+    self.postMessage({ type: "boot", phase: "load-handler-entered" });
     if (generator) {
         self.postMessage({ type: "load-ready", loadMs: 0, backend: "webgpu", cached: true });
         return;
@@ -71,12 +135,20 @@ async function handleLoad() {
     if (typeof navigator === "undefined" || !navigator.gpu) {
         throw new Error("WebGPU not available in worker context");
     }
+    self.postMessage({ type: "boot", phase: "load-navigator-gpu-present" });
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) {
         throw new Error("WebGPU requestAdapter() returned null");
     }
+    self.postMessage({
+        type: "boot",
+        phase: "load-adapter-ok",
+        vendor: adapter.info?.vendor,
+        arch: adapter.info?.architecture
+    });
 
     const loadStart = performance.now();
+    self.postMessage({ type: "boot", phase: "load-calling-pipeline" });
     generator = await pipeline(
         "text-generation",
         "onnx-community/gemma-4-E4B-it-ONNX",
@@ -89,6 +161,7 @@ async function handleLoad() {
         }
     );
     const loadMs = performance.now() - loadStart;
+    self.postMessage({ type: "boot", phase: "load-pipeline-returned", loadMs });
 
     self.postMessage({ type: "load-ready", loadMs, backend: "webgpu", cached: false });
 }

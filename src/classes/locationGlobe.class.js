@@ -2,7 +2,7 @@ class LocationGlobe {
     constructor(parentId) {
         if (!parentId) throw "Missing parameters";
 
-        const path = require("path");
+        const path = require("node:path");
 
         this._geodata = require(path.join(__dirname, "assets/misc/grid.json"));
         require(path.join(__dirname, "assets/vendor/encom-globe.js"));

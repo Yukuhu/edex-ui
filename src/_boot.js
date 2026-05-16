@@ -49,9 +49,9 @@ signale.time("Startup");
 const electron = require("electron");
 require('@electron/remote/main').initialize()
 const ipc = electron.ipcMain;
-const path = require("path");
-const url = require("url");
-const fs = require("fs");
+const path = require("node:path");
+const url = require("node:url");
+const fs = require("node:fs");
 const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
 
@@ -316,7 +316,7 @@ app.on('ready', async () => {
     signale.info(`Shell found at ${settings.shell}`);
     signale.success(`Settings loaded!`);
 
-    if (!require("fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
+    if (!require("node:fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
 
     // See #366
     let cleanEnv = await require("shell-env")(settings.shell).catch(e => { throw e; });

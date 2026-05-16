@@ -39,7 +39,7 @@ class Netstat {
         this.failedAttempts = {};
         this.runsBeforeGeoIPUpdate = 0;
 
-        this._httpsAgent = new (require("https").Agent)({
+        this._httpsAgent = new (require("node:https").Agent)({
             keepAlive: false,
             maxSockets: 10
         });
@@ -123,7 +123,7 @@ class Netstat {
                 offline = true;
             } else {
                 if (this.runsBeforeGeoIPUpdate === 0 && this.lastconn.finished) {
-                    this.lastconn = require("https").get({host: "myexternalip.com", port: 443, path: "/json", localAddress: net.ip4, agent: this._httpsAgent}, res => {
+                    this.lastconn = require("node:https").get({host: "myexternalip.com", port: 443, path: "/json", localAddress: net.ip4, agent: this._httpsAgent}, res => {
                         let rawData = "";
                         res.on("data", chunk => {
                             rawData += chunk;
@@ -178,7 +178,7 @@ class Netstat {
 
     ping(target, port, local) {
         return new Promise((resolve, reject) => {
-            let s = new (require("net").Socket)();
+            let s = new (require("node:net").Socket)();
             let start = process.hrtime();
 
             s.connect({

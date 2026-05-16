@@ -1,18 +1,18 @@
-const cluster = require("cluster");
+const cluster = require("node:cluster");
 
 if (cluster.isMaster) {
     const electron = require("electron");
     const ipc = electron.ipcMain;
     const signale = require("signale");
     // Also, leave a core available for the renderer process
-    const osCPUs = require("os").cpus().length - 1;
+    const osCPUs = require("node:os").cpus().length - 1;
     // See #904
     const numCPUs = (osCPUs > 7) ? 7 : osCPUs;
 
     const si = require("systeminformation");
 
     cluster.setupMaster({
-        exec: require("path").join(__dirname, "_multithread.js")
+        exec: require("node:path").join(__dirname, "_multithread.js")
     });
 
     let workers = [];

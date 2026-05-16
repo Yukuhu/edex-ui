@@ -38,8 +38,8 @@ class WebApp {
         // concatenation is fragile on Windows (`file://C:\…` is
         // invalid); pathToFileURL handles drive letters and separator
         // conversion.
-        const path = require("path");
-        const url = require("url");
+        const path = require("node:path");
+        const url = require("node:url");
         const preloadUrl = url.pathToFileURL(path.join(__dirname, "classes/webApp-preload.js")).toString();
 
         this.disp = new Modal({

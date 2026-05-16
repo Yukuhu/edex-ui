@@ -26,11 +26,11 @@ class FsModal {
     }
 
     constructor() {
-        const os = require("os");
-        const path = require("path");
+        const os = require("node:os");
+        const path = require("node:path");
         this.osLib = os;
         this.pathLib = path;
-        this.fsLib = require("fs");
+        this.fsLib = require("node:fs");
 
         FsModal._instance = this;
         this.leftPane = null;

@@ -155,8 +155,8 @@ class ControlMenu {
             this._cache[kind] = entries;
             return entries;
         }
-        const fs = require("fs");
-        const path = require("path");
+        const fs = require("node:fs");
+        const path = require("node:path");
         const remote = require("@electron/remote");
         const userData = remote.app.getPath("userData");
         let dir, hot;

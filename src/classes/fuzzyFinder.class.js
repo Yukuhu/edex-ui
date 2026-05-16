@@ -93,7 +93,7 @@ class FuzzyFinder {
         // panel exposed this via window.fsDisp; that panel has been
         // retired in favor of the FsModal (Ctrl+Shift+E), so the
         // terminal is now the single source of truth.
-        const fs = require("fs");
+        const fs = require("node:fs");
         const term = window.term?.[window.currentTerm];
         let cwd = term?.cwd || window.settings?.cwd;
         if (cwd?.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);

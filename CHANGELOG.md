@@ -231,6 +231,12 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Fixed
 
+- **Terminal init crash under color v5 (ESM-only)**: `color@5` ships
+  as an ES module, so `require("color")` from `terminal.class.js`
+  returned the namespace object and `color(base)` threw "color is not
+  a function". Resolve the constructor via `.default` with a
+  function-shape fallback so both v3.x and v5+ keep working.
+  (Closes #93)
 - **Augmented-ui stylesheet 404 on fresh install**: `augmented-ui` v2
   renamed its dist file from `augmented.css` to `augmented-ui.css`.
   Updated the `<link>` in `ui.html`. (Closes #94)

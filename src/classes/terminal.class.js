@@ -72,7 +72,13 @@ class Terminal {
                 });
             }
 
-            let color = require("color");
+            // color v5 is ESM-only; under Node 22's require-of-ESM,
+            // `require("color")` resolves to the module namespace and
+            // the constructor lives on `.default`. Older v3.x exported
+            // the constructor as the module itself, so the legacy
+            // shape stays as a fallback for downgrades.
+            const colorMod = require("color");
+            const color = typeof colorMod === "function" ? colorMod : colorMod.default;
             let colorify;
             if (doCustomFilter) {
                 colorify = (base, target) => {

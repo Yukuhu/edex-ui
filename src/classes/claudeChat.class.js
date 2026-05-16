@@ -72,6 +72,39 @@ class ClaudeChat {
         { id: "q4",    label: "q4 (~50 MB, low)" }
     ];
 
+    // Canonicalise the `chatBackend` value read from settings.json.
+    // Pulled out as a static so #88's tests can exercise the real
+    // production logic rather than a duplicated helper.
+    //
+    // Accepts the pre-#88 short names ("cli" / "gemma") that were
+    // briefly canonical during the #87-only release, plus the post-
+    // #88 canonical names. Unknown values and missing settings fall
+    // through to "claude-cli" so a corrupt or future-version settings
+    // file degrades to the safe online backend.
+    static _migrateBackend(backendRaw) {
+        return (backendRaw === "gemma-local" || backendRaw === "gemma")
+            ? "gemma-local"
+            : "claude-cli";
+    }
+
+    // Chat backends. "claude-cli" is the existing IPC-to-subprocess path
+    // (requires an authenticated `claude` CLI on PATH). "gemma-local"
+    // routes turns through window.gemmaEngine — entirely in-app, WebGPU
+    // required.
+    static CHAT_BACKENDS = [
+        { id: "claude-cli",  label: "claude-cli (subprocess, online)" },
+        { id: "gemma-local", label: "gemma-local (WebGPU, offline)" }
+    ];
+
+    // Gemma 4 E4B ONNX quantization tiers. Each tier is downloaded
+    // on demand on first use and cached locally; switching back to a
+    // previously-used tier is free. Sizes are the q4f16 / q8 weights
+    // plus the embed-tokens shard and overhead.
+    static GEMMA_DTYPES = [
+        { id: "q4f16", label: "q4f16 (~3.6 GB, recommended for 8 GB VRAM)" },
+        { id: "q8",    label: "q8 (~6.8 GB, higher quality, needs >10 GB VRAM)" }
+    ];
+
     // Patterns shared between `_extractSources` (end-of-turn cleanup of
     // the bubble text) and the streaming TTS filter (`_ttsPushTail`).
     // Keeping them in one place ensures the spoken text and the rendered
@@ -220,12 +253,15 @@ class ClaudeChat {
         this.avatar = new AIAvatar(this.avatarCanvas);
         this.avatar.setState("idle");
 
-        // Chat backend selection. "cli" preserves existing behaviour
-        // (claude CLI subprocess via IPC); "gemma" routes turns through
-        // window.gemmaEngine + local WebGPU inference. The Gemma path
-        // maintains the transcript in-renderer and re-sends it each
-        // turn (no --resume equivalent on the local model).
-        this.chatBackend = window.settings?.chatBackend === "gemma" ? "gemma" : "cli";
+        // Chat backend selection. "claude-cli" preserves existing
+        // behaviour (claude CLI subprocess via IPC); "gemma-local"
+        // routes turns through window.gemmaEngine + local WebGPU
+        // inference. The Gemma path maintains the transcript in-
+        // renderer and re-sends it each turn (no --resume equivalent
+        // on the local model). The static _migrateBackend folds the
+        // pre-#88 short names ("cli" / "gemma") into the canonical
+        // ones so old settings.json files still work.
+        this.chatBackend = ClaudeChat._migrateBackend(window.settings?.chatBackend);
         this.transcript = [];
         // Reference to the just-pushed user message for the in-flight
         // Gemma turn; used to roll the transcript back on cancellation
@@ -311,7 +347,7 @@ class ClaudeChat {
                 // Only paint Gemma's download progress when Gemma is the
                 // active backend. TTS still owns the bar when the user
                 // is on CLI + voice on.
-                if (this.chatBackend === "gemma") this._onTtsProgress(ev.detail);
+                if (this.chatBackend === "gemma-local") this._onTtsProgress(ev.detail);
             },
             delta: ev => {
                 if (this._perf?.firstDeltaT === null) {
@@ -505,7 +541,7 @@ class ClaudeChat {
         this.input.value = "";
         this._beginAssistantBubble();
 
-        if (this.chatBackend === "gemma") {
+        if (this.chatBackend === "gemma-local") {
             this._submitGemma(prompt);
         } else {
             this._submitCli(prompt);
@@ -573,11 +609,11 @@ class ClaudeChat {
     }
 
     _toggleBackend() {
-        const next = this.chatBackend === "gemma" ? "cli" : "gemma";
+        const next = this.chatBackend === "gemma-local" ? "claude-cli" : "gemma-local";
         // Cancel any in-flight request on the OLD backend cleanly so
         // the switch doesn't leave an orphaned subprocess turn or an
         // active WebGPU generate fighting the user's new context.
-        if (this.chatBackend === "cli" && this.pendingReqId) {
+        if (this.chatBackend === "claude-cli" && this.pendingReqId) {
             this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
             // Late claude:delta IPC events are gated on pendingReqId
             // and harmlessly dropped once we finalize, but the
@@ -588,7 +624,7 @@ class ClaudeChat {
             this._appendErrorLine("[backend switch — claude request cancelled]");
             this._finalizeAssistant();
             if (this.avatar) this.avatar.setState("idle");
-        } else if (this.chatBackend === "gemma" && window.gemmaEngine?.isGenerating) {
+        } else if (this.chatBackend === "gemma-local" && window.gemmaEngine?.isGenerating) {
             window.gemmaEngine.cancel();
             // `done` event with cancelled:true will close out the bubble
             // and roll back the unmatched user turn from the transcript.
@@ -600,16 +636,16 @@ class ClaudeChat {
         if (!window.settings) window.settings = {};
         window.settings.chatBackend = next;
         this._refreshBackendButton();
-        this.status.innerText = next === "gemma"
+        this.status.innerText = next === "gemma-local"
             ? "Backend: local Gemma (WebGPU)."
             : "Backend: Claude CLI.";
     }
 
     _refreshBackendButton() {
         if (!this.backendToggle) return;
-        const onGemma = this.chatBackend === "gemma";
+        const onGemma = this.chatBackend === "gemma-local";
         this.backendToggle.textContent = onGemma ? "LOCAL GEMMA" : "CLAUDE CLI";
-        this.backendToggle.classList.toggle("gemma", onGemma);
+        this.backendToggle.classList.toggle("gemma-local", onGemma);
     }
 
     _toggleVoice() {

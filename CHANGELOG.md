@@ -17,6 +17,19 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **`chatBackend` and `gemmaDtype` settings rows** in the in-app
+  settings editor (`Ctrl+Shift+S`). Both keys were already in
+  `_boot.js` defaults and the `writeSettingsFile` serializer as
+  pass-throughs; this finishes the job by adding the actual editor
+  `<select>` rows so users can change them from the UI. `gemmaDtype`
+  offers `q4f16` (~3.6 GB, recommended for 8 GB VRAM) and `q8`
+  (~6.8 GB, higher quality). `chatBackend` offers `claude-cli`
+  (subprocess, online — default) and `gemma-local` (WebGPU,
+  offline). Canonicalised the internal `chatBackend` values from the
+  brief pre-#88 release (`"cli"` / `"gemma"`) to the longer names;
+  `claudeChat.class.js` and the settings-editor `<select>` accept
+  the short names too so existing `settings.json` files keep working
+  until the next editor save canonicalises them. (Closes #88)
 - **Chat backend toggle in the Claude Chat modal**: header now has a
   `CLAUDE CLI` ↔ `LOCAL GEMMA` button that routes turns to either the
   existing `claude` CLI subprocess (default, unchanged) or the local

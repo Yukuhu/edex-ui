@@ -85,8 +85,8 @@ window.onerror = (msg, path, line, col, error) => {
     document.getElementById("boot_screen").innerHTML += `${error} :  ${safeMsg}<br/>==> at ${path}  ${line}:${col}`;
 };
 
-const path = require("path");
-const fs = require("fs");
+const path = require("node:path");
+const fs = require("node:fs");
 const electron = require("electron");
 const remote = require("@electron/remote");
 const ipc = electron.ipcRenderer;
@@ -313,7 +313,7 @@ function displayLine() {
     let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
 
     function isArchUser() {
-        return require("os").platform() === "linux"
+        return require("node:os").platform() === "linux"
                 && fs.existsSync("/etc/os-release")
                 && fs.readFileSync("/etc/os-release").toString().includes("arch");
     }
@@ -1590,7 +1590,7 @@ document.addEventListener("keydown", e => {
 
 // Fix #265
 window.addEventListener("keyup", e => {
-    if (require("os").platform() === "win32" && e.key === "F4" && e.altKey === true) {
+    if (require("node:os").platform() === "win32" && e.key === "F4" && e.altKey === true) {
         remote.app.quit();
     }
 });

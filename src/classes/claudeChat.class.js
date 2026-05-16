@@ -140,7 +140,7 @@ class ClaudeChat {
 
     constructor() {
         this.ipc = require("electron").ipcRenderer;
-        this.sessionId = require("crypto").randomUUID();
+        this.sessionId = require("node:crypto").randomUUID();
         this.firstTurn = true;
         this.pendingReqId = null;
         this.activeAssistantBubble = null;

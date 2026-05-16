@@ -329,9 +329,9 @@ class Terminal {
             this._getTtyCWD = tty => {
                 return new Promise((resolve, reject) => {
                     let pid = tty._pid;
-                    switch(require("os").type()) {
+                    switch(require("node:os").type()) {
                         case "Linux":
-                            require("fs").readlink(`/proc/${pid}/cwd`, (e, cwd) => {
+                            require("node:fs").readlink(`/proc/${pid}/cwd`, (e, cwd) => {
                                 if (e !== null) {
                                     reject(e);
                                 } else {
@@ -340,7 +340,7 @@ class Terminal {
                             });
                             break;
                         case "Darwin":
-                            require("child_process").exec(`lsof -a -d cwd -p ${pid} | tail -1 | awk '{ for (i=9; i<=NF; i++) printf "%s ", $i }'`, (e, cwd) => {
+                            require("node:child_process").exec(`lsof -a -d cwd -p ${pid} | tail -1 | awk '{ for (i=9; i<=NF; i++) printf "%s ", $i }'`, (e, cwd) => {
                                 if (e !== null) {
                                     reject(e);
                                 } else {
@@ -356,10 +356,10 @@ class Terminal {
             this._getTtyProcess = tty => {
                 return new Promise((resolve, reject) => {
                     let pid = tty._pid;
-                    switch(require("os").type()) {
+                    switch(require("node:os").type()) {
                         case "Linux":
                         case "Darwin":
-                            require("child_process").exec(`ps -o comm --no-headers --sort=+pid -g ${pid} | tail -1`, (e, proc) => {
+                            require("node:child_process").exec(`ps -o comm --no-headers --sort=+pid -g ${pid} | tail -1`, (e, proc) => {
                                 if (e !== null) {
                                     reject(e);
                                 } else {

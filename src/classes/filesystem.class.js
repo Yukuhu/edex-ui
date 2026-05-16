@@ -22,8 +22,8 @@ class FilesystemDisplay {
     constructor(opts) {
         if (!opts || (!opts.container && !opts.parentId)) throw new Error("Missing options");
 
-        const fs = require("fs");
-        const path = require("path");
+        const fs = require("node:fs");
+        const path = require("node:path");
 
         this.fsLib = fs;
         this.pathLib = path;

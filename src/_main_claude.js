@@ -7,7 +7,7 @@
 // Conversation continuity within a modal session is achieved by passing
 // the same --session-id (a UUIDv4) to every spawn for that modal.
 
-const { spawn } = require("child_process");
+const { spawn } = require("node:child_process");
 const { ipcMain } = require("electron");
 
 let _cleanEnv = null;

@@ -4,7 +4,7 @@ class Sysinfo {
 
         // See #255
         let os;
-        switch (require("os").platform()) {
+        switch (require("node:os").platform()) {
             case "darwin":
                 os = "macOS";
                 break;
@@ -12,7 +12,7 @@ class Sysinfo {
                 os = "win";
                 break;
             default:
-                os = require("os").platform();
+                os = require("node:os").platform();
         }
 
         // Create DOM
@@ -99,7 +99,7 @@ class Sysinfo {
     }
     updateUptime() {
         let uptime = {
-            raw: Math.floor(require("os").uptime()),
+            raw: Math.floor(require("node:os").uptime()),
             days: 0,
             hours: 0,
             minutes: 0

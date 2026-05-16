@@ -1288,10 +1288,16 @@ const _renderShortcutsAppList = (shortcuts) => {
     let html = "";
     shortcuts.filter(e => e.type === "app").forEach(cut => {
         const action = cut.action.startsWith("TAB_") ? "TAB_X" : cut.action;
+        // SHORTCUTS_DEFINITION entries contain intentional inline HTML
+        // (<strong>, <code>, <br>) so they are emitted unescaped. The
+        // ?? fallback handles user-edited shortcuts.json entries whose
+        // action key isn't in the lookup; that path *is* user input, so
+        // escape it.
+        const description = SHORTCUTS_DEFINITION[action] ?? window._escapeHtml(action);
         html += `<tr>
                         <td>${cut.enabled ? 'YES' : 'NO'}</td>
-                        <td><input disabled type="text" maxlength=25 value="${cut.trigger}"></td>
-                        <td>${SHORTCUTS_DEFINITION[action]}</td>
+                        <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(cut.trigger)}"></td>
+                        <td>${description}</td>
                     </tr>`;
     });
     return html;
@@ -1302,9 +1308,9 @@ const _renderShortcutsCustomList = (shortcuts) => {
     shortcuts.filter(e => e.type === "shell").forEach(cut => {
         html += `<tr>
                             <td>${cut.enabled ? 'YES' : 'NO'}</td>
-                            <td><input disabled type="text" maxlength=25 value="${cut.trigger}"></td>
+                            <td><input disabled type="text" maxlength=25 value="${window._escapeHtml(cut.trigger)}"></td>
                             <td>
-                                <input disabled type="text" placeholder="Run terminal command..." value="${cut.action}">
+                                <input disabled type="text" placeholder="Run terminal command..." value="${window._escapeHtml(cut.action)}">
                                 <input disabled type="checkbox" name="shortcutsHelpNew_Enter" ${cut.linebreak ? 'checked' : ''}>
                                 <label for="shortcutsHelpNew_Enter">Enter</label>
                             </td>
@@ -1333,7 +1339,7 @@ const _shortcutsHelpHTML = (appList, customList) => `<h5>Using either the on-scr
                             <th>Enabled</th>
                             <th>Trigger</th>
                             <th>Command</th>
-                        <tr>
+                        </tr>
                        ${customList}
                     </table>
                 </details>

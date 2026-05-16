@@ -165,52 +165,67 @@ class FsModal {
     }
 
     async _handleDrop({ srcPath, srcName, move, targetPane }) {
-        // Resolve destination inside the target pane's CWD.
-        const dstDir = targetPane.dirpath;
-        if (!dstDir) {
-            this._info("Target pane has no current directory.");
+        const check = this._validateDrop({ srcPath, srcName, targetPane });
+        if (!check.ok) {
+            if (check.reason) this._info(check.reason);
             return;
         }
-        const dstPath = this.pathLib.join(dstDir, srcName);
+        const { dstPath } = check;
 
-        // No-op if dropping in the same directory.
-        const srcDir = this.pathLib.dirname(srcPath);
-        if (this.pathLib.resolve(srcDir) === this.pathLib.resolve(dstDir)) return;
-
-        // Sanity gate — refuse anything that would touch / or move root.
-        if (srcPath === "/" || dstPath === "/" || srcPath === "" || dstPath === "") {
-            this._info("Refusing destructive operation on the filesystem root.");
-            return;
-        }
-
-        // Detect overwrite and prompt.
-        let exists = false;
-        try { exists = this.fsLib.existsSync(dstPath); } catch (_) {}
-        if (exists) {
-            const proceed = await this._confirm(`Overwrite ${srcName}?`, dstPath);
-            if (!proceed) return;
-        }
+        const exists = this._dstExists(dstPath);
+        if (exists && !(await this._confirm(`Overwrite ${srcName}?`, dstPath))) return;
 
         try {
-            if (move) {
-                try {
-                    await this.fsLib.promises.rename(srcPath, dstPath);
-                } catch (err) {
-                    if (err?.code === "EXDEV") {
-                        // Cross-device — fall back to copy + delete.
-                        await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: true, dereference: false });
-                        await this.fsLib.promises.rm(srcPath, { recursive: true, force: true });
-                    } else { throw err; }
-                }
-            } else {
-                await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: !!exists, dereference: false });
-            }
+            if (move) await this._executeMove(srcPath, dstPath);
+            else await this._executeCopy(srcPath, dstPath, exists);
         } catch (err) {
-            this._info(`${move ? "Move" : "Copy"} failed: ${err?.message ? err.message : String(err)}`);
+            const msg = err?.message ? err.message : String(err);
+            this._info(`${move ? "Move" : "Copy"} failed: ${msg}`);
             return;
         }
 
-        // Refresh both panes so the change is visible everywhere.
+        await this._refreshBothPanes();
+    }
+
+    // Drop pre-checks. Returns { ok, dstPath } on success, or
+    // { ok: false, reason } where `reason` is null for the silent
+    // same-directory no-op and a user-facing string otherwise.
+    _validateDrop({ srcPath, srcName, targetPane }) {
+        const dstDir = targetPane.dirpath;
+        if (!dstDir) return { ok: false, reason: "Target pane has no current directory." };
+
+        const dstPath = this.pathLib.join(dstDir, srcName);
+        const srcDir = this.pathLib.dirname(srcPath);
+        if (this.pathLib.resolve(srcDir) === this.pathLib.resolve(dstDir)) {
+            return { ok: false, reason: null };
+        }
+        if (srcPath === "/" || dstPath === "/" || srcPath === "" || dstPath === "") {
+            return { ok: false, reason: "Refusing destructive operation on the filesystem root." };
+        }
+        return { ok: true, dstPath };
+    }
+
+    _dstExists(dstPath) {
+        try { return this.fsLib.existsSync(dstPath); }
+        catch (_) { return false; }
+    }
+
+    async _executeMove(srcPath, dstPath) {
+        try {
+            await this.fsLib.promises.rename(srcPath, dstPath);
+        } catch (err) {
+            if (err?.code !== "EXDEV") throw err;
+            // Cross-device — fall back to copy + delete.
+            await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: true, dereference: false });
+            await this.fsLib.promises.rm(srcPath, { recursive: true, force: true });
+        }
+    }
+
+    async _executeCopy(srcPath, dstPath, force) {
+        await this.fsLib.promises.cp(srcPath, dstPath, { recursive: true, force: !!force, dereference: false });
+    }
+
+    async _refreshBothPanes() {
         try { await this.leftPane.refresh();  } catch (_) {}
         try { await this.rightPane.refresh(); } catch (_) {}
     }

@@ -60,6 +60,15 @@ let loadedDtype = null;
 let bootReady = false;
 const pendingMessages = [];
 let inflightStopper = null;
+// Serialize load → generate so they can't interleave when the
+// renderer fires both immediately. `cancel` deliberately bypasses
+// the chain — if it queued, it'd wait for the very generate it was
+// meant to stop, and by then `inflightStopper` would be null.
+let dispatchChain = Promise.resolve();
+function enqueueDispatch(msg) {
+    dispatchChain = dispatchChain.then(() => dispatch(msg));
+    return dispatchChain;
+}
 
 async function dispatch(msg) {
     try {
@@ -67,8 +76,6 @@ async function dispatch(msg) {
             await handleLoad(msg.dtype);
         } else if (msg.type === "generate") {
             await handleGenerate(msg);
-        } else if (msg.type === "cancel") {
-            if (inflightStopper) inflightStopper.interrupt();
         }
     } catch (err) {
         const errType = msg.type === "generate" ? "generate-error" : "load-error";
@@ -83,11 +90,17 @@ async function dispatch(msg) {
 self.addEventListener("message", (event) => {
     if (event.origin && event.origin !== self.location.origin) return; // S2819
     const msg = event.data || {};
+    if (msg.type === "cancel") {
+        // Synchronous, queue-bypassing. Safe at any boot stage:
+        // before boot or between generates `inflightStopper` is null.
+        if (inflightStopper) inflightStopper.interrupt();
+        return;
+    }
     if (!bootReady) {
         pendingMessages.push(msg);
         return;
     }
-    dispatch(msg);
+    enqueueDispatch(msg);
 });
 
 // ── Load transformers.js with runtime patches ───────────────────────
@@ -111,7 +124,7 @@ try {
 }
 
 bootReady = true;
-while (pendingMessages.length > 0) dispatch(pendingMessages.shift());
+while (pendingMessages.length > 0) enqueueDispatch(pendingMessages.shift());
 
 // ── Implementation ──────────────────────────────────────────────────
 
@@ -195,6 +208,12 @@ async function handleLoad(dtype = "q4f16") {
 async function handleGenerate(msg) {
     if (!generator) {
         throw new Error("Pipeline not loaded — send { type: 'load' } first");
+    }
+    if (inflightStopper) {
+        // Single-in-flight contract: callers (#86's GemmaEngine) hold
+        // one worker per chat session and serialize their own turns.
+        // Rejecting a second generate keeps `cancel` unambiguous.
+        throw new Error("Generation already in progress");
     }
     const { id, messages, options = {} } = msg;
 

@@ -34,7 +34,7 @@ class Keyboard {
             Shift: []
         };
         window.shortcuts.forEach(scut => {
-            let cut = Object.assign({}, scut);
+            let cut = { ...scut };
             let mods = cut.trigger.split("+");
             cut.trigger = mods.pop();
 
@@ -47,7 +47,7 @@ class Keyboard {
             
             if (cut.type === "app" && cut.action === "TAB_X" && cut.trigger === "X") {
                 for (let i = 1; i <= 5; i++) {
-                    let ncut = Object.assign({}, cut);
+                    let ncut = { ...cut };
                     ncut.trigger = `${i}`;
                     ncut.action = `TAB_${i}`;
                     this._shortcuts[cat].push(ncut);
@@ -257,8 +257,7 @@ class Keyboard {
         // Bind actual keyboard actions to on-screen animations (for use without a touchscreen)
         let findKey = e => {
             // Fix incorrect querySelector error
-            let physkey;
-            (e.key === "\"") ? physkey = `\\"` : physkey = e.key;
+            const physkey = (e.key === "\"") ? `\\"` : e.key;
 
             // Find basic keys (typically letters, upper and lower-case)
             let key = document.querySelector('div.keyboard_key[data-cmd="'+physkey+'"]');
@@ -557,8 +556,7 @@ class Keyboard {
         }
     }
     togglePasswordMode() {
-        let d = this.container.dataset.passwordMode;
-        (d === "true") ? d = "false" : d = "true";
+        const d = (this.container.dataset.passwordMode === "true") ? "false" : "true";
         this.container.dataset.passwordMode = d;
         window.passwordMode = d;
         return d;

@@ -932,6 +932,46 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>chatBackend</td>
+                        <td>Which backend the Claude Chat modal sends turns to. <code>claude-cli</code> uses the locally-installed authenticated <code>claude</code> CLI (online, full toolset). <code>gemma-local</code> runs Gemma 4 E4B ONNX in-app via WebGPU (offline, no tools).</td>
+                        <td><select id="settingsEditor-chatBackend">
+                            ${(() => {
+                                const curRaw = window.settings.chatBackend;
+                                // Migrate pre-#88 short names so the dropdown
+                                // shows the right option even before the user
+                                // saves through this editor.
+                                const cur = curRaw === "gemma" ? "gemma-local"
+                                    : curRaw === "cli" ? "claude-cli"
+                                    : (curRaw || "claude-cli");
+                                const list = (typeof ClaudeChat !== "undefined" && ClaudeChat.CHAT_BACKENDS)
+                                    ? ClaudeChat.CHAT_BACKENDS
+                                    : [{id: cur, label: cur}];
+                                const ordered = [
+                                    list.find(b => b.id === cur) || {id: cur, label: cur},
+                                    ...list.filter(b => b.id !== cur)
+                                ];
+                                return ordered.map(b => `<option value="${b.id}">${b.label}</option>`).join("");
+                            })()}
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>gemmaDtype</td>
+                        <td>Quantization for the local Gemma 4 E4B ONNX model. Multi-GB download on first use, cached locally afterwards; switching tiers re-downloads but old tiers stay cached.</td>
+                        <td><select id="settingsEditor-gemmaDtype">
+                            ${(() => {
+                                const cur = window.settings.gemmaDtype || "q4f16";
+                                const list = (typeof ClaudeChat !== "undefined" && ClaudeChat.GEMMA_DTYPES)
+                                    ? ClaudeChat.GEMMA_DTYPES
+                                    : [{id: cur, label: cur}];
+                                const ordered = [
+                                    list.find(d => d.id === cur) || {id: cur, label: cur},
+                                    ...list.filter(d => d.id !== cur)
+                                ];
+                                return ordered.map(d => `<option value="${d.id}">${d.label}</option>`).join("");
+                            })()}
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>experimentalGlobeFeatures</td>
                         <td>Toggle experimental features for the network globe</td>
                         <td><select id="settingsEditor-experimentalGlobeFeatures">
@@ -1172,11 +1212,8 @@ window.writeSettingsFile = () => {
         modalCloseButton: (document.getElementById("settingsEditor-modalCloseButton").value === "true"),
         ttsVoice: document.getElementById("settingsEditor-ttsVoice").value,
         ttsDtype: document.getElementById("settingsEditor-ttsDtype").value,
-        // Pass-throughs until #88 adds editor rows. Carries the
-        // existing values through saves so the user's choices survive
-        // a settings-editor write even before the UI rows exist.
-        gemmaDtype: window.settings.gemmaDtype,
-        chatBackend: window.settings.chatBackend,
+        chatBackend: document.getElementById("settingsEditor-chatBackend").value,
+        gemmaDtype: document.getElementById("settingsEditor-gemmaDtype").value,
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };

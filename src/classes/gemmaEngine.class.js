@@ -63,8 +63,42 @@ class GemmaEngine extends EventTarget {
         if (this._generatePending) {
             return Promise.reject(new Error("Generation already in progress"));
         }
+        // Mark the engine busy synchronously, before awaiting the load.
+        // Without this, a second generate() that lands while load is
+        // still pending also passes the guard, and both calls clobber
+        // each other's `_generatePending` entry when the load resolves.
+        const pending = { id: null, resolve: null, reject: null };
+        this._generatePending = pending;
+
         const dtype = window.settings?.gemmaDtype || GemmaEngine.DEFAULT_DTYPE;
-        return this._ensureLoaded(dtype).then(() => this._generateInWorker(messages, options));
+        return new Promise((resolve, reject) => {
+            pending.resolve = resolve;
+            pending.reject = reject;
+            this._ensureLoaded(dtype).then(() => {
+                if (this._generatePending !== pending) {
+                    // Engine was terminated or the slot was cleared
+                    // (e.g. by a worker-error event) while we were
+                    // loading.
+                    reject(new Error("Generation aborted before start"));
+                    return;
+                }
+                if (!this._worker || this._loadedDtype === null) {
+                    this._generatePending = null;
+                    reject(new Error("Worker not loaded"));
+                    return;
+                }
+                pending.id = this._genNextId++;
+                this._worker.postMessage({
+                    type: "generate",
+                    id: pending.id,
+                    messages,
+                    options
+                });
+            }).catch(err => {
+                if (this._generatePending === pending) this._generatePending = null;
+                reject(err);
+            });
+        });
     }
 
     // Interrupt the in-flight generation. The worker's
@@ -107,6 +141,11 @@ class GemmaEngine extends EventTarget {
         this._worker.addEventListener("error", err => {
             console.warn("[Gemma Worker] error:", err.message || err);
             const e = new Error(err.message || "Worker error");
+            // Drop the dead worker so the next load()/generate() spawns
+            // a fresh one rather than poking a corpse.
+            try { this._worker?.terminate(); } catch (_) { /* ok */ }
+            this._worker = null;
+            this._loadedDtype = null;
             if (this._loadReject) {
                 this._loadReject(e);
                 this._loadResolve = this._loadReject = this._loadPromise = null;
@@ -133,17 +172,6 @@ class GemmaEngine extends EventTarget {
         });
         this._worker.postMessage({ type: "load", dtype });
         return this._loadPromise;
-    }
-
-    _generateInWorker(messages, options) {
-        if (!this._worker || this._loadedDtype === null) {
-            return Promise.reject(new Error("Worker not loaded"));
-        }
-        const id = this._genNextId++;
-        return new Promise((resolve, reject) => {
-            this._generatePending = { id, resolve, reject };
-            this._worker.postMessage({ type: "generate", id, messages, options });
-        });
     }
 
     _onWorkerMessage(ev) {

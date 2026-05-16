@@ -291,7 +291,11 @@ window.ttsEngine = new TtsEngine();
 // when the chat backend is switched to local-Gemma. The transformers.js
 // pipeline + WebGPU session are loaded lazily on first use; spawning
 // the engine here is cheap (no worker spun up until load()/generate()).
+// Kick off the WebGPU availability probe immediately so the chat-modal
+// UI can gate the Gemma backend before the user clicks (instead of
+// waiting for a load() to lazily trigger it).
 window.gemmaEngine = new GemmaEngine();
+window.gemmaEngine.beginAvailabilityProbe();
 
 // See #223
 remote.app.focus();

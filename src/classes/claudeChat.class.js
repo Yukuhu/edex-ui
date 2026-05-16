@@ -227,6 +227,12 @@ class ClaudeChat {
         // turn (no --resume equivalent on the local model).
         this.chatBackend = window.settings?.chatBackend === "gemma" ? "gemma" : "cli";
         this.transcript = [];
+        // Reference to the just-pushed user message for the in-flight
+        // Gemma turn; used to roll the transcript back on cancellation
+        // or async failure. `null` when no Gemma turn is in flight or
+        // the most recent one completed normally (assistant reply was
+        // appended, so the user turn stays).
+        this._pendingGemmaUserTurn = null;
         this._refreshBackendButton();
 
         this.voiceToggle.addEventListener("click", () => this._toggleVoice());
@@ -322,9 +328,17 @@ class ClaudeChat {
                 // Persist the assistant reply into the transcript so
                 // the next turn ships full context (no --resume on
                 // Gemma). Skip on cancellation so partial output
-                // doesn't pollute future prompts.
-                if (!detail.cancelled && this.activeAssistantBuf) {
-                    this.transcript.push({ role: "assistant", content: this.activeAssistantBuf });
+                // doesn't pollute future prompts — and roll back the
+                // unmatched user turn that started this round, since
+                // the catch path only fires on errors and `done` with
+                // cancelled:true is a normal-completion message.
+                if (detail.cancelled) {
+                    this._rollbackPendingGemmaTurn();
+                } else {
+                    if (this.activeAssistantBuf) {
+                        this.transcript.push({ role: "assistant", content: this.activeAssistantBuf });
+                    }
+                    this._pendingGemmaUserTurn = null;
                 }
                 this._finalizeAssistant();
                 // `this.firstTurn` is the CLI's session-resume flag —
@@ -521,6 +535,7 @@ class ClaudeChat {
             return;
         }
         const userTurn = { role: "user", content: prompt };
+        this._pendingGemmaUserTurn = userTurn;
         this.transcript.push(userTurn);
         this.status.innerText = "Generating…";
         if (this.avatar) this.avatar.setState("thinking");
@@ -530,13 +545,12 @@ class ClaudeChat {
         // whose `loaderror` event also rejects _loadPromise. The
         // listener has already closed out the bubble for the
         // event-driven cases, so only surface the error if the
-        // bubble is still pending — and roll back the just-pushed
-        // user turn so it doesn't sit unanswered in context.
+        // bubble is still pending. The user turn is rolled back via
+        // _rollbackPendingGemmaTurn so it doesn't sit unanswered in
+        // future Gemma context.
         window.gemmaEngine.generate(this.transcript).catch(err => {
             console.warn("[ClaudeChat] gemmaEngine.generate rejected:", err);
-            if (this.transcript[this.transcript.length - 1] === userTurn) {
-                this.transcript.pop();
-            }
+            this._rollbackPendingGemmaTurn();
             if (this.activeAssistantBubble) {
                 this._appendErrorLine(err?.message || "Gemma request failed.");
                 this._finalizeAssistant();
@@ -546,6 +560,18 @@ class ClaudeChat {
         });
     }
 
+    // Pop the unmatched user turn for the in-flight Gemma round, if
+    // it's still the tail of the transcript. Called when the turn
+    // ends without a corresponding assistant message — cancellation,
+    // load failure, generation error, or worker death.
+    _rollbackPendingGemmaTurn() {
+        if (this._pendingGemmaUserTurn
+            && this.transcript[this.transcript.length - 1] === this._pendingGemmaUserTurn) {
+            this.transcript.pop();
+        }
+        this._pendingGemmaUserTurn = null;
+    }
+
     _toggleBackend() {
         const next = this.chatBackend === "gemma" ? "cli" : "gemma";
         // Cancel any in-flight request on the OLD backend cleanly so
@@ -553,11 +579,19 @@ class ClaudeChat {
         // active WebGPU generate fighting the user's new context.
         if (this.chatBackend === "cli" && this.pendingReqId) {
             this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
+            // Late claude:delta IPC events are gated on pendingReqId
+            // and harmlessly dropped once we finalize, but the
+            // already-running TTS queue and the avatar don't watch
+            // that flag — drop them explicitly so they don't carry
+            // over after the user's switched contexts.
+            this._cancelSpeech();
             this._appendErrorLine("[backend switch — claude request cancelled]");
             this._finalizeAssistant();
+            if (this.avatar) this.avatar.setState("idle");
         } else if (this.chatBackend === "gemma" && window.gemmaEngine?.isGenerating) {
             window.gemmaEngine.cancel();
-            // `done` event with cancelled:true will close out the bubble.
+            // `done` event with cancelled:true will close out the bubble
+            // and roll back the unmatched user turn from the transcript.
         }
         this.chatBackend = next;
         // Persist via window.settings so the choice survives writes

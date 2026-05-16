@@ -170,6 +170,7 @@ class ClaudeChat {
                         <canvas class="claudeChat_avatar" id="claudeChat_avatar"></canvas>
                         <div class="claudeChat_headerInfo">
                             <div class="claudeChat_modelLine" id="claudeChat_modelLine">model: <span id="claudeChat_modelName">${ClaudeChat.DEFAULT_MODEL}</span></div>
+                            <div class="claudeChat_backendLine">backend: <button id="claudeChat_backendToggle" type="button">CLAUDE CLI</button></div>
                             <div class="claudeChat_voiceLine">voice: <button id="claudeChat_voiceToggle" type="button">VOICE: OFF</button></div>
                             <div class="claudeChat_ttsLine">TTS: <span id="claudeChat_ttsConfig">…</span></div>
                         </div>
@@ -212,13 +213,24 @@ class ClaudeChat {
         this.modelName = document.getElementById("claudeChat_modelName");
         this.ttsConfigEl = document.getElementById("claudeChat_ttsConfig");
         this.voiceToggle = document.getElementById("claudeChat_voiceToggle");
+        this.backendToggle = document.getElementById("claudeChat_backendToggle");
         this._refreshTtsConfigDisplay();
         this.avatarCanvas = document.getElementById("claudeChat_avatar");
 
         this.avatar = new AIAvatar(this.avatarCanvas);
         this.avatar.setState("idle");
 
+        // Chat backend selection. "cli" preserves existing behaviour
+        // (claude CLI subprocess via IPC); "gemma" routes turns through
+        // window.gemmaEngine + local WebGPU inference. The Gemma path
+        // maintains the transcript in-renderer and re-sends it each
+        // turn (no --resume equivalent on the local model).
+        this.chatBackend = window.settings?.chatBackend === "gemma" ? "gemma" : "cli";
+        this.transcript = [];
+        this._refreshBackendButton();
+
         this.voiceToggle.addEventListener("click", () => this._toggleVoice());
+        this.backendToggle.addEventListener("click", () => this._toggleBackend());
 
         // Engine → chat UI bindings. Avatar, status line, and the
         // download-progress bar are chat-owned; the engine owns the
@@ -262,6 +274,79 @@ class ClaudeChat {
         };
         for (const [name, fn] of Object.entries(this._engineListeners)) {
             window.ttsEngine.addEventListener(name, fn);
+        }
+
+        // GemmaEngine → chat UI bindings. Mirrors the TTS listener
+        // shape (same event names for the shared load-progress flow);
+        // adds delta / done / error for streamed generation. The
+        // progress bar handler `_onTtsProgress` reads the same
+        // transformers progress-event shape and is reused unchanged.
+        this._gemmaListeners = {
+            loadstart: ev => {
+                const dtype = ev.detail?.dtype || "";
+                this.status.innerText = `Loading Gemma (${dtype})…`;
+                this._showProgress(`Loading model (${dtype})…`);
+            },
+            loadready: ev => {
+                const { dtype } = ev.detail || {};
+                this._hideProgress();
+                this.status.innerText = `Gemma ready (${dtype}).`;
+            },
+            loaderror: ev => {
+                this._hideProgress();
+                const msg = ev.detail?.message || "Gemma load error";
+                console.warn("[ClaudeChat] gemma loaderror:", msg);
+                this._appendErrorLine(msg);
+                this._finalizeAssistant();
+                this.status.innerText = "Error.";
+                if (this.avatar) this.avatar.setState("error");
+            },
+            progress: ev => {
+                // Only paint Gemma's download progress when Gemma is the
+                // active backend. TTS still owns the bar when the user
+                // is on CLI + voice on.
+                if (this.chatBackend === "gemma") this._onTtsProgress(ev.detail);
+            },
+            delta: ev => {
+                if (this._perf?.firstDeltaT === null) {
+                    this._perf.firstDeltaT = performance.now();
+                }
+                this._appendAssistantText(ev.detail?.text || "");
+                if (this.avatar?.state === "thinking") {
+                    this.avatar.setState("responding");
+                }
+            },
+            done: ev => {
+                this._drainPending();
+                const detail = ev.detail || {};
+                // Persist the assistant reply into the transcript so the
+                // next turn ships full context (no --resume on Gemma).
+                if (this.activeAssistantBuf) {
+                    this.transcript.push({ role: "assistant", content: this.activeAssistantBuf });
+                }
+                this._finalizeAssistant();
+                this.firstTurn = false;
+                if (detail.cancelled) {
+                    this.status.innerText = "Cancelled.";
+                } else {
+                    const tps = (detail.tokensPerSec ?? 0).toFixed(1);
+                    this.status.innerText = `Done. ${detail.tokens} tokens (${tps} tok/s).`;
+                }
+                if (this.avatar) this.avatar.setState("idle");
+            },
+            error: ev => {
+                const msg = ev.detail?.message || "Gemma error";
+                this._drainPending();
+                this._appendErrorLine(msg);
+                this._finalizeAssistant();
+                this.status.innerText = "Error.";
+                if (this.avatar) this.avatar.setState("error");
+            }
+        };
+        if (window.gemmaEngine) {
+            for (const [name, fn] of Object.entries(this._gemmaListeners)) {
+                window.gemmaEngine.addEventListener(name, fn);
+            }
         }
 
         this.sendBtn.addEventListener("click", () => this._submit());
@@ -365,7 +450,8 @@ class ClaudeChat {
     _submit() {
         const prompt = this.input.value.trim();
         if (!prompt) return;
-        if (this.pendingReqId) return; // already in flight
+        if (this.pendingReqId) return; // CLI already in flight
+        if (this.chatBackend === "gemma" && window.gemmaEngine?.isGenerating) return;
 
         // Cancel any TTS still in flight from the previous turn — both
         // playing audio and the streaming consumer.
@@ -395,6 +481,14 @@ class ClaudeChat {
         this.input.value = "";
         this._beginAssistantBubble();
 
+        if (this.chatBackend === "gemma") {
+            this._submitGemma(prompt);
+        } else {
+            this._submitCli(prompt);
+        }
+    }
+
+    _submitCli(prompt) {
         this.pendingReqId = `req_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
         this.status.innerText = "Querying claude…";
         if (this.avatar) this.avatar.setState("thinking");
@@ -406,6 +500,57 @@ class ClaudeChat {
             model: this.model,
             prompt
         });
+    }
+
+    _submitGemma(prompt) {
+        if (!window.gemmaEngine?.isAvailable) {
+            this._appendErrorLine("WebGPU is not available — local Gemma backend disabled.");
+            this._finalizeAssistant();
+            this.status.innerText = "Error.";
+            if (this.avatar) this.avatar.setState("error");
+            return;
+        }
+        this.transcript.push({ role: "user", content: prompt });
+        this.status.innerText = "Generating…";
+        if (this.avatar) this.avatar.setState("thinking");
+        // delta / done / error all flow back through `_gemmaListeners`
+        // and update the UI; the returned promise is only useful for
+        // synchronous rejects (busy-guard, engine terminate, etc.).
+        window.gemmaEngine.generate(this.transcript).catch(err => {
+            console.warn("[ClaudeChat] gemmaEngine.generate rejected:", err);
+        });
+    }
+
+    _toggleBackend() {
+        const next = this.chatBackend === "gemma" ? "cli" : "gemma";
+        // Cancel any in-flight request on the OLD backend cleanly so
+        // the switch doesn't leave an orphaned subprocess turn or an
+        // active WebGPU generate fighting the user's new context.
+        if (this.chatBackend === "cli" && this.pendingReqId) {
+            this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
+            this._appendErrorLine("[backend switch — claude request cancelled]");
+            this._finalizeAssistant();
+        } else if (this.chatBackend === "gemma" && window.gemmaEngine?.isGenerating) {
+            window.gemmaEngine.cancel();
+            // `done` event with cancelled:true will close out the bubble.
+        }
+        this.chatBackend = next;
+        // Persist via window.settings so the choice survives writes
+        // (full save happens via window.writeSettingsFile from the
+        // settings editor; we just keep the live object in sync).
+        if (!window.settings) window.settings = {};
+        window.settings.chatBackend = next;
+        this._refreshBackendButton();
+        this.status.innerText = next === "gemma"
+            ? "Backend: local Gemma (WebGPU)."
+            : "Backend: Claude CLI.";
+    }
+
+    _refreshBackendButton() {
+        if (!this.backendToggle) return;
+        const onGemma = this.chatBackend === "gemma";
+        this.backendToggle.textContent = onGemma ? "LOCAL GEMMA" : "CLAUDE CLI";
+        this.backendToggle.classList.toggle("gemma", onGemma);
     }
 
     _toggleVoice() {
@@ -849,12 +994,21 @@ class ClaudeChat {
         if (this.pendingReqId) {
             this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
         }
+        if (window.gemmaEngine?.isGenerating) {
+            window.gemmaEngine.cancel();
+        }
         this._cancelSpeech();
-        // The TTS worker is owned by the engine singleton and survives
-        // chat close — the next chat session reuses the warm pipeline.
+        // Both engine workers are owned by their respective singletons
+        // and survive chat close — the next chat session reuses the
+        // warm pipeline. We only unhook listeners.
         if (window.ttsEngine && this._engineListeners) {
             for (const [name, fn] of Object.entries(this._engineListeners)) {
                 window.ttsEngine.removeEventListener(name, fn);
+            }
+        }
+        if (window.gemmaEngine && this._gemmaListeners) {
+            for (const [name, fn] of Object.entries(this._gemmaListeners)) {
+                window.gemmaEngine.removeEventListener(name, fn);
             }
         }
         if (this._longTaskObserver) {

@@ -1186,16 +1186,27 @@ class ClaudeChat {
     }
 
     _teardown() {
+        this._cancelInflight();
+        this._cancelSpeech();
+        this._removeEngineListeners();
+        this._disposePerfObserver();
+        this._disposeAvatar();
+        this._removeIpcListeners();
+    }
+
+    _cancelInflight() {
         if (this.pendingReqId) {
             this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
         }
         if (window.gemmaEngine?.isGenerating) {
             window.gemmaEngine.cancel();
         }
-        this._cancelSpeech();
-        // Both engine workers are owned by their respective singletons
-        // and survive chat close — the next chat session reuses the
-        // warm pipeline. We only unhook listeners.
+    }
+
+    // Both engine workers are owned by their respective singletons and
+    // survive chat close — the next chat session reuses the warm
+    // pipeline. We only unhook listeners.
+    _removeEngineListeners() {
         if (window.ttsEngine && this._engineListeners) {
             for (const [name, fn] of Object.entries(this._engineListeners)) {
                 window.ttsEngine.removeEventListener(name, fn);
@@ -1209,14 +1220,23 @@ class ClaudeChat {
         if (window.gemmaEngine && this._onGemmaAvailability) {
             window.gemmaEngine.removeEventListener("availabilitychange", this._onGemmaAvailability);
         }
+    }
+
+    _disposePerfObserver() {
         if (this._longTaskObserver) {
             try { this._longTaskObserver.disconnect(); } catch (_) {}
             this._longTaskObserver = null;
         }
+    }
+
+    _disposeAvatar() {
         if (this.avatar) {
             this.avatar.destroy();
             this.avatar = null;
         }
+    }
+
+    _removeIpcListeners() {
         this.ipc.removeListener("claude:delta", this._onDelta);
         this.ipc.removeListener("claude:done", this._onDone);
         this.ipc.removeListener("claude:error", this._onError);

@@ -191,6 +191,21 @@ class ControlMenu {
     }
 
     render() {
+        const SLOTS = 5;
+        this.crumb.textContent = this._pathCrumbs().join(" › ");
+
+        const entries = this.visibleEntries();
+        if (this.selected >= entries.length) this.selected = 0;
+
+        this.results.innerHTML = entries.length === 0
+            ? this._renderEmptySlots(SLOTS)
+            : this._renderEntrySlots(entries, this.selected, SLOTS);
+    }
+
+    // Walks `this.path` from the root menu and returns the breadcrumb
+    // labels including the leading "Control Menu". Stops at the first
+    // unresolved path id.
+    _pathCrumbs() {
         const crumbs = ["Control Menu"];
         let lvl = ControlMenu.MENU;
         for (const id of this.path) {
@@ -200,32 +215,29 @@ class ControlMenu {
             if (Array.isArray(entry.submenu)) lvl = entry.submenu;
             else if (entry.buildSubmenu) lvl = this._buildSubmenu(entry.buildSubmenu);
         }
-        this.crumb.textContent = crumbs.join(" › ");
+        return crumbs;
+    }
 
-        const entries = this.visibleEntries();
-        if (this.selected >= entries.length) this.selected = 0;
+    _renderEmptySlots(slots) {
+        let html = `<li id="controlMenuMatch-0" class="controlMenuMatchSelected">No matches<span class="controlMenuHint"></span></li>`;
+        for (let i = 1; i < slots; i++) html += `<li id="controlMenuMatch-${i}"></li>`;
+        return html;
+    }
 
-        const SLOTS = 5;
+    _renderEntrySlots(entries, selected, slots) {
         let html = "";
-        if (entries.length === 0) {
-            html = `<li id="controlMenuMatch-0" class="controlMenuMatchSelected">No matches<span class="controlMenuHint"></span></li>`;
-            for (let i = 1; i < SLOTS; i++) html += `<li id="controlMenuMatch-${i}"></li>`;
-            this.results.innerHTML = html;
-            return;
-        }
-        for (let i = 0; i < SLOTS; i++) {
+        for (let i = 0; i < slots; i++) {
             const e = entries[i];
             if (!e) {
                 html += `<li id="controlMenuMatch-${i}"></li>`;
                 continue;
             }
-            const isSelected = (i === this.selected);
             const hasChildren = !!(e.submenu || e.buildSubmenu);
             const hint = hasChildren ? "›" : (e.hint || "");
-            const cls = isSelected ? "controlMenuMatchSelected" : "";
+            const cls = (i === selected) ? "controlMenuMatchSelected" : "";
             html += `<li id="controlMenuMatch-${i}" class="${cls}" onclick="window.activeControlMenu._clickRow(${i})">${window._escapeHtml(e.label)}<span class="controlMenuHint">${window._escapeHtml(hint)}</span></li>`;
         }
-        this.results.innerHTML = html;
+        return html;
     }
 
     _clickRow(i) {

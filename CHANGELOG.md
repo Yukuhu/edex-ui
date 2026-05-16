@@ -17,6 +17,26 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Added
 
+- **Gemma 4 E4B text-generation worker** (`src/workers/gemma-worker.js`):
+  module web worker that loads `onnx-community/gemma-4-E4B-it-ONNX`
+  via `@huggingface/transformers` v4 under WebGPU and streams tokens
+  back to the renderer over postMessage. Modeled on
+  `tts-worker-web.js`. Message protocol: `load` → `load-progress` /
+  `load-ready`, `generate` → streamed `token` events → `generate-done`,
+  `cancel` interrupts in-flight generation via transformers.js's
+  `InterruptableStoppingCriteria`. Three runtime patches concentrated
+  in `loadTransformersWithPatches()` are required to make WebGPU
+  reachable under Electron's `nodeIntegrationInWorker: true` without
+  a bundler: a blob-URL rewrite of `transformers.web.js` to redirect
+  the two bare-specifier ORT imports to absolute paths against
+  `node_modules`, an in-place patch that forces transformers'
+  `apis.IS_NODE_ENV` branch unreachable so it picks `ONNX_WEB`
+  instead of the stubbed `onnxruntime_node_exports`, and a mask of
+  `process.type` to `"renderer"` so ORT's WASM bootstrap skips its
+  `import("worker_threads")` branch. Validated by the issue #84
+  spike. FS caching is kept on (Gemma model is multi-GB; see #89 for
+  resumable downloads). No UI integration here — that lives in #86+.
+  (Closes #85)
 - **Reusable TTS infrastructure for text-document modals**: the
   Kokoro/ONNX worker, sentence splitter, audio queue and
   `speechSynthesis` fallback that powered Claude Chat have been

@@ -337,42 +337,61 @@ class GemmaEngine extends EventTarget {
 
     _onWorkerMessage(ev) {
         const msg = ev.data || {};
-        if (msg.type === "load-progress") {
-            this.dispatchEvent(new CustomEvent("progress", { detail: msg.event }));
-        } else if (msg.type === "load-ready") {
-            const backend = msg.backend || "webgpu";
-            console.info(`[Gemma] Worker load(${msg.dtype}) backend=${backend} load=${(msg.loadMs ?? 0).toFixed(0)}ms`);
-            this._loadedDtype = msg.dtype;
-            this.dispatchEvent(new CustomEvent("loadready", {
-                detail: { dtype: msg.dtype, backend, loadMs: msg.loadMs }
-            }));
-            if (this._loadResolve) this._loadResolve();
-            this._loadResolve = this._loadReject = this._loadPromise = null;
-        } else if (msg.type === "load-error") {
-            this.dispatchEvent(new CustomEvent("loaderror", { detail: { message: msg.message } }));
-            if (this._loadReject) this._loadReject(new Error(msg.message));
-            this._loadResolve = this._loadReject = this._loadPromise = null;
-        } else if (msg.type === "token") {
-            this.dispatchEvent(new CustomEvent("delta", { detail: { text: msg.text } }));
-        } else if (msg.type === "generate-done") {
-            const detail = {
-                tokens: msg.tokens,
-                genMs: msg.genMs,
-                tokensPerSec: msg.tokensPerSec,
-                cancelled: !!msg.cancelled
-            };
-            console.info(`[Gemma] gen=${(msg.genMs ?? 0).toFixed(0)}ms tokens=${msg.tokens} (${(msg.tokensPerSec ?? 0).toFixed(2)} tok/s)${msg.cancelled ? " cancelled" : ""}`);
-            this.dispatchEvent(new CustomEvent("done", { detail }));
-            if (this._generatePending) {
-                this._generatePending.resolve(detail);
-                this._generatePending = null;
-            }
-        } else if (msg.type === "generate-error") {
-            this.dispatchEvent(new CustomEvent("error", { detail: { message: msg.message } }));
-            if (this._generatePending) {
-                this._generatePending.reject(new Error(msg.message));
-                this._generatePending = null;
-            }
+        switch (msg.type) {
+            case "load-progress": return this._onLoadProgress(msg);
+            case "load-ready":    return this._onLoadReady(msg);
+            case "load-error":    return this._onLoadError(msg);
+            case "token":         return this._onToken(msg);
+            case "generate-done": return this._onGenerateDone(msg);
+            case "generate-error":return this._onGenerateError(msg);
+        }
+    }
+
+    _onLoadProgress(msg) {
+        this.dispatchEvent(new CustomEvent("progress", { detail: msg.event }));
+    }
+
+    _onLoadReady(msg) {
+        const backend = msg.backend || "webgpu";
+        console.info(`[Gemma] Worker load(${msg.dtype}) backend=${backend} load=${(msg.loadMs ?? 0).toFixed(0)}ms`);
+        this._loadedDtype = msg.dtype;
+        this.dispatchEvent(new CustomEvent("loadready", {
+            detail: { dtype: msg.dtype, backend, loadMs: msg.loadMs }
+        }));
+        if (this._loadResolve) this._loadResolve();
+        this._loadResolve = this._loadReject = this._loadPromise = null;
+    }
+
+    _onLoadError(msg) {
+        this.dispatchEvent(new CustomEvent("loaderror", { detail: { message: msg.message } }));
+        if (this._loadReject) this._loadReject(new Error(msg.message));
+        this._loadResolve = this._loadReject = this._loadPromise = null;
+    }
+
+    _onToken(msg) {
+        this.dispatchEvent(new CustomEvent("delta", { detail: { text: msg.text } }));
+    }
+
+    _onGenerateDone(msg) {
+        const detail = {
+            tokens: msg.tokens,
+            genMs: msg.genMs,
+            tokensPerSec: msg.tokensPerSec,
+            cancelled: !!msg.cancelled
+        };
+        console.info(`[Gemma] gen=${(msg.genMs ?? 0).toFixed(0)}ms tokens=${msg.tokens} (${(msg.tokensPerSec ?? 0).toFixed(2)} tok/s)${msg.cancelled ? " cancelled" : ""}`);
+        this.dispatchEvent(new CustomEvent("done", { detail }));
+        if (this._generatePending) {
+            this._generatePending.resolve(detail);
+            this._generatePending = null;
+        }
+    }
+
+    _onGenerateError(msg) {
+        this.dispatchEvent(new CustomEvent("error", { detail: { message: msg.message } }));
+        if (this._generatePending) {
+            this._generatePending.reject(new Error(msg.message));
+            this._generatePending = null;
         }
     }
 }

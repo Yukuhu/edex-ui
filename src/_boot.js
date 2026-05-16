@@ -114,6 +114,7 @@ if (!fs.existsSync(settingsFile)) {
         modalCloseButton: true,
         ttsVoice: "af_heart",
         ttsDtype: "q8",
+        gemmaDtype: "q4f16",
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

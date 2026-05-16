@@ -1172,6 +1172,9 @@ window.writeSettingsFile = () => {
         modalCloseButton: (document.getElementById("settingsEditor-modalCloseButton").value === "true"),
         ttsVoice: document.getElementById("settingsEditor-ttsVoice").value,
         ttsDtype: document.getElementById("settingsEditor-ttsDtype").value,
+        // Pass-through until #88 adds an editor row. Carries the existing
+        // value (or undefined → GemmaEngine.DEFAULT_DTYPE) through writes.
+        gemmaDtype: window.settings.gemmaDtype,
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };

@@ -1261,64 +1261,59 @@ window.toggleFullScreen = () => {
 };
 
 // Display available keyboard shortcuts and custom shortcuts helper
-window.openShortcutsHelp = () => {
-    // Also guard on this modal's own DOM (#shortcutsHelpAccordeon1
-    // is created below) so rapid Ctrl+Shift+K presses don't stack
-    // copies — same hazard as #50.
-    if (document.getElementById("settingsEditor") || document.getElementById("shortcutsHelpAccordeon1")) return;
+const SHORTCUTS_DEFINITION = {
+    "COPY": "Copy selected buffer from the terminal.",
+    "PASTE": "Paste system clipboard to the terminal.",
+    "NEXT_TAB": "Switch to the next opened terminal tab (left to right order).",
+    "PREVIOUS_TAB": "Switch to the previous opened terminal tab (right to left order).",
+    "TAB_X": "Switch to terminal tab <strong>X</strong>, or create it if it hasn't been opened yet.",
+    "SETTINGS": "Open the settings editor.",
+    "SHORTCUTS": "List and edit available keyboard shortcuts.",
+    "FUZZY_SEARCH": "Search for entries in the current working directory.",
+    "FS_OPEN": "Open the two-pane filesystem browser.",
+    "FS_LIST_VIEW": "Toggle list / grid view in the focused pane of the filesystem browser.",
+    "FS_DOTFILES": "Toggle hidden files in the focused pane of the filesystem browser.",
+    "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
+    "KB_TOGGLE": "Show / hide the on-screen keyboard. Hiding it grows the terminal to fill the freed space.",
+    "PANELS_TOGGLE": "Show / hide the left + right side panels (system / network widgets). Hiding them grows the terminal horizontally.",
+    "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
+    "DEV_RELOAD": "Trigger front-end hot reload.",
+    "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI).",
+    "CONTROL_MENU": "Open the central control / launcher menu.",
+    "WEBAPP_FULLSCREEN": "(Inside a WebApp) Toggle the modal between standard size and full nDEX viewport. Bound to <code>F11</code>.",
+    "WEBAPP_TO_TAB": "(Inside a WebApp) Promote the WebApp into a terminal tab slot. Bound to <code>Ctrl+Shift+T</code>. Placeholder until issue #29 lands the tab-bar refactor."
+};
 
-    const shortcutsDefinition = {
-        "COPY": "Copy selected buffer from the terminal.",
-        "PASTE": "Paste system clipboard to the terminal.",
-        "NEXT_TAB": "Switch to the next opened terminal tab (left to right order).",
-        "PREVIOUS_TAB": "Switch to the previous opened terminal tab (right to left order).",
-        "TAB_X": "Switch to terminal tab <strong>X</strong>, or create it if it hasn't been opened yet.",
-        "SETTINGS": "Open the settings editor.",
-        "SHORTCUTS": "List and edit available keyboard shortcuts.",
-        "FUZZY_SEARCH": "Search for entries in the current working directory.",
-        "FS_OPEN": "Open the two-pane filesystem browser.",
-        "FS_LIST_VIEW": "Toggle list / grid view in the focused pane of the filesystem browser.",
-        "FS_DOTFILES": "Toggle hidden files in the focused pane of the filesystem browser.",
-        "KB_PASSMODE": "Toggle the on-screen keyboard's \"Password Mode\", which allows you to safely<br>type sensitive information even if your screen might be recorded (disable visual input feedback).",
-        "KB_TOGGLE": "Show / hide the on-screen keyboard. Hiding it grows the terminal to fill the freed space.",
-        "PANELS_TOGGLE": "Show / hide the left + right side panels (system / network widgets). Hiding them grows the terminal horizontally.",
-        "DEV_DEBUG": "Open Chromium Dev Tools, for debugging purposes.",
-        "DEV_RELOAD": "Trigger front-end hot reload.",
-        "CLAUDE_CHAT": "Open the Claude chat modal (talks to the locally installed <code>claude</code> CLI).",
-        "CONTROL_MENU": "Open the central control / launcher menu.",
-        "WEBAPP_FULLSCREEN": "(Inside a WebApp) Toggle the modal between standard size and full nDEX viewport. Bound to <code>F11</code>.",
-        "WEBAPP_TO_TAB": "(Inside a WebApp) Promote the WebApp into a terminal tab slot. Bound to <code>Ctrl+Shift+T</code>. Placeholder until issue #29 lands the tab-bar refactor."
-    };
-
-    let appList = "";
-    window.shortcuts.filter(e => e.type === "app").forEach(cut => {
-        let action = (cut.action.startsWith("TAB_")) ? "TAB_X" : cut.action;
-
-        appList += `<tr>
-                        <td>${(cut.enabled) ? 'YES' : 'NO'}</td>
+const _renderShortcutsAppList = (shortcuts) => {
+    let html = "";
+    shortcuts.filter(e => e.type === "app").forEach(cut => {
+        const action = cut.action.startsWith("TAB_") ? "TAB_X" : cut.action;
+        html += `<tr>
+                        <td>${cut.enabled ? 'YES' : 'NO'}</td>
                         <td><input disabled type="text" maxlength=25 value="${cut.trigger}"></td>
-                        <td>${shortcutsDefinition[action]}</td>
+                        <td>${SHORTCUTS_DEFINITION[action]}</td>
                     </tr>`;
     });
+    return html;
+};
 
-    let customList = "";
-    window.shortcuts.filter(e => e.type === "shell").forEach(cut => {
-        customList += `<tr>
-                            <td>${(cut.enabled) ? 'YES' : 'NO'}</td>
+const _renderShortcutsCustomList = (shortcuts) => {
+    let html = "";
+    shortcuts.filter(e => e.type === "shell").forEach(cut => {
+        html += `<tr>
+                            <td>${cut.enabled ? 'YES' : 'NO'}</td>
                             <td><input disabled type="text" maxlength=25 value="${cut.trigger}"></td>
                             <td>
                                 <input disabled type="text" placeholder="Run terminal command..." value="${cut.action}">
-                                <input disabled type="checkbox" name="shortcutsHelpNew_Enter" ${(cut.linebreak) ? 'checked' : ''}>
+                                <input disabled type="checkbox" name="shortcutsHelpNew_Enter" ${cut.linebreak ? 'checked' : ''}>
                                 <label for="shortcutsHelpNew_Enter">Enter</label>
                             </td>
                         </tr>`;
     });
+    return html;
+};
 
-    window.keyboard.detach();
-    new Modal({
-        type: "custom",
-        title: `Available Keyboard Shortcuts <i>(v${remote.app.getVersion()})</i>`,
-        html: `<h5>Using either the on-screen or a physical keyboard, you can use the following shortcuts:</h5>
+const _shortcutsHelpHTML = (appList, customList) => `<h5>Using either the on-screen or a physical keyboard, you can use the following shortcuts:</h5>
                 <details open id="shortcutsHelpAccordeon1">
                     <summary>Emulator shortcuts</summary>
                     <table class="shortcutsHelp">
@@ -1342,26 +1337,42 @@ window.openShortcutsHelp = () => {
                        ${customList}
                     </table>
                 </details>
-                <br>`,
+                <br>`;
+
+const _shortcutsHelpOnClose = () => {
+    window.keyboard.attach();
+    window.term[window.currentTerm].term.focus();
+};
+
+// Mirror the two <details> accordions so opening one auto-closes the other.
+const _wireShortcutsAccordions = () => {
+    const wrap1 = document.getElementById('shortcutsHelpAccordeon1');
+    const wrap2 = document.getElementById('shortcutsHelpAccordeon2');
+    wrap1.addEventListener('toggle', () => { wrap2.open = !wrap1.open; });
+    wrap2.addEventListener('toggle', () => { wrap1.open = !wrap2.open; });
+};
+
+window.openShortcutsHelp = () => {
+    // Also guard on this modal's own DOM (#shortcutsHelpAccordeon1
+    // is created below) so rapid Ctrl+Shift+K presses don't stack
+    // copies — same hazard as #50.
+    if (document.getElementById("settingsEditor") || document.getElementById("shortcutsHelpAccordeon1")) return;
+
+    const appList = _renderShortcutsAppList(window.shortcuts);
+    const customList = _renderShortcutsCustomList(window.shortcuts);
+
+    window.keyboard.detach();
+    new Modal({
+        type: "custom",
+        title: `Available Keyboard Shortcuts <i>(v${remote.app.getVersion()})</i>`,
+        html: _shortcutsHelpHTML(appList, customList),
         buttons: [
             {label: "Open Shortcuts File", action:`electron.shell.openPath('${shortcutsFile}');electronWin.minimize();`},
             {label: "Reload UI", action: "window.location.reload(true);"},
         ]
-    }, () => {
-        window.keyboard.attach();
-        window.term[window.currentTerm].term.focus();
-    });
+    }, _shortcutsHelpOnClose);
 
-    let wrap1 = document.getElementById('shortcutsHelpAccordeon1');
-    let wrap2 = document.getElementById('shortcutsHelpAccordeon2');
-
-    wrap1.addEventListener('toggle', e => {
-        wrap2.open = !wrap1.open;
-    });
-
-    wrap2.addEventListener('toggle', e => {
-        wrap1.open = !wrap2.open;
-    });
+    _wireShortcutsAccordions();
 };
 
 window.useAppShortcut = action => {

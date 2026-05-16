@@ -144,95 +144,16 @@ class Keyboard {
             });
         });
 
+        // Hoisted outside the per-key loop so we don't re-query the DOM
+        // for every key — the .keyboard_enter NodeList is stable from
+        // here on.
+        const enterElements = document.querySelectorAll(".keyboard_enter");
         this.container.childNodes.forEach(row => {
             row.childNodes.forEach(key => {
-
-                let enterElements = document.querySelectorAll(".keyboard_enter");
-
-                if (key.attributes["class"].value.endsWith("keyboard_enter")) {
-                    // The enter key is divided in two dom elements, so we bind their animations here
-
-                    key.onmousedown = e => {
-                        this.pressKey(key);
-                        key.holdTimeout = setTimeout(() => {
-                            key.holdInterval = setInterval(() => {
-                                this.pressKey(key);
-                            }, 70);
-                        }, 400);
-
-                        enterElements.forEach(key => {
-                            key.setAttribute("class", "keyboard_key active keyboard_enter");
-                        });
-
-                        // Keep focus on the terminal
-                        if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
-                        if (this.container.dataset.passwordMode == "false")
-                            window.audioManager.granted.play();
-                        e.preventDefault();
-                    };
-                    key.onmouseup = () => {
-                        clearTimeout(key.holdTimeout);
-                        clearInterval(key.holdInterval);
-
-                        enterElements.forEach(key => {
-                            key.setAttribute("class", "keyboard_key blink keyboard_enter");
-                        });
-                        setTimeout(() => {
-                            enterElements.forEach(key => {
-                                key.setAttribute("class", "keyboard_key keyboard_enter");
-                            });
-                        }, 100);
-                    };
+                if (this._isEnterKey(key)) {
+                    this._wireEnterKeyHandlers(key, enterElements);
                 } else {
-                    key.onmousedown = e => {
-                        if (/^ESCAPED\|-- (CTRL|SHIFT|ALT){1}.*/.test(key.dataset.cmd)) {
-                            let cmd = key.dataset.cmd.substr(11);
-                            if (cmd.startsWith("CTRL")) {
-                                this.container.dataset.isCtrlOn = "true";
-                            }
-                            if (cmd.startsWith("SHIFT")) {
-                                this.container.dataset.isShiftOn = "true";
-                            }
-                            if (cmd.startsWith("ALT")) {
-                                this.container.dataset.isAltOn = "true";
-                            }
-                        } else {
-                            key.holdTimeout = setTimeout(() => {
-                                key.holdInterval = setInterval(() => {
-                                    this.pressKey(key);
-                                }, 70);
-                            }, 400);
-                            this.pressKey(key);
-                        }
-
-                        // Keep focus on the terminal
-                        if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
-                        if(this.container.dataset.passwordMode == "false")
-                            window.audioManager.stdin.play();
-                        e.preventDefault();
-                    };
-                    key.onmouseup = e => {
-                        if (/^ESCAPED\|-- (CTRL|SHIFT|ALT){1}.*/.test(key.dataset.cmd)) {
-                            let cmd = key.dataset.cmd.substr(11);
-                            if (cmd.startsWith("CTRL")) {
-                                this.container.dataset.isCtrlOn = "false";
-                            }
-                            if (cmd.startsWith("SHIFT")) {
-                                this.container.dataset.isShiftOn = "false";
-                            }
-                            if (cmd.startsWith("ALT")) {
-                                this.container.dataset.isAltOn = "false";
-                            }
-                        } else {
-                            clearTimeout(key.holdTimeout);
-                            clearInterval(key.holdInterval);
-                        }
-
-                        key.setAttribute("class", "keyboard_key blink");
-                        setTimeout(() => {
-                            key.setAttribute("class", "keyboard_key");
-                        }, 100);
-                    };
+                    this._wireRegularKeyHandlers(key);
                 }
 
                 // See #229
@@ -595,6 +516,104 @@ class Keyboard {
             && !e.code.startsWith("Alt")
             && !e.code.startsWith("Control")
             && !e.code.startsWith("Caps");
+    }
+
+    // True when `key` is one of the two DOM elements that make up the
+    // visually-split Enter key. The class string ends with
+    // "keyboard_enter" for both halves.
+    _isEnterKey(key) {
+        return key.attributes["class"].value.endsWith("keyboard_enter");
+    }
+
+    // Wire mousedown/mouseup for the split Enter key. Both halves
+    // animate together via `enterElements`.
+    _wireEnterKeyHandlers(key, enterElements) {
+        key.onmousedown = e => {
+            this.pressKey(key);
+            key.holdTimeout = setTimeout(() => {
+                key.holdInterval = setInterval(() => {
+                    this.pressKey(key);
+                }, 70);
+            }, 400);
+
+            enterElements.forEach(enterEl => {
+                enterEl.setAttribute("class", "keyboard_key active keyboard_enter");
+            });
+
+            // Keep focus on the terminal
+            if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
+            if (this.container.dataset.passwordMode == "false")
+                window.audioManager.granted.play();
+            e.preventDefault();
+        };
+        key.onmouseup = () => {
+            clearTimeout(key.holdTimeout);
+            clearInterval(key.holdInterval);
+
+            enterElements.forEach(enterEl => {
+                enterEl.setAttribute("class", "keyboard_key blink keyboard_enter");
+            });
+            setTimeout(() => {
+                enterElements.forEach(enterEl => {
+                    enterEl.setAttribute("class", "keyboard_key keyboard_enter");
+                });
+            }, 100);
+        };
+    }
+
+    // Wire mousedown/mouseup for everything that isn't the Enter key.
+    // Modifier keys (CTRL/SHIFT/ALT) flip dataset state on press/release;
+    // regular keys press through (with hold-to-repeat after 400ms).
+    _wireRegularKeyHandlers(key) {
+        key.onmousedown = e => {
+            if (/^ESCAPED\|-- (CTRL|SHIFT|ALT){1}.*/.test(key.dataset.cmd)) {
+                let cmd = key.dataset.cmd.substr(11);
+                if (cmd.startsWith("CTRL")) {
+                    this.container.dataset.isCtrlOn = "true";
+                }
+                if (cmd.startsWith("SHIFT")) {
+                    this.container.dataset.isShiftOn = "true";
+                }
+                if (cmd.startsWith("ALT")) {
+                    this.container.dataset.isAltOn = "true";
+                }
+            } else {
+                key.holdTimeout = setTimeout(() => {
+                    key.holdInterval = setInterval(() => {
+                        this.pressKey(key);
+                    }, 70);
+                }, 400);
+                this.pressKey(key);
+            }
+
+            // Keep focus on the terminal
+            if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
+            if(this.container.dataset.passwordMode == "false")
+                window.audioManager.stdin.play();
+            e.preventDefault();
+        };
+        key.onmouseup = e => {
+            if (/^ESCAPED\|-- (CTRL|SHIFT|ALT){1}.*/.test(key.dataset.cmd)) {
+                let cmd = key.dataset.cmd.substr(11);
+                if (cmd.startsWith("CTRL")) {
+                    this.container.dataset.isCtrlOn = "false";
+                }
+                if (cmd.startsWith("SHIFT")) {
+                    this.container.dataset.isShiftOn = "false";
+                }
+                if (cmd.startsWith("ALT")) {
+                    this.container.dataset.isAltOn = "false";
+                }
+            } else {
+                clearTimeout(key.holdTimeout);
+                clearInterval(key.holdInterval);
+            }
+
+            key.setAttribute("class", "keyboard_key blink");
+            setTimeout(() => {
+                key.setAttribute("class", "keyboard_key");
+            }, 100);
+        };
     }
     addCircum(char) {
         switch(char) {

@@ -103,6 +103,48 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
     let stderrBuf = "";
     let lastEmittedText = "";
 
+    // System init event carries the model + cwd + session ID.
+    const handleSystem = (ev) => {
+        if (ev.subtype === "init" && ev.model) {
+            sender.send("claude:model", { reqId, model: ev.model });
+        }
+    };
+
+    // Partial-message stream: deltas arrive on `stream_event` blocks.
+    const handleStreamEvent = (ev) => {
+        if (ev.event?.type !== "content_block_delta") return;
+        const d = ev.event.delta;
+        if (d?.type !== "text_delta") return;
+        if (typeof d.text !== "string" || d.text.length === 0) return;
+        sender.send("claude:delta", { reqId, text: d.text });
+        lastEmittedText += d.text;
+    };
+
+    // Final assistant message: catches anything we missed via deltas.
+    const handleAssistant = (ev) => {
+        if (!ev.message || !Array.isArray(ev.message.content)) return;
+        const fullText = ev.message.content
+            .filter(b => b.type === "text")
+            .map(b => b.text || "")
+            .join("");
+        if (fullText.length <= lastEmittedText.length) return;
+        const remainder = fullText.slice(lastEmittedText.length);
+        sender.send("claude:delta", { reqId, text: remainder });
+        lastEmittedText = fullText;
+    };
+
+    const dispatchEvent = (ev) => {
+        switch (ev.type) {
+            case "system": return handleSystem(ev);
+            case "stream_event": return handleStreamEvent(ev);
+            case "assistant": return handleAssistant(ev);
+            case "result":
+                // Includes usage, is_error, subtype — forward usage to renderer
+                sender.send("claude:result", { reqId, result: ev });
+                return;
+        }
+    };
+
     proc.stdout.on("data", chunk => {
         stdoutBuf += chunk.toString();
         let nl;
@@ -110,45 +152,10 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             const line = stdoutBuf.slice(0, nl);
             stdoutBuf = stdoutBuf.slice(nl + 1);
             if (!line.trim()) continue;
-
             let ev;
             try { ev = JSON.parse(line); }
             catch (_) { continue; }
-
-            // System init event carries the model + cwd + session ID.
-            if (ev.type === "system" && ev.subtype === "init" && ev.model) {
-                sender.send("claude:model", { reqId, model: ev.model });
-                continue;
-            }
-
-            // Partial-message stream: deltas arrive on `stream_event` blocks.
-            if (ev.type === "stream_event" && ev.event?.type === "content_block_delta") {
-                const d = ev.event.delta;
-                if (d?.type === "text_delta" && typeof d.text === "string" && d.text.length > 0) {
-                    sender.send("claude:delta", { reqId, text: d.text });
-                    lastEmittedText += d.text;
-                }
-                continue;
-            }
-
-            // Final assistant message: catches anything we missed via deltas.
-            if (ev.type === "assistant" && ev.message && Array.isArray(ev.message.content)) {
-                const fullText = ev.message.content
-                    .filter(b => b.type === "text")
-                    .map(b => b.text || "")
-                    .join("");
-                if (fullText.length > lastEmittedText.length) {
-                    const remainder = fullText.slice(lastEmittedText.length);
-                    sender.send("claude:delta", { reqId, text: remainder });
-                    lastEmittedText = fullText;
-                }
-                continue;
-            }
-
-            if (ev.type === "result") {
-                // Includes usage, is_error, subtype — forward usage to renderer
-                sender.send("claude:result", { reqId, result: ev });
-            }
+            dispatchEvent(ev);
         }
     });
 

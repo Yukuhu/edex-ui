@@ -63,6 +63,8 @@ test("ClaudeChat._isHttpUrl rejects malformed / non-string inputs", async (t) =>
     });
     await t.test("empty / whitespace-only strings", () => {
         assert.equal(ClaudeChat._isHttpUrl(""), false);
+        assert.equal(ClaudeChat._isHttpUrl("   "), false);
+        assert.equal(ClaudeChat._isHttpUrl("\n\t"), false);
     });
     await t.test("malformed URLs", () => {
         assert.equal(ClaudeChat._isHttpUrl("not a url"), false);
@@ -101,8 +103,10 @@ test("_extractSources: identity cases", async (t) => {
 test("_extractSources: bare URLs in the body", async (t) => {
     await t.test("strips a single bare URL and captures it as a source", () => {
         const r = instance._extractSources("Check https://example.com/foo for details.");
-        // Bare URL is REMOVED from cleaned text.
-        assert.ok(!r.cleaned.includes("https://example.com"));
+        // Bare URL is REMOVED from cleaned text — pin the exact output
+        // rather than a substring-absence check (CodeQL flags
+        // `.includes(url)` as an incomplete-URL-sanitization pattern).
+        assert.equal(r.cleaned, "Check  for details.");
         // Captured with url=url, label=url (no markdown label).
         assert.equal(r.sources.length, 1);
         assert.equal(r.sources[0].url, "https://example.com/foo");
@@ -131,8 +135,8 @@ test("_extractSources: trailing Sources block", async (t) => {
     await t.test("Sources: heading with bare URLs is lopped off", () => {
         const text = "Here is the answer.\n\nSources:\nhttps://a.com\nhttps://b.com\n";
         const r = instance._extractSources(text);
-        assert.ok(!r.cleaned.includes("Sources:"));
-        assert.ok(!r.cleaned.includes("a.com"));
+        // Pin the exact cleaned text (block + trailing whitespace fully gone).
+        assert.equal(r.cleaned, "Here is the answer.");
         assert.equal(r.sources.length, 2);
         const urls = r.sources.map(s => s.url).sort();
         assert.deepEqual(urls, ["https://a.com", "https://b.com"]);

@@ -98,6 +98,7 @@ const RENDERER_SHARED = {
     Modal: "readonly",
     Netstat: "readonly",
     RAMwatcher: "readonly",
+    Shortcuts: "readonly",
     Sysinfo: "readonly",
     Terminal: "readonly",
     Toplist: "readonly",

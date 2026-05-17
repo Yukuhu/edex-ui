@@ -103,14 +103,23 @@ EOF
 
 ## Things to remember
 
-- **Settings live in two places:** the bootstrap defaults in
-  `src/_boot.js` (written to `settings.json` on first launch only) and
-  the in-app editor + persistence in `src/_renderer.js`. Adding a new
-  setting means touching both — and the renderer's `writeSettingsFile`
-  serializer — or it won't survive a save.
-- **Shortcuts also live in two places:** the default `shortcuts.json`
-  template in `src/_boot.js` and the `useAppShortcut` switch +
-  `shortcutsDefinition` table in `src/_renderer.js`.
+- **Settings shape lives in `src/utils/settingsSerializer.js`** —
+  `SCHEMA` maps each persisted `settings.json` key to its
+  settings-editor input id and type, and `serializeFromDom` turns form
+  values into the object written back to disk. The bootstrap defaults
+  in `src/_boot.js` are still a separate template (#174 will fold them
+  into the same module). Adding a new setting today: append to
+  `SCHEMA`, add the editor input in `_renderer.js`'s settings modal,
+  and add the default value in `_boot.js`.
+- **Shortcut dispatch + help-modal helpers live in
+  `src/classes/shortcuts.class.js`** — `SHORTCUTS_DEFINITION` (the
+  human-readable descriptions), `useAppShortcut` (the action
+  dispatcher), `openShortcutsHelp`, `registerKeyboardShortcuts`, and a
+  one-shot `Shortcuts.init()` that the renderer calls at startup. The
+  default `shortcuts.json` template is still in `src/_boot.js` (#174
+  will unify it). Adding a new shortcut today: append to
+  `SHORTCUTS_DEFINITION`, add the case in `useAppShortcut`, and add
+  the default in `_boot.js`.
 - **Modal Esc closes the topmost modal globally**
   (`src/classes/modal.class.js`); the auto-Close button on
   `type: "custom"` modals is gated by `window.settings.modalCloseButton`.

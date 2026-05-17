@@ -271,6 +271,23 @@ original author Gabriel "Squared" SAILLARD — see the README
 - **README "About this fork" + "Acknowledgments" sections** that
   credit Gabriel "Squared" SAILLARD as the original eDEX-UI author
   with a link back to `GitSquared/edex-ui`. (PR #2)
+- **`docs/globals.md`** — comprehensive inventory of every `window.X`
+  symbol the renderer relies on, by category (vendored,
+  service-class identifiers, per-launch state, transient/per-modal
+  state, helpers, action functions, browser event hooks, internal
+  bookkeeping flags). Each row notes the owner module, where the
+  symbol is initialised and mutated, and any reader outside the
+  defining file. The introduction explains *why* the project uses
+  `window.*` as a service locator — the classic-script shared scope
+  pattern that's also the rationale behind ESLint's
+  `RENDERER_SHARED` map and the SonarCloud `S7764` suppression in
+  `sonar-project.properties`. CLAUDE.md and the ESLint config now
+  link to this doc as the canonical reference. The audit surfaced
+  three globals (`window.resizeTimeout`, `window._settingsOpening`,
+  `window.edexErrorsModals`) whose `window` lifetime is tactical
+  rather than intentional — they're flagged in the doc as cleanup
+  candidates for a follow-up PR rather than removed here, so any
+  behaviour regression is easy to bisect. (Closes #178)
 - **SonarCloud static analysis** runs on every push to `master` and
   every PR via `.github/workflows/sonarcloud.yml`. Blocks on the
   quality gate so a failing gate marks the check red and branch

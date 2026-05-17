@@ -45,9 +45,10 @@ const WORKER = clean(globals.worker);
 // `window`). Reading any of these bare from another renderer file
 // is intentional, not a typo.
 //
-// When adding a new renderer class, add it here too. The eventual
-// `docs/globals.md` (issue #178) will be the canonical reference;
-// until then, this list serves as a working inventory.
+// When adding a new renderer class, add it here too. `docs/globals.md`
+// (issue #178) is the canonical reference for *why* the project
+// hangs services off `window` and what the lifecycle of each symbol
+// is; this map is the corresponding lint-side allowlist.
 const RENDERER_SHARED = {
     // Node modules loaded once at the top of _renderer.js
     path: "readonly",

@@ -123,14 +123,17 @@ test("pressKey: shell-type shortcut writes to terminal and ALSO falls through to
 
     // Shell shortcut fires the command (with linebreak → writelr).
     assert.ok(term.calls.some(c => c.method === "writelr" && c.arg === "ls -la"));
+    // Shell shortcuts route through term.writelr/term.write — they do
+    // NOT call useAppShortcut (which is only the app-type branch).
+    assert.ok(!window.useAppShortcut.calls || window.useAppShortcut.calls.length === 0);
     // It does NOT short-circuit, so the underlying cmd is also written.
     assert.ok(term.calls.some(c => c.method === "write" && c.arg === "l"));
 });
 
-test("pressKey: disabled shortcuts are ignored", (t) => {
+test("pressKey: disabled shortcuts are ignored — input still reaches the terminal", (t) => {
     t.after(teardownDom);
     setupDom();
-    const { kb } = makeKeyboard({
+    const { kb, term } = makeKeyboard({
         shortcuts: { CtrlShift: [{ enabled: false, trigger: "A", type: "app", action: "SHOULD_NOT_FIRE" }] }
     });
     kb.container.dataset.isCtrlOn = "true";
@@ -140,6 +143,9 @@ test("pressKey: disabled shortcuts are ignored", (t) => {
 
     // useAppShortcut.calls is undefined or empty.
     assert.ok(!window.useAppShortcut.calls || window.useAppShortcut.calls.length === 0);
+    // And the cmd still reaches the terminal (disabled shortcut doesn't
+    // swallow the keystroke).
+    assert.deepEqual(term.calls, [{ method: "write", arg: "a" }]);
 });
 
 test("pressKey: no modifiers held → no shortcut lookup happens", (t) => {
@@ -182,6 +188,51 @@ test("pressKey: Alt+Shift overrides with altshift_cmd", (t) => {
     assert.deepEqual(term.calls, [{ method: "write", arg: "À" }]);
 });
 
+test("pressKey: CapsLock acts like Shift for shift_cmd swap", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isCapsLckOn = "true";
+    kb.pressKey(fakeKeyElement({ cmd: "a", shift_cmd: "A" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "A" }]);
+});
+
+test("pressKey: CapsLock + capslck_cmd overrides shift_cmd", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isCapsLckOn = "true";
+    kb.pressKey(fakeKeyElement({ cmd: "a", shift_cmd: "A", capslck_cmd: "AA" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "AA" }]);
+});
+
+test("pressKey: Ctrl swaps to ctrl_cmd", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isCtrlOn = "true";
+    kb.pressKey(fakeKeyElement({ cmd: "a", ctrl_cmd: "\x01" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "\x01" }]);
+});
+
+test("pressKey: Alt swaps to alt_cmd", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isAltOn = "true";
+    kb.pressKey(fakeKeyElement({ cmd: "a", alt_cmd: "à" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "à" }]);
+});
+
+test("pressKey: Fn swaps to fn_cmd", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isFnOn = "true";
+    kb.pressKey(fakeKeyElement({ cmd: "a", fn_cmd: "F1" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "F1" }]);
+});
+
 // ---------------------------------------------------------------------
 // Dead-key transforms (round-trip through pressKey)
 // ---------------------------------------------------------------------
@@ -205,6 +256,18 @@ test("pressKey: cedilla flag clears after applying (sticky-cedilla regression lo
     assert.deepEqual(term.calls, [{ method: "write", arg: "ç" }]);
     // Pre-fix this would have been "true" — see #142.
     assert.equal(kb.container.dataset.isNextCedilla, "false");
+});
+
+test("pressKey: Greek dispatch goes through toGreek (no addGreek method)", (t) => {
+    t.after(teardownDom);
+    setupDom();
+    const { kb, term } = makeKeyboard();
+    kb.container.dataset.isNextGreek = "true";
+    // `b` is mapped by toGreek to lower beta β. (See #148 for the
+    // case-asymmetry findings; pin the documented behavior.)
+    kb.pressKey(fakeKeyElement({ cmd: "b" }));
+    assert.deepEqual(term.calls, [{ method: "write", arg: "β" }]);
+    assert.equal(kb.container.dataset.isNextGreek, "false");
 });
 
 // ---------------------------------------------------------------------

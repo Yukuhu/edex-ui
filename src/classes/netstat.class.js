@@ -136,7 +136,10 @@ class Netstat {
                                     geo: this.geoLookup.get(data.ip).location
                                 };
 
-                                this.ipEl.innerHTML = window._escapeHtml(this.ipinfo.ip);
+                                // IP from myexternalip.com — treat as
+                                // text so a malformed/injected response
+                                // can't introduce DOM. Issue #171.
+                                this.ipEl.textContent = this.ipinfo.ip;
 
                                 this.runsBeforeGeoIPUpdate = 10;
                             } catch(e) {
@@ -162,8 +165,8 @@ class Netstat {
                 if (offline) {
                     this._renderOffline();
                 } else {
-                    this.stateEl.innerHTML = "ONLINE";
-                    this.pingEl.innerHTML = Math.round(p)+"ms";
+                    this.stateEl.textContent = "ONLINE";
+                    this.pingEl.textContent = Math.round(p)+"ms";
                 }
             }
         });
@@ -171,9 +174,9 @@ class Netstat {
 
     // Reset the three status cells to their offline placeholder values.
     _renderOffline() {
-        this.stateEl.innerHTML = "OFFLINE";
-        this.ipEl.innerHTML    = "--.--.--.--";
-        this.pingEl.innerHTML  = "--ms";
+        this.stateEl.textContent = "OFFLINE";
+        this.ipEl.textContent    = "--.--.--.--";
+        this.pingEl.textContent  = "--ms";
     }
 
     ping(target, port, local) {

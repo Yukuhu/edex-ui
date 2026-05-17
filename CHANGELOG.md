@@ -468,6 +468,34 @@ original author Gabriel "Squared" SAILLARD — see the README
   (which would otherwise execute `javascript:` or `file:` schemes
   via the OS handler). Defence layered both at extraction time and
   at the click site. (PR #4 follow-up)
+- **`innerHTML` audit + OS-supplied-string escapes**. Walked every
+  `.innerHTML =` / `+=` site in `src/` (71 total, vendored
+  `encom-globe.js` excluded) and classified each as safe-static,
+  safe-internal, safe-already-escaped, textContent-candidate, or
+  unsafe. Six call sites in five files were rendering OS-supplied
+  strings — values that can legitimately contain HTML metacharacters
+  — into the DOM without escape and have been fixed:
+  - `_renderer.js`: PTY foreground process name in the shell-tab
+    label (`<p>MAIN - ${p}</p>` and the multi-tab variant), the
+    OS username in the welcome greeter, and the uncaught-error
+    handler's boot-screen log line.
+  - `filesystem.class.js`: disk label + device name from
+    `systeminformation.blockDevices()` (the `readFS` path was
+    already escaping; `readDevices` wasn't).
+  - `toplist.class.js`: `proc.name` in the always-on top-processes
+    panel, plus `proc.name`/`proc.user`/`proc.state`/`proc.started`
+    in the Active Processes modal — all OS-supplied via
+    `systeminformation.processes()`.
+  Twelve other plain-text assignments (battery state, online/offline
+  cells, disk-usage placeholders, the external IPv4 readout) were
+  converted from `innerHTML` to `textContent` — same visible result,
+  but bypasses the HTML parser entirely so any future drift can't
+  introduce a sink. The remaining tiers (theme-JSON injection via
+  `_purifyCSS` callsites, keyboard-layout JSON injection in
+  `keyboard.class.js`) are documented as a separate threat model
+  for a follow-up. New `tests/README.md` section "Rule of thumb:
+  `innerHTML` vs `textContent`" captures the conventions.
+  (Closes #171)
 - **`_escapeHtml` / `_purifyCSS` hardening + tests**. Extracted both
   helpers into `src/utils/escapeHelpers.js` and tightened their
   contracts: null/undefined/non-string input now coerce safely

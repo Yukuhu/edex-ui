@@ -49,7 +49,7 @@ class Sysinfo {
     updateDate() {
         let time = new Date();
 
-        document.querySelector("#mod_sysinfo > div:first-child > h1").innerHTML = time.getFullYear();
+        document.querySelector("#mod_sysinfo > div:first-child > h1").textContent = time.getFullYear();
 
         let month = time.getMonth();
         switch(month) {
@@ -90,7 +90,7 @@ class Sysinfo {
                 month = "DEC";
                 break;
         }
-        document.querySelector("#mod_sysinfo > div:first-child > h2").innerHTML = month+" "+time.getDate();
+        document.querySelector("#mod_sysinfo > div:first-child > h2").textContent = month+" "+time.getDate();
 
         let timeToNewDay = ((23 - time.getHours()) * 3600000) + ((59 - time.getMinutes()) * 60000);
         setTimeout(() => {
@@ -121,14 +121,14 @@ class Sysinfo {
             let indicator = document.querySelector("#mod_sysinfo > div:last-child > h2");
             if (bat.hasBattery) {
                 if (bat.isCharging) {
-                    indicator.innerHTML = "CHARGE";
+                    indicator.textContent = "CHARGE";
                 } else if (bat.acConnected) {
-                    indicator.innerHTML = "WIRED";
+                    indicator.textContent = "WIRED";
                 } else {
-                    indicator.innerHTML = bat.percent+"%";
+                    indicator.textContent = bat.percent+"%";
                 }
             } else {
-                indicator.innerHTML = "ON";
+                indicator.textContent = "ON";
             }
         });
     }

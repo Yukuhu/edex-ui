@@ -9,6 +9,7 @@
 
 const { spawn } = require("node:child_process");
 const { ipcMain } = require("electron");
+const { CHANNELS } = require("./ipc/channels.js");
 
 let _cleanEnv = null;
 const activeProcs = new Map(); // reqId -> ChildProcess
@@ -44,16 +45,16 @@ const ALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 function init({ cleanEnv }) {
     _cleanEnv = cleanEnv || process.env;
 
-    ipcMain.on("claude:send", (e, payload) => {
+    ipcMain.on(CHANNELS.CLAUDE_SEND, (e, payload) => {
         const { reqId, sessionId, prompt, firstTurn, model } = payload || {};
         if (!reqId || !prompt) {
-            e.sender.send("claude:error", { reqId, message: "Missing reqId or prompt" });
+            e.sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: "Missing reqId or prompt" });
             return;
         }
         runClaude(e.sender, reqId, sessionId, prompt, !!firstTurn, model);
     });
 
-    ipcMain.on("claude:cancel", (e, { reqId } = {}) => {
+    ipcMain.on(CHANNELS.CLAUDE_CANCEL, (e, { reqId } = {}) => {
         const proc = activeProcs.get(reqId);
         if (proc) {
             try { proc.kill("SIGTERM"); } catch (_) {}
@@ -91,7 +92,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             stdio: ["pipe", "pipe", "pipe"],
         });
     } catch (err) {
-        sender.send("claude:error", { reqId, message: `Failed to spawn claude: ${err.message}` });
+        sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: `Failed to spawn claude: ${err.message}` });
         return;
     }
     activeProcs.set(reqId, proc);
@@ -106,7 +107,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
     // System init event carries the model + cwd + session ID.
     const handleSystem = (ev) => {
         if (ev.subtype === "init" && ev.model) {
-            sender.send("claude:model", { reqId, model: ev.model });
+            sender.send(CHANNELS.CLAUDE_MODEL, { reqId, model: ev.model });
         }
     };
 
@@ -116,7 +117,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
         const d = ev.event.delta;
         if (d?.type !== "text_delta") return;
         if (typeof d.text !== "string" || d.text.length === 0) return;
-        sender.send("claude:delta", { reqId, text: d.text });
+        sender.send(CHANNELS.CLAUDE_DELTA, { reqId, text: d.text });
         lastEmittedText += d.text;
     };
 
@@ -129,7 +130,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             .join("");
         if (fullText.length <= lastEmittedText.length) return;
         const remainder = fullText.slice(lastEmittedText.length);
-        sender.send("claude:delta", { reqId, text: remainder });
+        sender.send(CHANNELS.CLAUDE_DELTA, { reqId, text: remainder });
         lastEmittedText = fullText;
     };
 
@@ -140,7 +141,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             case "assistant": return handleAssistant(ev);
             case "result":
                 // Includes usage, is_error, subtype — forward usage to renderer
-                sender.send("claude:result", { reqId, result: ev });
+                sender.send(CHANNELS.CLAUDE_RESULT, { reqId, result: ev });
                 return;
         }
     };
@@ -165,16 +166,16 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
 
     proc.on("error", err => {
         activeProcs.delete(reqId);
-        sender.send("claude:error", { reqId, message: err.message });
+        sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: err.message });
     });
 
     proc.on("close", code => {
         activeProcs.delete(reqId);
         if (code !== 0 && lastEmittedText.length === 0) {
             const tail = stderrBuf.trim().split("\n").slice(-5).join("\n") || `exit code ${code}`;
-            sender.send("claude:error", { reqId, message: tail });
+            sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: tail });
         } else {
-            sender.send("claude:done", { reqId, code });
+            sender.send(CHANNELS.CLAUDE_DONE, { reqId, code });
         }
     });
 }

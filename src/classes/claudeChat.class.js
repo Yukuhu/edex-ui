@@ -15,6 +15,11 @@ class ClaudeChat {
     // whatever the user's Claude Code default happens to be.
     static DEFAULT_MODEL = "claude-haiku-4-5";
 
+    // IPC channel registry (issue #177). Static so the test harness
+    // can reach it without invoking the constructor, and so
+    // `_wireIpc` doesn't have to pay a `require` cost on every call.
+    static _CHANNELS = require("../ipc/channels.js").CHANNELS;
+
     // Kokoro TTS — runs in src/workers/tts-worker.js, owned by
     // window.ttsEngine. The static voice/dtype tables below are still
     // exposed here because the settings editor in _renderer.js reads
@@ -556,11 +561,11 @@ class ClaudeChat {
             }
         };
 
-        this.ipc.on("claude:delta", this._onDelta);
-        this.ipc.on("claude:done", this._onDone);
-        this.ipc.on("claude:error", this._onError);
-        this.ipc.on("claude:result", this._onResult);
-        this.ipc.on("claude:model", this._onModel);
+        this.ipc.on(ClaudeChat._CHANNELS.CLAUDE_DELTA, this._onDelta);
+        this.ipc.on(ClaudeChat._CHANNELS.CLAUDE_DONE, this._onDone);
+        this.ipc.on(ClaudeChat._CHANNELS.CLAUDE_ERROR, this._onError);
+        this.ipc.on(ClaudeChat._CHANNELS.CLAUDE_RESULT, this._onResult);
+        this.ipc.on(ClaudeChat._CHANNELS.CLAUDE_MODEL, this._onModel);
     }
 
     _submit() {
@@ -615,7 +620,7 @@ class ClaudeChat {
         this.status.innerText = "Querying claude…";
         if (this.avatar) this.avatar.setState("thinking");
         if (this._perf) this._perf.ipcOutT = performance.now();
-        this.ipc.send("claude:send", {
+        this.ipc.send(ClaudeChat._CHANNELS.CLAUDE_SEND, {
             reqId: this.pendingReqId,
             sessionId: this.sessionId,
             firstTurn: this.firstTurn,
@@ -692,7 +697,7 @@ class ClaudeChat {
         // the switch doesn't leave an orphaned subprocess turn or an
         // active WebGPU generate fighting the user's new context.
         if (this.chatBackend === "claude-cli" && this.pendingReqId) {
-            this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
+            this.ipc.send(ClaudeChat._CHANNELS.CLAUDE_CANCEL, { reqId: this.pendingReqId });
             // Late claude:delta IPC events are gated on pendingReqId
             // and harmlessly dropped once we finalize, but the
             // already-running TTS queue and the avatar don't watch
@@ -1196,7 +1201,7 @@ class ClaudeChat {
 
     _cancelInflight() {
         if (this.pendingReqId) {
-            this.ipc.send("claude:cancel", { reqId: this.pendingReqId });
+            this.ipc.send(ClaudeChat._CHANNELS.CLAUDE_CANCEL, { reqId: this.pendingReqId });
         }
         if (window.gemmaEngine?.isGenerating) {
             window.gemmaEngine.cancel();
@@ -1237,11 +1242,11 @@ class ClaudeChat {
     }
 
     _removeIpcListeners() {
-        this.ipc.removeListener("claude:delta", this._onDelta);
-        this.ipc.removeListener("claude:done", this._onDone);
-        this.ipc.removeListener("claude:error", this._onError);
-        this.ipc.removeListener("claude:result", this._onResult);
-        this.ipc.removeListener("claude:model", this._onModel);
+        this.ipc.removeListener(ClaudeChat._CHANNELS.CLAUDE_DELTA, this._onDelta);
+        this.ipc.removeListener(ClaudeChat._CHANNELS.CLAUDE_DONE, this._onDone);
+        this.ipc.removeListener(ClaudeChat._CHANNELS.CLAUDE_ERROR, this._onError);
+        this.ipc.removeListener(ClaudeChat._CHANNELS.CLAUDE_RESULT, this._onResult);
+        this.ipc.removeListener(ClaudeChat._CHANNELS.CLAUDE_MODEL, this._onModel);
     }
 }
 

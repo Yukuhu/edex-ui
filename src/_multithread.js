@@ -4,6 +4,7 @@ if (cluster.isMaster) {
     const electron = require("electron");
     const ipc = electron.ipcMain;
     const signale = require("./utils/logger.js");
+    const { CHANNELS, systeminformationReply } = require("./ipc/channels.js");
     // Also, leave a core available for the renderer process
     const osCPUs = require("node:os").cpus().length - 1;
     // See #904
@@ -42,7 +43,7 @@ if (cluster.isMaster) {
     }
 
     const queue = {};
-    ipc.on("systeminformation-call", (e, type, id, ...args) => {
+    ipc.on(CHANNELS.SI_CALL, (e, type, id, ...args) => {
         if (!si[type]) {
             signale.warn("Illegal request for systeminformation");
             return;
@@ -51,7 +52,7 @@ if (cluster.isMaster) {
         if (args.length > 1 || workers.length <= 0) {
             si[type](...args).then(res => {
                 if (e.sender) {
-                    e.sender.send("systeminformation-reply-"+id, res);
+                    e.sender.send(systeminformationReply(id), res);
                 }
             });
         } else {
@@ -64,7 +65,7 @@ if (cluster.isMaster) {
         msg = JSON.parse(msg);
         try {
             if (!queue[msg.id].isDestroyed()) {
-                queue[msg.id].send("systeminformation-reply-"+msg.id, msg.res);
+                queue[msg.id].send(systeminformationReply(msg.id), msg.res);
                 delete queue[msg.id];
             }
         } catch(e) {

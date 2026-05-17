@@ -54,8 +54,9 @@ const url = require("node:url");
 const fs = require("node:fs");
 const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
+const { CHANNELS } = require("./ipc/channels.js");
 
-ipc.on("log", (e, type, content) => {
+ipc.on(CHANNELS.LOG, (e, type, content) => {
     signale[type](content);
 });
 
@@ -329,7 +330,7 @@ app.on('ready', async () => {
         extraTtys[basePort+i] = null;
     }
 
-    ipc.on("ttyspawn", (e, arg) => {
+    ipc.on(CHANNELS.TTY_SPAWN, (e, arg) => {
         let port = null;
         Object.keys(extraTtys).forEach(key => {
             if (extraTtys[key] === null && port === null) {
@@ -340,7 +341,7 @@ app.on('ready', async () => {
 
         if (port === null) {
             signale.error("TTY spawn denied (Reason: exceeded max TTYs number)");
-            e.sender.send("ttyspawn-reply", "ERROR: max number of ttys reached");
+            e.sender.send(CHANNELS.TTY_SPAWN_REPLY, "ERROR: max number of ttys reached");
         } else {
             signale.pending(`Creating new TTY process on port ${port}`);
             let term = new Terminal({
@@ -372,23 +373,23 @@ app.on('ready', async () => {
             };
 
             extraTtys[port] = term;
-            e.sender.send("ttyspawn-reply", "SUCCESS: "+port);
+            e.sender.send(CHANNELS.TTY_SPAWN_REPLY, "SUCCESS: "+port);
         }
     });
 
     // Backend support for theme and keyboard hotswitch
     let themeOverride = null;
     let kbOverride = null;
-    ipc.on("getThemeOverride", (e, arg) => {
-        e.sender.send("getThemeOverride", themeOverride);
+    ipc.on(CHANNELS.THEME_GET, (e, arg) => {
+        e.sender.send(CHANNELS.THEME_GET, themeOverride);
     });
-    ipc.on("getKbOverride", (e, arg) => {
-        e.sender.send("getKbOverride", kbOverride);
+    ipc.on(CHANNELS.KB_GET, (e, arg) => {
+        e.sender.send(CHANNELS.KB_GET, kbOverride);
     });
-    ipc.on("setThemeOverride", (e, arg) => {
+    ipc.on(CHANNELS.THEME_SET, (e, arg) => {
         themeOverride = arg;
     });
-    ipc.on("setKbOverride", (e, arg) => {
+    ipc.on(CHANNELS.KB_SET, (e, arg) => {
         kbOverride = arg;
     });
 });

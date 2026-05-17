@@ -60,6 +60,9 @@ window.eval = global.eval = function () {
 // so the unit suite can exercise them without booting the renderer.
 // See that file for the full contract. Issue #170.
 const _escapeHelpers = require("./utils/escapeHelpers.js");
+// IPC channel constants — every literal channel string in this
+// file routes through the registry (issue #177).
+const { CHANNELS, systeminformationReply } = require("./ipc/channels.js");
 window._escapeHtml = _escapeHelpers.escapeHtml;
 window._purifyCSS = _escapeHelpers.purifyCSS;
 window._encodePathURI = uri => {
@@ -116,7 +119,7 @@ if (remote.process.argv.includes("--nocursor")) {
 }
 
 // Retrieve theme override (hotswitch)
-ipc.once("getThemeOverride", (e, theme) => {
+ipc.once(CHANNELS.THEME_GET, (e, theme) => {
     if (theme !== null) {
         window.settings.theme = theme;
         window.settings.nointroOverride = true;
@@ -125,15 +128,15 @@ ipc.once("getThemeOverride", (e, theme) => {
         _loadTheme(require(path.join(themesDir, window.settings.theme+".json")));
     }
 });
-ipc.send("getThemeOverride");
+ipc.send(CHANNELS.THEME_GET);
 // Same for keyboard override/hotswitch
-ipc.once("getKbOverride", (e, layout) => {
+ipc.once(CHANNELS.KB_GET, (e, layout) => {
     if (layout !== null) {
         window.settings.keyboard = layout;
         window.settings.nointroOverride = true;
     }
 });
-ipc.send("getKbOverride");
+ipc.send(CHANNELS.KB_GET);
 
 // Load UI theme
 window._loadTheme = theme => {
@@ -224,8 +227,8 @@ function initGraphicalErrorHandling() {
         });
         window.edexErrorsModals.push(errorModal);
 
-        ipc.send("log", "error", `${error}: ${safeMsg}`);
-        ipc.send("log", "debug", `at ${path} ${line}:${col}`);
+        ipc.send(CHANNELS.LOG, "error", `${error}: ${safeMsg}`);
+        ipc.send(CHANNELS.LOG, "debug", `at ${path} ${line}:${col}`);
     };
 }
 
@@ -262,13 +265,13 @@ function initSystemInformationProxy() {
 
                 return new Promise((resolve, reject) => {
                     let id = nanoid();
-                    ipc.once("systeminformation-reply-"+id, (e, res) => {
+                    ipc.once(systeminformationReply(id), (e, res) => {
                         if (callback) {
                             args.at(-1)(res);
                         }
                         resolve(res);
                     });
-                    ipc.send("systeminformation-call", prop, id, ...args);
+                    ipc.send(CHANNELS.SI_CALL, prop, id, ...args);
                 });
             };
         }
@@ -616,7 +619,7 @@ async function initUI() {
 }
 
 window.themeChanger = theme => {
-    ipc.send("setThemeOverride", theme);
+    ipc.send(CHANNELS.THEME_SET, theme);
     setTimeout(() => {
         window.location.reload(true);
     }, 100);
@@ -628,7 +631,7 @@ window.remakeKeyboard = layout => {
         layout: path.join(keyboardsDir, layout+".json" || settings.keyboard+".json"),
         container: "keyboard"
     });
-    ipc.send("setKbOverride", layout);
+    ipc.send(CHANNELS.KB_SET, layout);
 };
 
 window.focusShellTab = number => {
@@ -654,8 +657,8 @@ window.focusShellTab = number => {
         window.term[number] = null;
 
         document.getElementById("shell_tab"+number).innerHTML = "<p>LOADING...</p>";
-        ipc.send("ttyspawn", "true");
-        ipc.once("ttyspawn-reply", (e, r) => {
+        ipc.send(CHANNELS.TTY_SPAWN, "true");
+        ipc.once(CHANNELS.TTY_SPAWN_REPLY, (e, r) => {
             if (r.startsWith("ERROR")) {
                 document.getElementById("shell_tab"+number).innerHTML = "<p>ERROR</p>";
             } else if (r.startsWith("SUCCESS")) {

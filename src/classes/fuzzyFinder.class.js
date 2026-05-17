@@ -4,6 +4,36 @@
 const SLOTS = 5;
 
 class FuzzyFinder {
+    // Strip the legacy `"FALLBACK |-- "` prefix Terminal.class.js
+    // adds to `cwd` when the OS-level lookup failed and we fell back
+    // to a guessed directory. The prefix isn't a real path
+    // component, so anything that wants to `readdirSync` on it
+    // (FuzzyFinder, FsModal, …) needs to remove it first. Issue #175.
+    static _stripCwdFallback(cwd) {
+        if (typeof cwd !== "string") return cwd;
+        return cwd.startsWith("FALLBACK |-- ") ? cwd.slice(13) : cwd;
+    }
+
+    // Pure filter+sort for an in-memory file list. The same logic
+    // the on-screen Ctrl+Shift+F modal uses:
+    //   1. Case-insensitive substring match.
+    //   2. Stop after `slotLimit` matches — there are only N row
+    //      slots, no point scoring the whole disk.
+    //   3. Names that *start with* the query bubble to the top;
+    //      everything else keeps its readdir-determined order.
+    // Issue #175.
+    static _matchAndSort(files, query, slotLimit) {
+        const q = String(query ?? "").toLowerCase();
+        const matches = [];
+        for (const name of files) {
+            if (matches.length >= slotLimit) break;
+            if (String(name).toLowerCase().includes(q)) matches.push(name);
+        }
+        const startsWithQ = name => Number(String(name).toLowerCase().startsWith(q));
+        matches.sort((a, b) => startsWithQ(b) - startsWithQ(a));
+        return matches;
+    }
+
     constructor() {
         if (document.getElementById("fuzzyFinder") || document.getElementById("settingsEditor")) {
             return false;
@@ -95,8 +125,7 @@ class FuzzyFinder {
         // terminal is now the single source of truth.
         const fs = require("node:fs");
         const term = window.term?.[window.currentTerm];
-        let cwd = term?.cwd || window.settings?.cwd;
-        if (cwd?.startsWith("FALLBACK |-- ")) cwd = cwd.slice(13);
+        const cwd = FuzzyFinder._stripCwdFallback(term?.cwd || window.settings?.cwd);
         this._currentCwd = cwd;
 
         let files;
@@ -106,18 +135,7 @@ class FuzzyFinder {
             files = [];
         }
 
-        const q = text.toLowerCase();
-        const matches = [];
-        for (const name of files) {
-            if (matches.length >= SLOTS) break;
-            if (name.toLowerCase().includes(q)) matches.push(name);
-        }
-
-        // Names that start with the query come first; others keep
-        // their (readdir-determined) order. Equivalent to the original
-        // three-branch comparator.
-        const startsWithQ = name => Number(name.toLowerCase().startsWith(q));
-        matches.sort((a, b) => startsWithQ(b) - startsWithQ(a));
+        const matches = FuzzyFinder._matchAndSort(files, text, SLOTS);
 
         // NOTE: when matches is empty, the legacy code wrote a "No
         // results" placeholder and then immediately overwrote it with

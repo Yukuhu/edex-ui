@@ -271,6 +271,33 @@ original author Gabriel "Squared" SAILLARD — see the README
 - **README "About this fork" + "Acknowledgments" sections** that
   credit Gabriel "Squared" SAILLARD as the original eDEX-UI author
   with a link back to `GitSquared/edex-ui`. (PR #2)
+- **Tests for `UpdateChecker` and `FuzzyFinder`** ([Closes #175](https://github.com/Yukuhu/edex-ui/issues/175)).
+  Extracted three pure static helpers so the version-compare
+  matrix and the fuzzy-search scoring logic can be exercised
+  without booting Electron:
+  - `UpdateChecker._compareVersion(current, tagName)` —
+    returns `"latest"` / `"dev"` / `"newer"` / `null`. Preserves
+    the legacy numeric-flattening semantics (`tag.slice(1)`
+    unconditional, `-pre` strip on local only, "1.2.10 is newer
+    than 1.3.0" upstream bug intact) so behaviour is unchanged.
+  - `FuzzyFinder._stripCwdFallback(cwd)` — removes the
+    `"FALLBACK |-- "` prefix Terminal adds when OS-level cwd
+    lookup failed.
+  - `FuzzyFinder._matchAndSort(files, query, slotLimit)` — the
+    filter / startsWith-priority sort used by the
+    `Ctrl+Shift+F` modal.
+  New test files: `tests/unit/updateChecker-compareVersion.test.js`
+  (13 tests covering the matrix the issue called out — older,
+  equal, newer, pre-release, malformed inputs, plus pinning the
+  numeric-flattening + slice-1 quirks) and
+  `tests/unit/fuzzyFinder-helpers.test.js` (13 tests covering
+  the prefix-strip and the match-and-sort: empty query, no
+  matches, startsWith priority, case insensitivity, slot cap,
+  early-exit scanning, regex-special chars, null/undefined
+  inputs). Tests: 414 → 440 (+26). The HTTP / Modal plumbing
+  in `UpdateChecker`'s constructor and the DOM rendering in
+  `FuzzyFinder.search` aren't covered here — they'd need a
+  dependency-injection refactor and are tracked separately.
 - **`docs/globals.md`** — comprehensive inventory of every `window.X`
   symbol the renderer relies on, by category (vendored,
   service-class identifiers, per-launch state, transient/per-modal

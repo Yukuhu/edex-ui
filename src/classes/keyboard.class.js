@@ -963,83 +963,33 @@ class Keyboard {
     addOverring(char) {
         return Keyboard.OVERRING_MAP[char] ?? char;
     }
+    static GREEK_MAP = {
+        "a": "α", "A": "Α",
+        "b": "β", "B": "Β",
+        "d": "δ", "D": "Δ",
+        "e": "ε", "E": "Ε",
+        "f": "φ", "F": "Φ",
+        "g": "γ", "G": "Γ",
+        "h": "η", "H": "Η",
+        "i": "ι", "I": "Ι",
+        "j": "θ", "J": "Θ",
+        "k": "κ", "K": "Κ",
+        "l": "λ", "L": "Λ",
+        "m": "μ", "M": "Μ",
+        "n": "ν", "N": "Ν",
+        "p": "π", "P": "Π",
+        "q": "χ", "Q": "Χ",
+        "r": "ρ", "R": "Ρ",
+        "s": "σ", "S": "Σ",
+        "t": "τ", "T": "Τ",
+        "u": "υ", "U": "Υ",
+        "w": "ω", "W": "Ω",
+        "x": "ξ", "X": "Ξ",
+        "y": "ψ", "Y": "Ψ",
+        "z": "ζ", "Z": "Ζ",
+    };
     toGreek(char) {
-        switch (char) {
-            case "b":
-                return "β";
-            case "p":
-                return "π";
-            case "P":
-                return "Π";
-            case "d":
-                return "δ";
-            case "D":
-                return "Δ";
-            case "l":
-                return "λ";
-            case "L":
-                return "Λ";
-            case "j":
-                return "θ";
-            case "J":
-                return "Θ";
-            case "z":
-                return "ζ";
-            case "w":
-                return "ω";
-            case "W":
-                return "Ω";
-            case "A":
-                return "α";
-            case "u":
-                return "υ";
-            case "U":
-                return "Υ";
-            case "i":
-                return "ι";
-            case "e":
-                return "ε";
-            case "t":
-                return "τ";
-            case "s":
-                return "σ";
-            case "S":
-                return "Σ";
-            case "r":
-                return "ρ";
-            case "R":
-                return "Ρ";
-            case "n":
-                return "ν";
-            case "m":
-                return "μ";
-            case "y":
-                return "ψ";
-            case "Y":
-                return "Ψ";
-            case "x":
-                return "ξ";
-            case "X":
-                return "Ξ";
-            case "k":
-                return "κ";
-            case "q":
-                return "χ";
-            case "Q":
-                return "Χ";
-            case "g":
-                return "γ";
-            case "G":
-                return "Γ";
-            case "h":
-                return "η";
-            case "f":
-                return "φ";
-            case "F":
-                return "Φ";
-            default:
-                return char;
-        }
+        return Keyboard.GREEK_MAP[char] ?? char;
     }
     static IOTASUB_MAP = {
         "o": "ǫ",

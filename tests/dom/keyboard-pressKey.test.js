@@ -263,8 +263,6 @@ test("pressKey: Greek dispatch goes through toGreek (no addGreek method)", (t) =
     setupDom();
     const { kb, term } = makeKeyboard();
     kb.container.dataset.isNextGreek = "true";
-    // `b` is mapped by toGreek to lower beta β. (See #148 for the
-    // case-asymmetry findings; pin the documented behavior.)
     kb.pressKey(fakeKeyElement({ cmd: "b" }));
     assert.deepEqual(term.calls, [{ method: "write", arg: "β" }]);
     assert.equal(kb.container.dataset.isNextGreek, "false");

@@ -235,17 +235,16 @@ test("_applyPendingDeadKey", async (t) => {
     });
     await t.test("dispatches to Greek via toGreek (no addGreek method)", () => {
         const kb = fakeKeyboard({ isNextGreek: "true" });
-        // toGreek has case-asymmetric mappings (e.g. `A → α` lowercase
-        // alpha but lowercase `a` falls through unchanged) — almost
-        // certainly typos in the pre-fork source, but out of scope
-        // for this dispatch-test PR. Pin both directions to current
-        // behavior so a future toGreek cleanup PR catches the diff.
-        assert.equal(kb._applyPendingDeadKey("a"), "a");        // lower-a NOT mapped (suspicious)
-        assert.equal(kb.container.dataset.isNextGreek, "false"); // flag still clears
+        assert.equal(kb._applyPendingDeadKey("a"), "α");        // #148: lower-a → lower alpha
+        assert.equal(kb.container.dataset.isNextGreek, "false");
 
         const kb2 = fakeKeyboard({ isNextGreek: "true" });
-        assert.equal(kb2._applyPendingDeadKey("b"), "β");        // lower-b is mapped to lower beta
+        assert.equal(kb2._applyPendingDeadKey("A"), "Α");       // #148: upper-A → upper alpha (was lowercase α)
         assert.equal(kb2.container.dataset.isNextGreek, "false");
+
+        const kb3 = fakeKeyboard({ isNextGreek: "true" });
+        assert.equal(kb3._applyPendingDeadKey("b"), "β");
+        assert.equal(kb3.container.dataset.isNextGreek, "false");
     });
     await t.test("when multiple flags are set, every match applies in DEAD_KEY_TRANSFORMS order", () => {
         // Pin the order: if both Circum AND Acute are set, the loop

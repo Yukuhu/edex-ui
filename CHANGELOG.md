@@ -351,6 +351,31 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Tightened `_purifyCSS` for color/font value contexts**
+  ([Closes #199](https://github.com/Yukuhu/edex-ui/issues/199)).
+  PR #198 noted as an explicit follow-up that `_purifyCSS` (strips
+  `<` only) is sufficient for `<style>`-tag-breakout but lets a
+  malicious theme break out of a *declaration* with `;` and inject
+  another inside the `<style>` body:
+
+  ```json
+  { "colors": { "black": "#000; background: url(javascript:alert(1))" } }
+  ```
+
+  renders as
+  `:root { --color_black: #000; background: url(…); }` and applies
+  the injected `background` to the `<html>` element.
+
+  New `safeCssValue(s)` helper in `src/utils/escapeHelpers.js`
+  strips `; { } < > \` — the small set of characters that can
+  break out of a value context. The renderer's 11 theme.colors.*
+  and theme.cssvars.* / theme.terminal.fontFamily callsites now
+  route through it; `theme.injectCSS` keeps `_purifyCSS` by design
+  (intentionally arbitrary CSS, needs `>` for child combinators).
+  9 new tests pin: hex/rgb/rgba/font-name pass-through, `;` strip
+  (the actual attack pattern collapse), `{`/`}` strip, `<`/`>`
+  strip, `\` strip (the `\;` CSS-escape smuggle attempt collapses
+  both characters), null/undefined, non-string coercion.
 - **Theme + keyboard-layout JSON injection hardening**
   ([Closes #197](https://github.com/Yukuhu/edex-ui/issues/197)).
   PR #184's "Out of scope" list called these out as a separate

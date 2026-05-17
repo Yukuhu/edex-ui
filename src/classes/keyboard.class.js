@@ -297,164 +297,166 @@ class Keyboard {
             });
         });
     }
+    static DEAD_KEY_TRANSFORMS = [
+        { flag: "isNextCircum",   method: "addCircum" },
+        { flag: "isNextTrema",    method: "addTrema" },
+        { flag: "isNextAcute",    method: "addAcute" },
+        { flag: "isNextGrave",    method: "addGrave" },
+        { flag: "isNextCaron",    method: "addCaron" },
+        { flag: "isNextBar",      method: "addBar" },
+        { flag: "isNextBreve",    method: "addBreve" },
+        { flag: "isNextTilde",    method: "addTilde" },
+        { flag: "isNextMacron",   method: "addMacron" },
+        { flag: "isNextCedilla",  method: "addCedilla" },
+        { flag: "isNextOverring", method: "addOverring" },
+        { flag: "isNextGreek",    method: "toGreek" },
+        { flag: "isNextIotasub",  method: "addIotasub" }
+    ];
+
+    static ESCAPED_CMD_HANDLERS = {
+        "CAPSLCK: ON":  { flag: "isCapsLckOn",   value: "true" },
+        "CAPSLCK: OFF": { flag: "isCapsLckOn",   value: "false" },
+        "FN: ON":       { flag: "isFnOn",        value: "true" },
+        "FN: OFF":      { flag: "isFnOn",        value: "false" },
+        "CIRCUM":       { flag: "isNextCircum",  value: "true" },
+        "TREMA":        { flag: "isNextTrema",   value: "true" },
+        "ACUTE":        { flag: "isNextAcute",   value: "true" },
+        "GRAVE":        { flag: "isNextGrave",   value: "true" },
+        "CARON":        { flag: "isNextCaron",   value: "true" },
+        "BAR":          { flag: "isNextBar",     value: "true" },
+        "BREVE":        { flag: "isNextBreve",   value: "true" },
+        "TILDE":        { flag: "isNextTilde",   value: "true" },
+        "MACRON":       { flag: "isNextMacron",  value: "true" },
+        "CEDILLA":      { flag: "isNextCedilla", value: "true" },
+        "OVERRING":     { flag: "isNextOverring",value: "true" },
+        "GREEK":        { flag: "isNextGreek",   value: "true" },
+        "IOTASUB":      { flag: "isNextIotasub", value: "true" }
+    };
+
     pressKey(key) {
         let cmd = key.dataset.cmd || "";
+        if (this._dispatchKeyboardShortcut(cmd)) return;
+        cmd = this._applyModifierCmd(key, cmd);
+        cmd = this._applyPendingDeadKey(cmd);
 
-        // Keyboard shortcuts
-        let shortcutsCat = "";
-        if (this.container.dataset.isCtrlOn === "true") shortcutsCat += "Ctrl";
-        if (this.container.dataset.isAltOn === "true") shortcutsCat += "Alt";
-        if (this.container.dataset.isShiftOn === "true") shortcutsCat += "Shift";
-
-        let shortcutsTriggered = false;
-
-        if (shortcutsCat.length > 1) {
-            this._shortcuts[shortcutsCat].forEach(cut => {
-                if (!cut.enabled) return;
-        
-                let trig = cut.trigger.toLowerCase()
-                                    .replace("plus", "+")
-                                    .replace("space", " ")
-                                    .replace("tab", "\t")
-                                    .replace(/backspace|delete/, "\b")
-                                    .replace(/esc|escape/, this.ctrlseq[1])
-                                    .replace(/return|enter/, "\r");
-
-                if (cmd !== trig) return;
-
-                if (cut.type === "app") {
-                    window.useAppShortcut(cut.action);
-                    shortcutsTriggered = true;
-                } else if (cut.type === "shell") {
-                    let fn = (cut.linebreak) ? writelr : write;
-                    window.term[window.currentTerm][fn](cut.action);
-                } else {
-                    console.warn(`${cut.trigger} has unknown type`);
-                }
-            });
-        }
-
-        if (shortcutsTriggered) return;
-
-        // Modifiers
-        if (this.container.dataset.isShiftOn === "true" && key.dataset.shift_cmd || this.container.dataset.isCapsLckOn === "true" && key.dataset.shift_cmd) cmd = key.dataset.shift_cmd;
-        if (this.container.dataset.isCapsLckOn === "true" && key.dataset.capslck_cmd) cmd = key.dataset.capslck_cmd;
-        if (this.container.dataset.isCtrlOn === "true" && key.dataset.ctrl_cmd) cmd = key.dataset.ctrl_cmd;
-        if (this.container.dataset.isAltOn === "true" && key.dataset.alt_cmd) cmd = key.dataset.alt_cmd;
-        if (this.container.dataset.isAltOn === "true" && this.container.dataset.isShiftOn === "true" && key.dataset.altshift_cmd) cmd = key.dataset.altshift_cmd;
-        if (this.container.dataset.isFnOn === "true" && key.dataset.fn_cmd) cmd = key.dataset.fn_cmd;
-        if (this.container.dataset.isNextCircum === "true") {
-            cmd = this.addCircum(cmd);
-            this.container.dataset.isNextCircum = "false";
-        }
-        if (this.container.dataset.isNextTrema === "true") {
-            cmd = this.addTrema(cmd);
-            this.container.dataset.isNextTrema = "false";
-        }
-        if (this.container.dataset.isNextAcute === "true") {
-            cmd = this.addAcute(cmd);
-            this.container.dataset.isNextAcute = "false";
-        }
-        if (this.container.dataset.isNextGrave === "true") {
-            cmd = this.addGrave(cmd);
-            this.container.dataset.isNextGrave = "false";
-        }
-        if (this.container.dataset.isNextCaron === "true") {
-            cmd = this.addCaron(cmd);
-            this.container.dataset.isNextCaron = "false";
-        }
-        if (this.container.dataset.isNextBar === "true") {
-            cmd = this.addBar(cmd);
-            this.container.dataset.isNextBar = "false";
-        }
-        if (this.container.dataset.isNextBreve === "true") {
-            cmd = this.addBreve(cmd);
-            this.container.dataset.isNextBreve = "false";
-        }
-        if (this.container.dataset.isNextTilde === "true") {
-            cmd = this.addTilde(cmd);
-            this.container.dataset.isNextTilde = "false";
-        }
-        if (this.container.dataset.isNextMacron === "true") {
-            cmd = this.addMacron(cmd);
-            this.container.dataset.isNextMacron = "false";
-        }
-        if (this.container.dataset.isNextCedilla === "true") {
-            cmd = this.addCedilla(cmd);
-            this.container.dataset.isNextCedilla = "true";
-        }
-        if (this.container.dataset.isNextOverring === "true") {
-            cmd = this.addOverring(cmd);
-            this.container.dataset.isNextOverring = "false";
-        }
-        if (this.container.dataset.isNextGreek === "true") {
-            cmd = this.toGreek(cmd);
-            this.container.dataset.isNextGreek = "false";
-        }
-        if (this.container.dataset.isNextIotasub === "true") {
-            cmd = this.addIotasub(cmd);
-            this.container.dataset.isNextIotasub = "false";
-        }
-
-        // Escaped commands
+        // `ESCAPED|-- X` commands always have their prefix stripped
+        // first. If X is a known dataset-flag mutation, fire it and
+        // short-circuit. If not, fall through and write the bare X
+        // (preserves the original behavior where unknown escaped
+        // commands still emit their stripped payload).
         if (cmd.startsWith("ESCAPED|-- ")) {
             cmd = cmd.substr(11);
-            switch(cmd) {
-                case "CAPSLCK: ON":
-                    this.container.dataset.isCapsLckOn = "true";
-                    return true;
-                case "CAPSLCK: OFF":
-                    this.container.dataset.isCapsLckOn = "false";
-                    return true;
-                case "FN: ON":
-                    this.container.dataset.isFnOn = "true";
-                    return true;
-                case "FN: OFF":
-                    this.container.dataset.isFnOn = "false";
-                    return true;
-                case "CIRCUM":
-                    this.container.dataset.isNextCircum = "true";
-                    return true;
-                case "TREMA":
-                    this.container.dataset.isNextTrema = "true";
-                    return true;
-                case "ACUTE":
-                    this.container.dataset.isNextAcute = "true";
-                    return true;
-                case "GRAVE":
-                    this.container.dataset.isNextGrave = "true";
-                    return true;
-                case "CARON":
-                    this.container.dataset.isNextCaron = "true";
-                    return true;
-                case "BAR":
-                    this.container.dataset.isNextBar = "true";
-                    return true;
-                case "BREVE":
-                    this.container.dataset.isNextBreve = "true";
-                    return true;
-                case "TILDE":
-                    this.container.dataset.isNextTilde = "true";
-                    return true;
-                case "MACRON":
-                    this.container.dataset.isNextMacron = "true";
-                    return true;
-                case "CEDILLA":
-                    this.container.dataset.isNextCedilla = "true";
-                    return true;
-                case "OVERRING":
-                    this.container.dataset.isNextOverring = "true";
-                    return true;
-                case "GREEK":
-                    this.container.dataset.isNextGreek = "true";
-                    return true;
-                case "IOTASUB":
-                    this.container.dataset.isNextIotasub = "true";
-                    return true;
+            if (this._tryHandleEscapedCommand(cmd)) return true;
+        }
+        return this._writeCmd(cmd);
+    }
+
+    // Builds the "Ctrl"/"Alt"/"Shift" concatenation key that indexes
+    // into `this._shortcuts` based on which modifier dataset flags
+    // are currently set on the on-screen keyboard.
+    _currentShortcutCat() {
+        let cat = "";
+        if (this.container.dataset.isCtrlOn === "true") cat += "Ctrl";
+        if (this.container.dataset.isAltOn === "true") cat += "Alt";
+        if (this.container.dataset.isShiftOn === "true") cat += "Shift";
+        return cat;
+    }
+
+    // Normalizes a shortcut trigger string from shortcuts.json so the
+    // string-equality comparison against the rendered `cmd` works.
+    _normalizeTrigger(trig) {
+        return trig.toLowerCase()
+            .replace("plus", "+")
+            .replace("space", " ")
+            .replace("tab", "\t")
+            .replace(/backspace|delete/, "\b")
+            // Order matters: /esc|escape/ would match the "esc" prefix
+            // first and leave "ape" trailing — anchor + put the longer
+            // alternative first so "escape" matches whole.
+            .replace(/escape|esc/, this.ctrlseq[1])
+            .replace(/return|enter/, "\r");
+    }
+
+    // Iterate the shortcut bucket matching the current modifier state.
+    // Returns true if an app-type shortcut fired (caller short-circuits
+    // and does NOT write the cmd). Shell-type shortcuts still write
+    // their command into the terminal but do not short-circuit the
+    // caller — preserving the original behavior.
+    _dispatchKeyboardShortcut(cmd) {
+        const cat = this._currentShortcutCat();
+        if (cat.length <= 1) return false;
+        let triggered = false;
+        this._shortcuts[cat].forEach(cut => {
+            if (!cut.enabled) return;
+            if (cmd !== this._normalizeTrigger(cut.trigger)) return;
+            if (cut.type === "app") {
+                window.useAppShortcut(cut.action);
+                triggered = true;
+            } else if (cut.type === "shell") {
+                // Bare `writelr`/`write` in the pre-fork source were a
+                // long-standing typo — those identifiers aren't defined
+                // anywhere (they're methods on the Terminal instance).
+                // The sibling shortcut dispatcher in _renderer.js used
+                // the string form correctly. The branch was dead in
+                // practice (no default shell-type shortcut matches the
+                // gated modifier combos), so the ReferenceError that
+                // would have fired never did.
+                const fn = cut.linebreak ? "writelr" : "write";
+                window.term[window.currentTerm][fn](cut.action);
+            } else {
+                console.warn(`${cut.trigger} has unknown type`);
+            }
+        });
+        return triggered;
+    }
+
+    // Apply the modifier-key cmd swap. Shift / CapsLock both swap to
+    // `shift_cmd`; CapsLock additionally to `capslck_cmd`; Ctrl/Alt/Fn
+    // to their respective dataset attrs; Alt+Shift overrides with
+    // `altshift_cmd`. Preserves the original precedence order.
+    _applyModifierCmd(key, cmd) {
+        const d = this.container.dataset;
+        if (d.isShiftOn === "true" && key.dataset.shift_cmd || d.isCapsLckOn === "true" && key.dataset.shift_cmd) cmd = key.dataset.shift_cmd;
+        if (d.isCapsLckOn === "true" && key.dataset.capslck_cmd) cmd = key.dataset.capslck_cmd;
+        if (d.isCtrlOn === "true" && key.dataset.ctrl_cmd) cmd = key.dataset.ctrl_cmd;
+        if (d.isAltOn === "true" && key.dataset.alt_cmd) cmd = key.dataset.alt_cmd;
+        if (d.isAltOn === "true" && d.isShiftOn === "true" && key.dataset.altshift_cmd) cmd = key.dataset.altshift_cmd;
+        if (d.isFnOn === "true" && key.dataset.fn_cmd) cmd = key.dataset.fn_cmd;
+        return cmd;
+    }
+
+    // Apply any pending dead-key transform (circumflex, diaeresis,
+    // acute, grave, …) to `cmd` and clear the flag. Table-driven —
+    // each entry pairs the dataset flag with the transform method.
+    // Note: this incidentally fixes a typo from the original inlined
+    // sequence where `isNextCedilla` was reset to "true" instead of
+    // "false", leaving the cedilla transform sticky.
+    _applyPendingDeadKey(cmd) {
+        const d = this.container.dataset;
+        for (const t of Keyboard.DEAD_KEY_TRANSFORMS) {
+            if (d[t.flag] === "true") {
+                cmd = this[t.method](cmd);
+                d[t.flag] = "false";
             }
         }
+        return cmd;
+    }
 
+    // Try to handle a prefix-stripped ESCAPED command (e.g. "CIRCUM",
+    // "CAPSLCK: ON") by flipping the matching dataset flag. Caller
+    // strips the "ESCAPED|-- " prefix before calling. Returns true
+    // on a hit so the caller can short-circuit.
+    _tryHandleEscapedCommand(cmd) {
+        const handler = Keyboard.ESCAPED_CMD_HANDLERS[cmd];
+        if (!handler) return false;
+        this.container.dataset[handler.flag] = handler.value;
+        return true;
+    }
 
+    // Dispatch the final cmd to the active output: terminal (when
+    // `linkedToTerm`) or the active DOM element. Newline is special-
+    // cased so it routes to `writelr` / a synthetic "change" event.
+    _writeCmd(cmd) {
         if (cmd === "\n") {
             if (window.keyboard.linkedToTerm) {
                 window.term[window.currentTerm].writelr("");
@@ -463,38 +465,50 @@ class Keyboard {
             }
             return true;
         }
-
-
         if (window.keyboard.linkedToTerm) {
             window.term[window.currentTerm].write(cmd);
-        } else {
-            let isDelete = false;
-            if (typeof document.activeElement.value !== "undefined") {
-                switch(cmd) {
-                    case "":
-                        document.activeElement.value = document.activeElement.value.slice(0, -1);
-                        isDelete = true;
-                        break;
-                    case "OD":
-                        document.activeElement.selectionStart--;
-                        document.activeElement.selectionEnd = document.activeElement.selectionStart;
-                        break;
-                    case "OC":
-                        document.activeElement.selectionEnd++;
-                        document.activeElement.selectionStart = document.activeElement.selectionEnd;
-                        break;
-                    default:
-                        if (this.ctrlseq.indexOf(cmd.slice(0, 1)) !== -1) {
-                            // Prevent trying to write other control sequences
-                        } else {
-                            document.activeElement.value = document.activeElement.value+cmd;
-                        }
-                }
-            }
-            // Emulate oninput events
-            document.activeElement.dispatchEvent(new CustomEvent("input", {detail: ((isDelete)? "delete" : "insert") }));
-            document.activeElement.focus();
+            return;
         }
+        this._writeCmdToActiveElement(cmd);
+    }
+
+    // Cmd writing for the non-terminal path (e.g. focus on a textarea
+    // or input). Handles arrow-key cursor movement and backspace
+    // explicitly; suppresses any other control sequence; appends
+    // plain text. The case labels here use the raw control-byte
+    // strings the layout emits (BS = \x08, ESC+OD / ESC+OC for the
+    // arrow keys).
+    _writeCmdToActiveElement(cmd) {
+        let isDelete = false;
+        if (typeof document.activeElement.value !== "undefined") {
+            // Case labels here use the raw control bytes that the
+            // on-screen layout JSON emits; \x08 = backspace, \x1B = ESC.
+            // Escape forms (vs literal invisible bytes in source) are
+            // used so the intent is visible in diffs and editors.
+            switch(cmd) {
+                case "\x08":
+                    document.activeElement.value = document.activeElement.value.slice(0, -1);
+                    isDelete = true;
+                    break;
+                case "\x1BOD":
+                    document.activeElement.selectionStart--;
+                    document.activeElement.selectionEnd = document.activeElement.selectionStart;
+                    break;
+                case "\x1BOC":
+                    document.activeElement.selectionEnd++;
+                    document.activeElement.selectionStart = document.activeElement.selectionEnd;
+                    break;
+                default:
+                    if (this.ctrlseq.indexOf(cmd.slice(0, 1)) !== -1) {
+                        // Prevent trying to write other control sequences
+                    } else {
+                        document.activeElement.value = document.activeElement.value+cmd;
+                    }
+            }
+        }
+        // Emulate oninput events
+        document.activeElement.dispatchEvent(new CustomEvent("input", {detail: ((isDelete)? "delete" : "insert") }));
+        document.activeElement.focus();
     }
     togglePasswordMode() {
         const d = (this.container.dataset.passwordMode === "true") ? "false" : "true";

@@ -80,9 +80,12 @@ class Cpuinfo {
                 this.series.push(new TimeSeries());
 
                 let serie = this.series[i];
+                // strictCssNumber guards the rgb() composition against
+                // malicious theme.r/g/b values. Issue #197.
+                const { strictCssNumber } = require("../utils/escapeHelpers.js");
                 let options = {
                     lineWidth: 1.7,
-                    strokeStyle: `rgb(${window.theme.r},${window.theme.g},${window.theme.b})`
+                    strokeStyle: `rgb(${strictCssNumber(window.theme.r)},${strictCssNumber(window.theme.g)},${strictCssNumber(window.theme.b)})`
                 };
 
                 if (i < divide) {

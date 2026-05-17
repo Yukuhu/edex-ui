@@ -3,7 +3,12 @@ class MediaPlayer {
         const modalElementId = "modal_" + opts.modalId;
         const type = opts.type;
         const icons = require("./assets/icons/file-icons.json");
-        const iconcolor = `rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b})`;
+        // strictCssNumber guards the rgb() composition — without it
+        // a malicious theme setting r/g/b to a string with `)` would
+        // break out of the rgb() call and inject CSS into the
+        // surrounding SVG `fill=` attribute. Issue #197.
+        const { strictCssNumber } = require("../utils/escapeHelpers.js");
+        const iconcolor = `rgb(${strictCssNumber(window.theme.r)}, ${strictCssNumber(window.theme.g)}, ${strictCssNumber(window.theme.b)})`;
         const mediaContainer = document.getElementById(modalElementId).querySelector(".media_container");
         const media = document.getElementById(modalElementId).querySelector(type);
         const mediaControls = document.getElementById(modalElementId).querySelector(".media_controls");

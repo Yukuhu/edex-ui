@@ -12,7 +12,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { escapeHtml, purifyCSS } = require("../../src/utils/escapeHelpers.js");
+const { escapeHtml, purifyCSS, strictCssNumber } = require("../../src/utils/escapeHelpers.js");
 
 // ── escapeHtml ───────────────────────────────────────────────────
 
@@ -108,4 +108,53 @@ test("purifyCSS returns \"\" for null/undefined input", () => {
 test("purifyCSS coerces non-string input via String()", () => {
     assert.equal(purifyCSS(42), "42");
     assert.equal(purifyCSS({ toString: () => "red < blue" }), "red  blue");
+});
+
+// ── strictCssNumber ──────────────────────────────────────────────
+
+test("strictCssNumber passes through finite numbers", () => {
+    assert.equal(strictCssNumber(0), 0);
+    assert.equal(strictCssNumber(170), 170);
+    assert.equal(strictCssNumber(-1), -1);
+    assert.equal(strictCssNumber(3.14), 3.14);
+});
+
+test("strictCssNumber parses well-formed numeric strings", () => {
+    // The themes.json schema declares r/g/b as numbers, but a
+    // malformed file could ship them as strings — accept them.
+    assert.equal(strictCssNumber("170"), 170);
+    assert.equal(strictCssNumber("3.14"), 3.14);
+    assert.equal(strictCssNumber("-1"), -1);
+});
+
+test("strictCssNumber rejects break-out attempts → 0", () => {
+    // The whole point of the helper. Without it,
+    // `rgb(${theme.r}, …)` with a malicious theme.r becomes:
+    //   rgb(0); background: url(javascript:alert(1)); /*, 0, 0)*/
+    // The 0 fallback collapses the attack to `rgb(0, …)`.
+    assert.equal(strictCssNumber("0); background: url(javascript:alert(1))"), 0);
+    assert.equal(strictCssNumber("0 /* inject */"), 0);
+    assert.equal(strictCssNumber("170; }script: alert(1)"), 0);
+});
+
+test("strictCssNumber rejects NaN, Infinity, and non-numeric strings", () => {
+    assert.equal(strictCssNumber(NaN), 0);
+    assert.equal(strictCssNumber(Infinity), 0);
+    assert.equal(strictCssNumber(-Infinity), 0);
+    assert.equal(strictCssNumber("not a number"), 0);
+    assert.equal(strictCssNumber(""), 0,
+        "Number('') is 0 — finite — but trimming whitespace and treating empty as missing matches the renderer's 'no value' expectation");
+});
+
+test("strictCssNumber returns 0 for null/undefined", () => {
+    assert.equal(strictCssNumber(null), 0);
+    assert.equal(strictCssNumber(undefined), 0);
+});
+
+test("strictCssNumber returns 0 for non-string-non-number input", () => {
+    assert.equal(strictCssNumber({}), 0);
+    assert.equal(strictCssNumber([]), 0,
+        "Number([]) is 0 — still 0; just pin the contract");
+    assert.equal(strictCssNumber(true), 1,
+        "Number(true) is 1 — finite — so passes through. Defensible.");
 });

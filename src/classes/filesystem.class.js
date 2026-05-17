@@ -29,7 +29,11 @@ class FilesystemDisplay {
         this.pathLib = path;
         this.cwd = [];
         this.cwd_path = null;
-        this.iconcolor = `rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b})`;
+        // strictCssNumber guards against malicious theme JSON setting
+        // r/g/b to a string that breaks out of the rgb() call —
+        // anything non-finite collapses to 0. Issue #197.
+        const { strictCssNumber } = require("../utils/escapeHelpers.js");
+        this.iconcolor = `rgb(${strictCssNumber(window.theme.r)}, ${strictCssNumber(window.theme.g)}, ${strictCssNumber(window.theme.b)})`;
         this._formatBytes = (a, b) => {
             if (0 == a) return "0 Bytes";
             const c = 1024, d = b || 2, e = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

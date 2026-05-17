@@ -114,9 +114,13 @@ Modules currently opted in (issue #176):
 
 - `src/ipc/channels.js` — also carries the JSDoc typedefs for IPC
   payloads (`ClaudeSendPayload`, `ClaudeDeltaPayload`, etc.). When
-  `_main_claude.js` / `_renderer.js` / `claudeChat.class.js` add
-  `// @ts-check`, those payload types are reachable via
-  `@type {import("./ipc/channels.js").ClaudeSendPayload}`.
+  another file adds `// @ts-check`, those payload types are
+  reachable via `@type {import("…/ipc/channels.js").ClaudeSendPayload}`
+  — the **`…` placeholder is a file-relative path**, so it varies
+  by location:
+  - `src/_main_claude.js`, `src/_renderer.js` → `"./ipc/channels.js"`
+  - `src/classes/claudeChat.class.js` → `"../ipc/channels.js"`
+  - `tests/unit/foo.test.js` → `"../../src/ipc/channels.js"`
 - `src/utils/escapeHelpers.js`
 - `src/utils/logger.js`
 - `src/utils/settingsSerializer.js`

@@ -29,6 +29,21 @@ jobs:
           # baseline. Full history is cheap on this repo.
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root devDependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        # Produces coverage/lcov.info which the Sonar scan reads via
+        # the sonar.javascript.lcov.reportPaths setting in
+        # sonar-project.properties.
+        run: npm run test:coverage
+
       - name: SonarCloud scan
         uses: SonarSource/sonarqube-scan-action@v8
         env:

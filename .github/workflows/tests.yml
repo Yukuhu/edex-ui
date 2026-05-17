@@ -1,0 +1,34 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Match Electron 42's bundled Node (22.x). Pinning major
+          # so we don't pick up surprise behaviour in `node:test`.
+          node-version: '22'
+          cache: 'npm'
+
+      # `npm ci` is faster + deterministic vs `npm install`. The
+      # devDependency we need (jsdom) is in the root package.json;
+      # the src/ workspace's deps aren't needed for the unit tests.
+      - name: Install root devDependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test

@@ -71,6 +71,24 @@ EOF
 - After merge, **delete the branch** locally and on origin:
   `git checkout master && git pull && git branch -d <branch> && git push origin --delete <branch>`.
 
+## Tests
+
+- The unit-test suite lives under `tests/` and runs on Node's built-in
+  `node:test` (no JS testing dependencies beyond `jsdom` for DOM tests).
+- `npm test` runs the suite (`spec` reporter on stdout).
+- `npm run test:coverage` additionally emits `coverage/lcov.info`,
+  which SonarCloud reads via `sonar.javascript.lcov.reportPaths` in
+  `sonar-project.properties`.
+- `npm run test:audit` preserves the legacy `snyk` security scan that
+  used to live under `npm test`.
+- The GitHub Actions `Tests` workflow (`.github/workflows/tests.yml`)
+  runs `npm ci && npm test` on every PR + master push. The
+  `SonarCloud` workflow additionally runs `test:coverage` so the
+  Quality Gate's `new_coverage` condition gates each PR.
+- See `tests/README.md` for layout, the `global.window` shim
+  rationale, and the tier-1 (pure helpers) vs tier-2 (DOM-touching
+  via jsdom) split.
+
 ## Commit and PR conventions
 
 - Commit messages use a `<type>: <imperative summary>` first line

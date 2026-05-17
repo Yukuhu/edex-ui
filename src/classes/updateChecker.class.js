@@ -45,14 +45,15 @@ class UpdateChecker {
         let https = require("node:https");
         let electron = require("electron");
         let remote = require("@electron/remote");
+        const { CHANNELS } = require("../ipc/channels.js");
         let current = remote.app.getVersion();
 
         this._failed = false;
         this._willfail = false;
         this._fail = e => {
             this._failed = true;
-            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch latest release from GitHub's API.");
-            electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
+            electron.ipcRenderer.send(CHANNELS.LOG, "note", "UpdateChecker: Could not fetch latest release from GitHub's API.");
+            electron.ipcRenderer.send(CHANNELS.LOG, "debug", `Error: ${e}`);
         };
 
         https.get({
@@ -90,16 +91,16 @@ class UpdateChecker {
                         let release = JSON.parse(d.toString());
                         const verdict = UpdateChecker._compareVersion(current, release.tag_name);
                         if (verdict === "latest") {
-                            electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest version.");
+                            electron.ipcRenderer.send(CHANNELS.LOG, "info", "UpdateChecker: Running latest version.");
                         } else if (verdict === "dev") {
-                            electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an unreleased, development version.");
+                            electron.ipcRenderer.send(CHANNELS.LOG, "info", "UpdateChecker: Running an unreleased, development version.");
                         } else if (verdict === "newer") {
                             new Modal({
                                 type: "info",
                                 title: "New version available",
                                 message: `nDEX-UI <strong>${release.tag_name}</strong> is now available.<br/>Head over to <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">github.com</a> to download the latest version.`
                             });
-                            electron.ipcRenderer.send("log", "info", `UpdateChecker: New version ${release.tag_name} available.`);
+                            electron.ipcRenderer.send(CHANNELS.LOG, "info", `UpdateChecker: New version ${release.tag_name} available.`);
                         } else {
                             // verdict === null — the payload didn't
                             // carry a usable tag_name. Funnel through

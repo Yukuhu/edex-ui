@@ -1,5 +1,11 @@
 class Terminal {
     constructor(opts) {
+        // IPC channel name shared between the client (renderer) and
+        // server (main) halves of this class — both go through the
+        // factory in src/ipc/channels.js (issue #177).
+        const { terminalChannel } = require("../ipc/channels.js");
+        this._channel = terminalChannel(opts.port);
+
         if (opts.role === "client") {
             if (!opts.parentId) throw "Missing options";
 
@@ -23,7 +29,7 @@ class Terminal {
                 while (rows.length < 3) {
                     rows = "0"+rows;
                 }
-                this.Ipc.send("terminal_channel-"+this.port, "Resize", cols, rows);
+                this.Ipc.send(this._channel, "Resize", cols, rows);
             };
 
             // Support for custom color filters on the terminal - see #483
@@ -160,8 +166,8 @@ class Terminal {
             document.querySelectorAll('.xterm-helper-textarea').forEach(textarea => textarea.setAttribute('readonly', 'readonly'))
             this.term.focus();
 
-            this.Ipc.send("terminal_channel-"+this.port, "Renderer startup");
-            this.Ipc.on("terminal_channel-"+this.port, (e, ...args) => {
+            this.Ipc.send(this._channel, "Renderer startup");
+            this.Ipc.on(this._channel, (e, ...args) => {
                 switch(args[0]) {
                     case "New cwd":
                         this.cwd = args[1];
@@ -381,14 +387,14 @@ class Terminal {
                         if (this.tty._cwd === cwd) return;
                         this.tty._cwd = cwd;
                         if (this.renderer) {
-                            this.renderer.send("terminal_channel-"+this.port, "New cwd", cwd);
+                            this.renderer.send(this._channel, "New cwd", cwd);
                         }
                     }).catch(e => {
                         if (!this._closed) {
                             console.log("Error while tracking TTY working directory: ", e);
                             this._disableCWDtracking = true;
                             try {
-                                this.renderer.send("terminal_channel-"+this.port, "Fallback cwd", opts.cwd || process.env.PWD);
+                                this.renderer.send(this._channel, "Fallback cwd", opts.cwd || process.env.PWD);
                             } catch(e) {
                                 // renderer closed
                             }
@@ -402,13 +408,13 @@ class Terminal {
                         if (this.tty._process === process) return;
                         this.tty._process = process;
                         if (this.renderer) {
-                            this.renderer.send("terminal_channel-"+this.port, "New process", process);
+                            this.renderer.send(this._channel, "New process", process);
                         }
                     }).catch(e => {
                         if (!this._closed) {
                             console.log("Error while retrieving TTY subprocess: ", e);
                             try {
-                                this.renderer.send("terminal_channel-"+this.port, "New process", "");
+                                this.renderer.send(this._channel, "New process", "");
                             } catch(e) {
                                 // renderer closed
                             }
@@ -441,15 +447,15 @@ class Terminal {
                     }
                 }
             });
-            this.Ipc.on("terminal_channel-"+this.port, (e, ...args) => {
+            this.Ipc.on(this._channel, (e, ...args) => {
                 switch(args[0]) {
                     case "Renderer startup":
                         this.renderer = e.sender;
                         if (!this._disableCWDtracking && this.tty._cwd) {
-                            this.renderer.send("terminal_channel-"+this.port, "New cwd", this.tty._cwd);
+                            this.renderer.send(this._channel, "New cwd", this.tty._cwd);
                         }
                         if (this._disableCWDtracking) {
-                            this.renderer.send("terminal_channel-"+this.port, "Fallback cwd", opts.cwd || process.env.PWD);
+                            this.renderer.send(this._channel, "Fallback cwd", opts.cwd || process.env.PWD);
                         }
                         break;
                     case "Resize":

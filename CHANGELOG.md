@@ -271,6 +271,23 @@ original author Gabriel "Squared" SAILLARD — see the README
 - **README "About this fork" + "Acknowledgments" sections** that
   credit Gabriel "Squared" SAILLARD as the original eDEX-UI author
   with a link back to `GitSquared/edex-ui`. (PR #2)
+- **`src/ipc/channels.js`** — IPC channel name registry
+  ([Closes #177](https://github.com/Yukuhu/edex-ui/issues/177)).
+  Every `ipc.send` / `ipc.on` channel literal in
+  `_boot.js`, `_main_claude.js`, `_multithread.js`,
+  `_renderer.js`, and the renderer classes (`claudeChat`,
+  `netstat`, `updateChecker`, `terminal`) now routes through a
+  single frozen `CHANNELS` object plus two factory functions
+  (`systeminformationReply(id)`, `terminalChannel(port)`) for
+  the dynamic-suffix patterns. A typo on either side of an IPC
+  channel used to fail silently — the message landed in nobody's
+  handler with no warning. With every channel pinned, a typo is a
+  load-time `TypeError` instead. Renaming the wire format to a
+  uniform `<domain>:<verb>` convention is intentionally out of
+  scope; the registry's tests pin each current channel value
+  verbatim so a future rename PR is loud. 9 new tests cover
+  inventory completeness, uniqueness, freeze invariants, and the
+  factory output formats. (Tests: 440 → 449.)
 - **Tests for `UpdateChecker` and `FuzzyFinder`** ([Closes #175](https://github.com/Yukuhu/edex-ui/issues/175)).
   Extracted three pure static helpers so the version-compare
   matrix and the fuzzy-search scoring logic can be exercised

@@ -148,8 +148,9 @@ class Netstat {
                                 console.warn(e);
                                 console.info(rawData.toString());
                                 let electron = require("electron");
-                                electron.ipcRenderer.send("log", "note", "NetStat: Error parsing data from myexternalip.com");
-                                electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
+                                const { CHANNELS } = require("../ipc/channels.js");
+                                electron.ipcRenderer.send(CHANNELS.LOG, "note", "NetStat: Error parsing data from myexternalip.com");
+                                electron.ipcRenderer.send(CHANNELS.LOG, "debug", `Error: ${e}`);
                             }
                         });
                     }).on("error", e => {

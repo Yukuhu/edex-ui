@@ -103,6 +103,13 @@ EOF
 
 ## Things to remember
 
+- **Renderer globals are inventoried in [`docs/globals.md`](docs/globals.md).**
+  Before adding a new `window.X` symbol, check whether one already
+  fits. The doc also explains why the project uses `window.*` as a
+  service locator (the `<script>`-tag shared-scope pattern) — same
+  rationale as the SonarCloud S7764 suppression in
+  `sonar-project.properties` and as the `RENDERER_SHARED` map in
+  `eslint.config.js`.
 - **Settings live in `src/utils/settingsSerializer.js`** —
   `SCHEMA` maps each persisted `settings.json` key to its
   settings-editor input id and type, `serializeFromDom` turns form

@@ -192,7 +192,7 @@ class Toplist {
                 type: "custom",
                 title: "Active Processes",
                 html: `
-<table id=\"processContainer\">
+<table id="processContainer">
     <thead>
         <tr>
             <td class="pid header">PID</td>
@@ -205,7 +205,7 @@ class Toplist {
             <td class="runtime header">Runtime</td>
         </tr>
     </thead>
-    <tbody id=\"processList\">
+    <tbody id="processList">
     </tbody>
   </table>`,
             },

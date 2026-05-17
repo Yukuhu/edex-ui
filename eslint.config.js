@@ -126,16 +126,7 @@ const COMMON_RULES = {
     // hardening measure — and is annotated locally with
     // `// eslint-disable-next-line no-global-assign` rather than
     // exempting `eval` here.
-    "no-global-assign": "error",
-
-    // The three rules below come from js.configs.recommended at
-    // "error". For the baseline PR we want lint to pass against
-    // current master without source edits (issue #169 ACs). They
-    // each flag a handful of pre-existing sites that can be
-    // cleaned up incrementally; demote to "warn" for visibility.
-    "no-case-declarations": "warn",
-    "no-extra-boolean-cast": "warn",
-    "no-useless-escape": "warn"
+    "no-global-assign": "error"
 };
 
 module.exports = [

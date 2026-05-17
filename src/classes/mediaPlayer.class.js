@@ -41,8 +41,8 @@ class MediaPlayer {
         this.setFullscreenData = (state) => {
             if (fullscreen === null) { return; }
             mediaContainer.dataset.fullscreen = !!state;
-            fullscreen.dataset.state = !!state ? "cancel-fullscreen" : "go-fullscreen";
-            const buttonIcon = !!state ? "fullscreen-exit" : "fullscreen";
+            fullscreen.dataset.state = state ? "cancel-fullscreen" : "go-fullscreen";
+            const buttonIcon = state ? "fullscreen-exit" : "fullscreen";
             fullscreen.innerHTML = `
                 <svg viewBox="0 0 ${icons[buttonIcon].width} ${icons[buttonIcon].height}" fill="${iconcolor}">
                     ${icons[buttonIcon].svg}

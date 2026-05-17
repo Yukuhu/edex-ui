@@ -7,9 +7,55 @@
 // Conversation continuity within a modal session is achieved by passing
 // the same --session-id (a UUIDv4) to every spawn for that modal.
 
+"use strict";
+// @ts-check
+
+/** @typedef {import("./ipc/channels.js").ClaudeSendPayload}   ClaudeSendPayload */
+/** @typedef {import("./ipc/channels.js").ClaudeDeltaPayload}  ClaudeDeltaPayload */
+/** @typedef {import("./ipc/channels.js").ClaudeDonePayload}   ClaudeDonePayload */
+/** @typedef {import("./ipc/channels.js").ClaudeErrorPayload}  ClaudeErrorPayload */
+/** @typedef {import("./ipc/channels.js").ClaudeResultPayload} ClaudeResultPayload */
+/** @typedef {import("./ipc/channels.js").ClaudeModelPayload}  ClaudeModelPayload */
+/** @typedef {import("./ipc/channels.js").ClaudeCancelPayload} ClaudeCancelPayload */
+
 const { spawn } = require("node:child_process");
 const { ipcMain } = require("electron");
 const { CHANNELS } = require("./ipc/channels.js");
+
+// Typed-sender helpers. Electron's `webContents.send(channel, ...args)`
+// takes `any[]`, so without these wrappers the IPC payload typedefs
+// in src/ipc/channels.js would only catch protocol drift on the
+// *receiver* side. With them, every send site through this module
+// is validated against the typedef at typecheck time. Issue #195.
+//
+// The helpers are intentionally narrow — one per channel — so an
+// unrelated CLAUDE_* channel can't accidentally be passed a payload
+// shaped for a different one.
+/**
+ * @param {Electron.WebContents} sender
+ * @param {ClaudeDeltaPayload} payload
+ */
+function sendDelta(sender, payload)  { sender.send(CHANNELS.CLAUDE_DELTA, payload); }
+/**
+ * @param {Electron.WebContents} sender
+ * @param {ClaudeDonePayload} payload
+ */
+function sendDone(sender, payload)   { sender.send(CHANNELS.CLAUDE_DONE, payload); }
+/**
+ * @param {Electron.WebContents} sender
+ * @param {ClaudeErrorPayload} payload
+ */
+function sendError(sender, payload)  { sender.send(CHANNELS.CLAUDE_ERROR, payload); }
+/**
+ * @param {Electron.WebContents} sender
+ * @param {ClaudeResultPayload} payload
+ */
+function sendResult(sender, payload) { sender.send(CHANNELS.CLAUDE_RESULT, payload); }
+/**
+ * @param {Electron.WebContents} sender
+ * @param {ClaudeModelPayload} payload
+ */
+function sendModel(sender, payload)  { sender.send(CHANNELS.CLAUDE_MODEL, payload); }
 
 let _cleanEnv = null;
 const activeProcs = new Map(); // reqId -> ChildProcess
@@ -45,16 +91,16 @@ const ALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 function init({ cleanEnv }) {
     _cleanEnv = cleanEnv || process.env;
 
-    ipcMain.on(CHANNELS.CLAUDE_SEND, (e, payload) => {
+    ipcMain.on(CHANNELS.CLAUDE_SEND, (e, /** @type {ClaudeSendPayload} */ payload) => {
         const { reqId, sessionId, prompt, firstTurn, model } = payload || {};
         if (!reqId || !prompt) {
-            e.sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: "Missing reqId or prompt" });
+            sendError(e.sender, { reqId, message: "Missing reqId or prompt" });
             return;
         }
         runClaude(e.sender, reqId, sessionId, prompt, !!firstTurn, model);
     });
 
-    ipcMain.on(CHANNELS.CLAUDE_CANCEL, (e, { reqId } = {}) => {
+    ipcMain.on(CHANNELS.CLAUDE_CANCEL, (e, /** @type {ClaudeCancelPayload} */ { reqId } = { reqId: "" }) => {
         const proc = activeProcs.get(reqId);
         if (proc) {
             try { proc.kill("SIGTERM"); } catch (_) {}
@@ -92,7 +138,7 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
             stdio: ["pipe", "pipe", "pipe"],
         });
     } catch (err) {
-        sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: `Failed to spawn claude: ${err.message}` });
+        sendError(sender, { reqId, message: `Failed to spawn claude: ${err.message}` });
         return;
     }
     activeProcs.set(reqId, proc);
@@ -105,43 +151,43 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
     let lastEmittedText = "";
 
     // System init event carries the model + cwd + session ID.
-    const handleSystem = (ev) => {
+    const handleSystem = (/** @type {any} */ ev) => {
         if (ev.subtype === "init" && ev.model) {
-            sender.send(CHANNELS.CLAUDE_MODEL, { reqId, model: ev.model });
+            sendModel(sender, { reqId, model: ev.model });
         }
     };
 
     // Partial-message stream: deltas arrive on `stream_event` blocks.
-    const handleStreamEvent = (ev) => {
+    const handleStreamEvent = (/** @type {any} */ ev) => {
         if (ev.event?.type !== "content_block_delta") return;
         const d = ev.event.delta;
         if (d?.type !== "text_delta") return;
         if (typeof d.text !== "string" || d.text.length === 0) return;
-        sender.send(CHANNELS.CLAUDE_DELTA, { reqId, text: d.text });
+        sendDelta(sender, { reqId, text: d.text });
         lastEmittedText += d.text;
     };
 
     // Final assistant message: catches anything we missed via deltas.
-    const handleAssistant = (ev) => {
+    const handleAssistant = (/** @type {any} */ ev) => {
         if (!ev.message || !Array.isArray(ev.message.content)) return;
         const fullText = ev.message.content
-            .filter(b => b.type === "text")
-            .map(b => b.text || "")
+            .filter((/** @type {any} */ b) => b.type === "text")
+            .map((/** @type {any} */ b) => b.text || "")
             .join("");
         if (fullText.length <= lastEmittedText.length) return;
         const remainder = fullText.slice(lastEmittedText.length);
-        sender.send(CHANNELS.CLAUDE_DELTA, { reqId, text: remainder });
+        sendDelta(sender, { reqId, text: remainder });
         lastEmittedText = fullText;
     };
 
-    const dispatchEvent = (ev) => {
+    const dispatchEvent = (/** @type {any} */ ev) => {
         switch (ev.type) {
             case "system": return handleSystem(ev);
             case "stream_event": return handleStreamEvent(ev);
             case "assistant": return handleAssistant(ev);
             case "result":
                 // Includes usage, is_error, subtype — forward usage to renderer
-                sender.send(CHANNELS.CLAUDE_RESULT, { reqId, result: ev });
+                sendResult(sender, { reqId, result: ev });
                 return;
         }
     };
@@ -166,16 +212,16 @@ function runClaude(sender, reqId, sessionId, prompt, firstTurn, model) {
 
     proc.on("error", err => {
         activeProcs.delete(reqId);
-        sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: err.message });
+        sendError(sender, { reqId, message: err.message });
     });
 
     proc.on("close", code => {
         activeProcs.delete(reqId);
         if (code !== 0 && lastEmittedText.length === 0) {
             const tail = stderrBuf.trim().split("\n").slice(-5).join("\n") || `exit code ${code}`;
-            sender.send(CHANNELS.CLAUDE_ERROR, { reqId, message: tail });
+            sendError(sender, { reqId, message: tail });
         } else {
-            sender.send(CHANNELS.CLAUDE_DONE, { reqId, code });
+            sendDone(sender, { reqId, code: code ?? 0 });
         }
     });
 }

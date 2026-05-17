@@ -24,6 +24,7 @@ const ACCENT_PAIRS = [
     ["addMacron",   "MACRON_MAP"],
     ["addCedilla",  "CEDILLA_MAP"],
     ["addOverring", "OVERRING_MAP"],
+    ["toGreek",     "GREEK_MAP"],
     ["addIotasub",  "IOTASUB_MAP"]
 ];
 
@@ -134,6 +135,31 @@ test("addOverring: documented entries map correctly", () => {
     assert.equal(instance.addOverring("y"), "ẙ");
     assert.equal(instance.addOverring("W"), "W"); // no precomposed; falls through
     assert.equal(instance.addOverring("Y"), "Y"); // no precomposed; falls through
+});
+
+test("toGreek: every Latin letter has both case pairs (#148)", () => {
+    // #148 closed the case-asymmetric gaps in the pre-fork switch
+    // (e.g. `A → α` mapping uppercase to lowercase, and most letters
+    // having only one half of the pair). Every Latin letter the map
+    // covers must now have both cases pointing at the same-case Greek
+    // letter.
+    const m = Keyboard.GREEK_MAP;
+    for (const k of Object.keys(m)) {
+        if (k !== k.toLowerCase()) continue;
+        const upper = k.toUpperCase();
+        assert.ok(upper in m, `GREEK_MAP missing uppercase pair for ${k}`);
+        assert.equal(m[k].toUpperCase(), m[upper], `GREEK_MAP case mismatch for ${k}/${upper}`);
+    }
+});
+
+test("toGreek: documented sample of Latin → Greek mappings", () => {
+    assert.equal(instance.toGreek("a"), "α");
+    assert.equal(instance.toGreek("A"), "Α");
+    assert.equal(instance.toGreek("b"), "β");
+    assert.equal(instance.toGreek("w"), "ω");
+    assert.equal(instance.toGreek("W"), "Ω");
+    assert.equal(instance.toGreek("j"), "θ"); // j is the phonetic stand-in for theta
+    assert.equal(instance.toGreek("q"), "χ"); // q is the phonetic stand-in for chi
 });
 
 test("addIotasub: the 10 documented Greek vowels round-trip", () => {

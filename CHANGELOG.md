@@ -336,6 +336,17 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Fixed
 
+- **`Keyboard.toGreek` case-pair asymmetry**: the pre-fork
+  `toGreek(char)` switch covered 36 letter mappings but with
+  inconsistent case-pair coverage that looked like accumulated typos —
+  most letters had only one half of the pair, and `A → α` mapped
+  uppercase A to **lowercase** alpha. Replaced the switch with a
+  `static GREEK_MAP` lookup (matching the 12 other accent maps the
+  class uses) and filled in every missing uppercase pair so all 23
+  covered Latin letters now have both halves mapping to the same-case
+  Greek letter (`a/A → α/Α`, `b/B → β/Β`, … `z/Z → ζ/Ζ`). Added a
+  case-pair invariant test to `tests/unit/keyboard-accent-maps.test.js`
+  so any future regression fails loudly. (Closes #148)
 - **Terminal init crash under color v5 (ESM-only)**: `color@5` ships
   as an ES module, so `require("color")` from `terminal.class.js`
   returned the namespace object and `color(base)` threw "color is not

@@ -458,9 +458,9 @@ class Terminal {
                             this.renderer.send(this._channel, "Fallback cwd", opts.cwd || process.env.PWD);
                         }
                         break;
-                    case "Resize":
-                        let cols = args[1];
-                        let rows = args[2];
+                    case "Resize": {
+                        const cols = args[1];
+                        const rows = args[2];
                         try {
                             this.tty.resize(Number(cols), Number(rows));
                         } catch (error) {
@@ -468,6 +468,7 @@ class Terminal {
                         }
                         this.onresized(cols, rows);
                         break;
+                    }
                     default:
                         return;
                 }

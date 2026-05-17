@@ -351,6 +351,29 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Re-promoted the three ESLint rules demoted by #169 to clear the
+  baseline** ([Closes #191](https://github.com/Yukuhu/edex-ui/issues/191)).
+  `no-case-declarations`, `no-useless-escape`, and
+  `no-extra-boolean-cast` had been temporarily `warn`-only so the
+  baseline could land without source edits. The 11 flagged sites
+  are now fixed:
+  - `prebuild-minify.js` — three `case` bodies in the `switch
+    (extension)` block wrapped in braces (`js`, `css`, `json`).
+    The lexical declarations (`let minified`, `let output`,
+    `let out`) are now scoped to each case rather than leaking
+    into the broader switch.
+  - `src/classes/terminal.class.js` — the `case "Resize"` body
+    wrapped in braces; the inner `cols` / `rows` are now `const`
+    and scoped to the case.
+  - `src/classes/mediaPlayer.class.js` — two `!!state` in
+    `setFullscreenData` simplified to bare `state` (the
+    surrounding `? :` and assignment-to-dataset contexts already
+    coerce to truthy).
+  - `src/classes/toplist.class.js` — four `\"` escapes inside a
+    template literal removed; the surrounding context is a
+    backtick string, not a double-quoted one.
+  `eslint.config.js` no longer demotes the three rules; their
+  defaults from `js.configs.recommended` are restored.
 - **Opt-in JSDoc typechecking** via `tsconfig.json` + `npm run typecheck`
   ([Closes #176](https://github.com/Yukuhu/edex-ui/issues/176)).
   No build step, no `.ts` files — `tsc --noEmit` with

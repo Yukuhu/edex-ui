@@ -16,7 +16,7 @@ renamed to `npm run test:audit`.
 
 ## Layout
 
-```
+```text
 tests/
 ├── README.md             — you are here
 ├── unit/                 — pure-logic / data-driven tests, no DOM

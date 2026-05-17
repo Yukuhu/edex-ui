@@ -1,4 +1,4 @@
-const signale = require("signale");
+const signale = require("./utils/logger.js");
 const {app, BrowserWindow, dialog, shell} = require("electron");
 
 process.on("uncaughtException", e => {

@@ -351,6 +351,18 @@ original author Gabriel "Squared" SAILLARD — see the README
   attribution alongside the new fork copyright. (PR #2)
 - **Sponsor banner asset** `media/sponsor-uidev-bytes.jpg` and
   unused `media/youtube-demo-teaser.gif`. (PR #2)
+- **`signale` (1.4.0, unmaintained since 2019)** replaced with an
+  in-repo logger at `src/utils/logger.js`. The new module exposes
+  the same method surface the project actually used (`info`,
+  `success`, `complete`, `pending`, `start`, `watch`, `note`,
+  `debug`, `warn`, `error`, `fatal`, `time`, `timeEnd`), preserves
+  signale's stdout/stderr routing (warn/error/fatal → stderr),
+  honors `NO_COLOR` / `FORCE_COLOR`, and tracks `time(label)` /
+  `timeEnd(label)` with `process.hrtime.bigint()`. No new
+  dependency added; `signale` and its transitive chain are dropped
+  from `src/package.json`. Output shape mirrors signale closely
+  enough that anyone tailing the boot console won't be surprised.
+  (Closes #172)
 
 ### Fixed
 

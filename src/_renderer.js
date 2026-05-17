@@ -65,6 +65,11 @@ const _escapeHelpers = require("./utils/escapeHelpers.js");
 const { CHANNELS, systeminformationReply } = require("./ipc/channels.js");
 window._escapeHtml = _escapeHelpers.escapeHtml;
 window._purifyCSS = _escapeHelpers.purifyCSS;
+// Numeric strictness for rgb()/rgba() interpolation. Used by every
+// renderer site that composes a CSS color from theme.r/g/b — see
+// `strictCssNumber` for the full contract. Issue #197.
+const _strictCssNumber = _escapeHelpers.strictCssNumber;
+window._strictCssNumber = _strictCssNumber;
 window._encodePathURI = uri => {
     return encodeURI(uri).replace(/#/g, "%23");
 };
@@ -401,11 +406,11 @@ async function displayTitleScreen() {
 
     await _delay(100);
 
-    title.setAttribute("style", `background-color: rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});border-bottom: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    title.setAttribute("style", `background-color: rgb(${_strictCssNumber(window.theme.r)}, ${_strictCssNumber(window.theme.g)}, ${_strictCssNumber(window.theme.b)});border-bottom: 5px solid rgb(${_strictCssNumber(window.theme.r)}, ${_strictCssNumber(window.theme.g)}, ${_strictCssNumber(window.theme.b)});`);
 
     await _delay(300);
 
-    title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    title.setAttribute("style", `border: 5px solid rgb(${_strictCssNumber(window.theme.r)}, ${_strictCssNumber(window.theme.g)}, ${_strictCssNumber(window.theme.b)});`);
 
     await _delay(100);
 
@@ -416,7 +421,7 @@ async function displayTitleScreen() {
 
     document.body.setAttribute("class", "");
     title.setAttribute("class", "");
-    title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    title.setAttribute("style", `border: 5px solid rgb(${_strictCssNumber(window.theme.r)}, ${_strictCssNumber(window.theme.g)}, ${_strictCssNumber(window.theme.b)});`);
 
     await _delay(1000);
     if (window.term) {

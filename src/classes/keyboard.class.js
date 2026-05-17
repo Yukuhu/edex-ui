@@ -96,14 +96,20 @@ class Keyboard {
                     key.setAttribute("id", "keyboard_spacebar");
                 } else if (keyObj.cmd === "\r") {
                     key.setAttribute("class", "keyboard_key keyboard_enter");
-                    key.innerHTML = `<h1>${keyObj.name}</h1>`;
+                    // Keyboard layouts are user-edited JSON under
+                    // userData/keyboards/. Escape every label that
+                    // becomes innerHTML so a malicious layout can't
+                    // inject `<script>`/`<img onerror=…>` etc.
+                    // Issue #197.
+                    key.innerHTML = `<h1>${window._escapeHtml(keyObj.name)}</h1>`;
                 } else {
+                    const esc = window._escapeHtml;
                     key.innerHTML = `
-                        <h5>${keyObj.altshift_name || ""}</h5>
-                        <h4>${keyObj.fn_name || ""}</h4>
-                        <h3>${keyObj.alt_name || ""}</h3>
-                        <h2>${keyObj.shift_name || ""}</h2>
-                        <h1>${keyObj.name || ""}</h1>`;
+                        <h5>${esc(keyObj.altshift_name || "")}</h5>
+                        <h4>${esc(keyObj.fn_name || "")}</h4>
+                        <h3>${esc(keyObj.alt_name || "")}</h3>
+                        <h2>${esc(keyObj.shift_name || "")}</h2>
+                        <h1>${esc(keyObj.name || "")}</h1>`;
                 }
 
                 // Icon support, overrides previously defined innerHTML

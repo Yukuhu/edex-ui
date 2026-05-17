@@ -351,6 +351,34 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Theme + keyboard-layout JSON injection hardening**
+  ([Closes #197](https://github.com/Yukuhu/edex-ui/issues/197)).
+  PR #184's "Out of scope" list called these out as a separate
+  threat model (the attacker has to convince the user to install a
+  malicious local config file under `userData/themes/` or
+  `/keyboards/`), but defense-in-depth is cheap.
+
+  - New `strictCssNumber(v)` helper in
+    `src/utils/escapeHelpers.js` — coerces to a finite number or
+    `0`. Plugged into every `rgb()` composition site in the
+    renderer that interpolates `theme.r/g/b`:
+    `_renderer.js` boot title (×3), `filesystem.class.js`
+    iconcolor, `cpuinfo.class.js` chart strokeStyle, and
+    `mediaPlayer.class.js` iconcolor. Without it, a malicious
+    theme setting `r: "0); background: url(javascript:alert(1))"`
+    could break out of the rgb() call and inject CSS into the
+    surrounding selector context.
+  - `keyboard.class.js` now wraps every interpolation of
+    `keyObj.name` and its four `*_name` variants (`alt_name`,
+    `shift_name`, `fn_name`, `altshift_name`) in `_escapeHtml`
+    before assigning to `innerHTML`. Keyboard layout files are
+    user-editable JSON; a malicious layout used to be able to
+    carry `<script>` in a key label.
+  - 6 new tests pin `strictCssNumber`: finite passthrough,
+    well-formed numeric strings, break-out attempts that collapse
+    to 0, NaN / Infinity / non-numeric, null/undefined, and
+    non-string-non-number inputs (including `true → 1`, `[] → 0`
+    quirk documentation).
 - **Extended `// @ts-check` to `src/_main_claude.js`**
   ([Closes #195](https://github.com/Yukuhu/edex-ui/issues/195)).
   The IPC payload typedefs that landed with #176

@@ -60,4 +60,27 @@ function purifyCSS(str) {
     return s.replace(/</g, "");
 }
 
-module.exports = { escapeHtml, purifyCSS };
+// Strict-numeric coercion for CSS contexts. Returns the input as a
+// finite number when possible, otherwise `0`. NaN / Infinity /
+// strings that contain non-numeric tokens never reach the stylesheet.
+//
+// Use this when interpolating user-supplied values into `rgb()`,
+// `rgba()`, `hsl()`, or any other CSS function that expects a number
+// — e.g. theme.colors.r/g/b. Without this guard, a malicious theme
+// setting `r: "0); background: url(javascript:alert(1))"` could
+// break out of the rgb() call and inject CSS into the rule's
+// selector context. The threat model is narrow (an attacker must
+// convince the user to install a malicious theme file under their
+// userData/themes/ directory) but the fix is cheap.
+//
+// Issue #197.
+/**
+ * @param {unknown} v
+ * @returns {number}
+ */
+function strictCssNumber(v) {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+module.exports = { escapeHtml, purifyCSS, strictCssNumber };

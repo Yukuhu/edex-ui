@@ -112,5 +112,8 @@
   },
   "optionalDependencies": {
     "cson-parser": "4.0.9"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
   }
 }

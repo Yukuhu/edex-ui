@@ -1,4 +1,5 @@
 "use strict";
+// @ts-check
 
 // Minimal in-repo logger. Drop-in replacement for the parts of
 // `signale` the project actually used (13 methods, dispatched both

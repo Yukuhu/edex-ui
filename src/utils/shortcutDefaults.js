@@ -1,4 +1,22 @@
 "use strict";
+// @ts-check
+
+/**
+ * @typedef {Object} Shortcut
+ * @property {"app" | "shell"} type
+ * @property {string} trigger
+ * @property {string} action
+ * @property {boolean} enabled
+ * @property {boolean} [linebreak]   // shell-type only — append a newline after writing
+ */
+
+/**
+ * In-place migration applied by `_boot.js` to existing
+ * `shortcuts.json` files. Returns `true` if it mutated the array.
+ * @typedef {Object} ShortcutMigration
+ * @property {string} description
+ * @property {(shortcuts: Shortcut[]) => boolean} apply
+ */
 
 // Default shortcuts.json template + post-install backfill rules. Pure
 // module — no DOM, no electron, no file I/O — so `_boot.js` can use
@@ -20,6 +38,7 @@
 // dispatcher (`useAppShortcut` in `shortcuts.class.js`) without
 // adding the trigger here will surface in the
 // "every DEFAULT_SHORTCUTS action resolves" cross-module test.
+/** @type {Shortcut[]} */
 const DEFAULT_SHORTCUTS = [
     { type: "app",   trigger: "Ctrl+Shift+C",      action: "COPY",          enabled: true  },
     { type: "app",   trigger: "Ctrl+Shift+V",      action: "PASTE",         enabled: true  },
@@ -50,6 +69,7 @@ const DEFAULT_SHORTCUTS = [
 // already-present state is ambiguous (missing entirely vs. carrying a
 // legacy trigger). Adding a rule here means a new line in this array
 // plus a `signale.info` line at the call site in `_boot.js`.
+/** @type {ShortcutMigration[]} */
 const MIGRATIONS = [
     {
         // CONTROL_MENU launcher was added after 1.x. Existing users

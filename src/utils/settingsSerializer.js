@@ -1,4 +1,5 @@
 "use strict";
+// @ts-check
 
 // Settings shape, defaults, and serializer. Pure module — no DOM, no
 // electron, no file I/O — so the unit suite can exercise the schema
@@ -79,7 +80,13 @@ const SCHEMA = {
 // result. The check fires **before** type coercion so a number field
 // reading "undefined" doesn't slip through as NaN, and a boolean
 // field doesn't slip through as `false`.
+/**
+ * @param {(inputId: string) => string | null | undefined} getValue
+ * @param {Record<string, unknown>} [existing]
+ * @returns {Record<string, unknown>}
+ */
 function serializeFromDom(getValue, existing) {
+    /** @type {Record<string, unknown>} */
     const out = {};
     const prev = existing || {};
     for (const [key, spec] of Object.entries(SCHEMA)) {

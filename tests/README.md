@@ -89,3 +89,35 @@ the contract for both helpers.
   `src/workers/*`. Skipped for unit tests; covered by manual /
   integration testing.
 - **Tier 4 — E2E.** Optional Playwright smoke test, phased separately.
+
+## Typechecking (`npm run typecheck`)
+
+JSDoc + opt-in `// @ts-check` lives alongside the test suite as a
+second safety net — types catch protocol drift across module
+boundaries that unit tests would only notice as runtime symptoms.
+
+There is **no build step**. `tsconfig.json` runs `tsc --noEmit` with
+`allowJs: true` + `checkJs: true`, so:
+
+- Files with a `// @ts-check` header at the top get strict type
+  diagnostics — JSDoc `@param` / `@returns` / `@typedef` /
+  `/** @type {…} */` annotations are honoured.
+- Files without the pragma are parsed for declarations and otherwise
+  left alone. There is no penalty for skipping it.
+
+The bar to opt a file in is intentionally low: add `// @ts-check`,
+annotate any signatures the typechecker objects to, run
+`npm run typecheck`. The CI job (`.github/workflows/typecheck.yml`)
+gates every PR + master push, mirroring `Lint` and `Tests`.
+
+Modules currently opted in (issue #176):
+
+- `src/ipc/channels.js` — also carries the JSDoc typedefs for IPC
+  payloads (`ClaudeSendPayload`, `ClaudeDeltaPayload`, etc.). When
+  `_main_claude.js` / `_renderer.js` / `claudeChat.class.js` add
+  `// @ts-check`, those payload types are reachable via
+  `@type {import("./ipc/channels.js").ClaudeSendPayload}`.
+- `src/utils/escapeHelpers.js`
+- `src/utils/logger.js`
+- `src/utils/settingsSerializer.js`
+- `src/utils/shortcutDefaults.js`

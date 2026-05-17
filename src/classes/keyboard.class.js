@@ -364,17 +364,22 @@ class Keyboard {
 
     // Normalizes a shortcut trigger string from shortcuts.json so the
     // string-equality comparison against the rendered `cmd` works.
+    //
+    // Each transform is anchored (`^…$`) — the trigger here is a
+    // single token (modifier prefixes are stripped upstream by the
+    // `_shortcuts` constructor block), so substring matches were a
+    // bug source: an unanchored `.replace("space", " ")` would replace
+    // the "space" inside "backspace" and break the downstream
+    // backspace/delete branch (#147). The same trap caught
+    // `/esc|escape/` in #142.
     _normalizeTrigger(trig) {
         return trig.toLowerCase()
-            .replace("plus", "+")
-            .replace("space", " ")
-            .replace("tab", "\t")
-            .replace(/backspace|delete/, "\b")
-            // Order matters: /esc|escape/ would match the "esc" prefix
-            // first and leave "ape" trailing — anchor + put the longer
-            // alternative first so "escape" matches whole.
-            .replace(/escape|esc/, this.ctrlseq[1])
-            .replace(/return|enter/, "\r");
+            .replace(/^plus$/, "+")
+            .replace(/^space$/, " ")
+            .replace(/^tab$/, "\t")
+            .replace(/^(?:backspace|delete)$/, "\b")
+            .replace(/^(?:escape|esc)$/, this.ctrlseq[1])
+            .replace(/^(?:return|enter)$/, "\r");
     }
 
     // Iterate the shortcut bucket matching the current modifier state.

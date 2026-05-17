@@ -351,6 +351,40 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Extended `// @ts-check` to three small renderer classes**
+  ([Closes #201](https://github.com/Yukuhu/edex-ui/issues/201)).
+  Warm-up for opt-in renderer-side typechecking — \`clock\`,
+  \`hardwareInspector\`, \`audiofx\` are each <100 LOC and have a
+  minimal bare-identifier surface. Establishes the pattern before
+  larger classes like \`claudeChat\` opt in.
+
+  New `src/types/window-globals.d.ts` is the centralised
+  TypeScript-side mirror of `docs/globals.md`: ambient `interface
+  Window` extensions for every custom `window.X` symbol the
+  renderer touches (`window.settings`, `window.si`,
+  `window.theme`, the escape helpers, the page-level action
+  functions, the renderer-class identifiers, etc.). Loose typing
+  (\`any\`) where the precise shape isn't known yet; tighter where
+  it is (\`NdexUiSettings\` mirrors the SCHEMA in
+  \`settingsSerializer.js\`). Future per-class opt-ins are now
+  zero-config — the ambient file resolves "Property X does not
+  exist on type Window" out of the box.
+
+  Two genuine null-safety holes surfaced in the warm-up and were
+  fixed inline (matches the typecheck infrastructure's
+  earn-its-keep moment from #196 / `firstTurn`):
+
+  - `Clock` and `HardwareInspector` constructors both read
+    `document.getElementById(parentId)` and dereference without a
+    null check. Added `if (!parent) throw new Error(...)` so the
+    failure is loud rather than `TypeError: cannot read
+    properties of null`.
+  - `Clock.updateClock`'s `document.getElementById("mod_clock_text")`
+    runs every second — replaced the unchecked dereference with
+    `if (target) target.innerHTML = …` so a hot-swap that's
+    rebuilding the DOM mid-tick can't crash the interval.
+
+  `tsconfig.json` `include` extended.
 - **Tightened `_purifyCSS` for color/font value contexts**
   ([Closes #199](https://github.com/Yukuhu/edex-ui/issues/199)).
   PR #198 noted as an explicit follow-up that `_purifyCSS` (strips

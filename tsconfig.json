@@ -21,7 +21,11 @@
   "include": [
     "src/utils/**/*.js",
     "src/ipc/**/*.js",
-    "src/_main_claude.js"
+    "src/types/**/*.d.ts",
+    "src/_main_claude.js",
+    "src/classes/clock.class.js",
+    "src/classes/hardwareInspector.class.js",
+    "src/classes/audiofx.class.js"
   ],
   "exclude": [
     "node_modules",

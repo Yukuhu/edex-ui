@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Match Electron 42's bundled Node (22.x), same as tests.yml.
+          node-version: '22'
+          cache: 'npm'
+
+      # ESLint + globals are root devDependencies; `npm ci` is enough.
+      # The src/ workspace's runtime deps aren't needed for lint.
+      - name: Install root devDependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint

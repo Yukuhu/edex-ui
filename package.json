@@ -26,6 +26,7 @@
     "postbuild-linux": "rm -R prebuild-src",
     "postbuild-darwin": "rm -R prebuild-src",
     "postbuild-windows": "rmdir /S /Q prebuild-src",
+    "lint": "eslint .",
     "test": "node --test --test-reporter=spec --test-reporter-destination=stdout",
     "pretest:coverage": "node -e \"require('node:fs').mkdirSync('coverage', { recursive: true })\"",
     "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info",
@@ -115,6 +116,8 @@
     "cson-parser": "4.0.9"
   },
   "devDependencies": {
+    "eslint": "^9.39.4",
+    "globals": "^15.15.0",
     "jsdom": "^29.1.1"
   }
 }

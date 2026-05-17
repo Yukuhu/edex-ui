@@ -277,6 +277,19 @@ original author Gabriel "Squared" SAILLARD — see the README
   protection can require it, mirroring CodeQL. Project key
   `Yukuhu_edex-ui`; vendored assets / fonts / audio are excluded so
   the analyser only sees first-party code. (Closes #33)
+- **Skip the Electron binary download in CI jobs that don't need
+  it.** The `Tests`, `Lint`, and `SonarCloud` workflows install
+  the root devDependencies with `ELECTRON_SKIP_BINARY_DOWNLOAD=1`,
+  which suppresses the `electron` npm package's ~100 MB postinstall
+  fetch. None of those jobs launch Electron — unit tests stub it
+  via `tests/helpers/mockElectron.js`, ESLint and the Sonar
+  coverage run don't go near it — so the download was pure waste.
+  `setup-node`'s npm cache only covers the tarball cache, not
+  postinstall side effects, so this env var is the only knob that
+  actually trims the time. `node_modules/electron` drops from
+  ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
+  untouched (that workflow genuinely needs the binary).
+  (Closes #179)
 - **ESLint baseline** via `eslint.config.js` (flat config, ESLint 9)
   with a deliberately minimal ruleset. The full list:
   `no-undef` (error), `no-unused-vars` (warn, `^_` ignore),

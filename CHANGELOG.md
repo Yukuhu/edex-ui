@@ -351,6 +351,28 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Opt-in JSDoc typechecking** via `tsconfig.json` + `npm run typecheck`
+  ([Closes #176](https://github.com/Yukuhu/edex-ui/issues/176)).
+  No build step, no `.ts` files — `tsc --noEmit` with
+  `allowJs: true` + `checkJs: true` so only files marked with a
+  `// @ts-check` header at the top get strict type diagnostics;
+  everything else is parsed for declarations and otherwise left
+  alone. Modules opted in this PR: `src/ipc/channels.js`,
+  `src/utils/escapeHelpers.js`, `src/utils/logger.js`,
+  `src/utils/settingsSerializer.js`,
+  `src/utils/shortcutDefaults.js`. The bar to add the pragma to
+  another file is low — annotate any signatures `tsc` objects to.
+  IPC payload shapes (`ClaudeSendPayload`, `ClaudeDeltaPayload`,
+  `ClaudeCancelPayload`, `ClaudeDonePayload`, `ClaudeErrorPayload`,
+  `ClaudeResultPayload`, `ClaudeModelPayload`, `TtySpawnReply`,
+  `ThemeOrKbOverride`) documented as exported JSDoc `@typedef`s in
+  `src/ipc/channels.js` so a future PR adding `// @ts-check` to the
+  Claude bridge or the renderer's IPC handlers can
+  `@type`-annotate handler arguments and catch protocol drift at
+  typecheck time. New `Typecheck` GitHub Actions workflow gates
+  every PR + master push, mirroring `Lint` and `Tests`.
+  TypeScript 5.x added as a devDependency only; runtime is
+  untouched.
 - **ESLint baseline** via `eslint.config.js` (flat config, ESLint 9)
   with a deliberately minimal ruleset. The full list:
   `no-undef` (error), `no-unused-vars` (warn, `^_` ignore),

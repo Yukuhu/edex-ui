@@ -1,4 +1,5 @@
 "use strict";
+// @ts-check
 
 // IPC channel name registry.
 //
@@ -64,6 +65,10 @@ const CHANNELS = Object.freeze({
 // Builds `"systeminformation-reply-<id>"`. Both sides (Proxy in
 // _renderer.js and the worker dispatcher in _multithread.js) call
 // this so the format only has to be right in one place.
+/**
+ * @param {string | number} id
+ * @returns {string}
+ */
 function systeminformationReply(id) {
     return `systeminformation-reply-${id}`;
 }
@@ -74,9 +79,85 @@ function systeminformationReply(id) {
 // and the renderer sends "Renderer startup" / "Resize" back. The
 // `port` value is the TTY's TCP port from `_boot.js`'s ttyspawn
 // flow.
+/**
+ * @param {string | number} port
+ * @returns {string}
+ */
 function terminalChannel(port) {
     return `terminal_channel-${port}`;
 }
+
+// ── IPC payload shapes ───────────────────────────────────────────
+//
+// Documented as JSDoc typedefs so a future PR adding `// @ts-check`
+// to `_main_claude.js`, `_renderer.js`, or `claudeChat.class.js`
+// can `@type`-annotate IPC handler arguments and catch protocol
+// drift at typecheck time.
+
+/**
+ * Renderer → main on `CHANNELS.CLAUDE_SEND`.
+ * @typedef {Object} ClaudeSendPayload
+ * @property {string} reqId         UUIDv4 per turn.
+ * @property {string} prompt        The user message.
+ * @property {string} [model]       Optional model override (e.g. "claude-haiku-4-5").
+ * @property {string} [sessionId]   UUIDv4 shared across turns within the modal.
+ * @property {string} [systemPrompt]
+ */
+
+/**
+ * Renderer → main on `CHANNELS.CLAUDE_CANCEL`.
+ * @typedef {Object} ClaudeCancelPayload
+ * @property {string} reqId
+ */
+
+/**
+ * Main → renderer on `CHANNELS.CLAUDE_DELTA`.
+ * @typedef {Object} ClaudeDeltaPayload
+ * @property {string} reqId
+ * @property {string} text          Streaming text chunk.
+ */
+
+/**
+ * Main → renderer on `CHANNELS.CLAUDE_DONE`.
+ * @typedef {Object} ClaudeDonePayload
+ * @property {string} reqId
+ * @property {number} code          Child-process exit code.
+ */
+
+/**
+ * Main → renderer on `CHANNELS.CLAUDE_ERROR`.
+ * @typedef {Object} ClaudeErrorPayload
+ * @property {string} reqId
+ * @property {string} message
+ */
+
+/**
+ * Main → renderer on `CHANNELS.CLAUDE_RESULT`.
+ * @typedef {Object} ClaudeResultPayload
+ * @property {string} reqId
+ * @property {object} result        The stream-json `result` event verbatim.
+ */
+
+/**
+ * Main → renderer on `CHANNELS.CLAUDE_MODEL`.
+ * @typedef {Object} ClaudeModelPayload
+ * @property {string} reqId
+ * @property {string} model         Resolved model id from the spawned CLI.
+ */
+
+/**
+ * Main → renderer on `CHANNELS.TTY_SPAWN_REPLY`. The body is a
+ * string prefixed with `SUCCESS: <port>` or `ERROR: <reason>` so
+ * the renderer can branch with `startsWith`.
+ * @typedef {string} TtySpawnReply
+ */
+
+/**
+ * Main → renderer reply on `CHANNELS.THEME_GET` / `CHANNELS.KB_GET`.
+ * `null` means "no override set" — the renderer falls back to
+ * `window.settings.theme` / `.keyboard`.
+ * @typedef {string | null} ThemeOrKbOverride
+ */
 
 module.exports = {
     CHANNELS,

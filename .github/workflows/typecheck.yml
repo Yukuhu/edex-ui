@@ -1,0 +1,36 @@
+name: Typecheck
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  tsc:
+    name: tsc --noEmit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Match Electron 42's bundled Node (22.x), same as the
+          # tests / lint workflows.
+          node-version: '22'
+          cache: 'npm'
+
+      # TypeScript is a root devDependency; `npm ci` is enough.
+      # `ELECTRON_SKIP_BINARY_DOWNLOAD=1` matches the other lint /
+      # test workflows — typechecking never launches Electron.
+      - name: Install root devDependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: Run typecheck
+        run: npm run typecheck

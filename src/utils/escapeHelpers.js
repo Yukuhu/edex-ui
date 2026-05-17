@@ -1,4 +1,5 @@
 "use strict";
+// @ts-check
 
 // Pure helpers for safe HTML / CSS interpolation. Extracted from
 // `_renderer.js` so they can be required from the main process and
@@ -19,6 +20,10 @@
 // contexts, or splicing into a <script> body. Those need
 // context-specific encoders (URL encoding, JSON-string encoding,
 // etc.) — none of the project's existing call sites need them.
+/**
+ * @param {unknown} text
+ * @returns {string}
+ */
 function escapeHtml(text) {
     if (text === null || text === undefined) return "";
     const str = typeof text === "string" ? text : String(text);
@@ -45,6 +50,10 @@ function escapeHtml(text) {
 //
 // Returns "" for null/undefined, coerces other non-string input via
 // String().
+/**
+ * @param {unknown} str
+ * @returns {string}
+ */
 function purifyCSS(str) {
     if (str === null || str === undefined) return "";
     const s = typeof str === "string" ? str : String(str);

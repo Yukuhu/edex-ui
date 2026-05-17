@@ -277,6 +277,19 @@ original author Gabriel "Squared" SAILLARD — see the README
   protection can require it, mirroring CodeQL. Project key
   `Yukuhu_edex-ui`; vendored assets / fonts / audio are excluded so
   the analyser only sees first-party code. (Closes #33)
+- **ESLint baseline** via `eslint.config.js` (flat config, ESLint 9)
+  with a deliberately minimal ruleset — `no-undef`, `no-unused-vars`,
+  `prefer-const`, `eqeqeq`, `no-implicit-globals`. The config
+  documents the renderer's "shared script-tag scope" pattern by
+  declaring class identifiers (`Modal`, `ClaudeChat`, …) and
+  renderer helpers (`_loadTheme`, `_escapeHtml`, …) as known
+  globals. Run via `npm run lint`; a new `Lint` GitHub Actions
+  workflow gates every PR + master push. Recommended-config rules
+  that currently flag pre-existing sites (`no-case-declarations`,
+  `no-useless-escape`, `no-extra-boolean-cast`) are demoted to
+  `warn` so the baseline lands without source edits; follow-up PRs
+  can promote them back as the underlying sites are cleaned up.
+  (Closes #169)
 
 ### Changed
 

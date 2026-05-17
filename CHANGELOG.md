@@ -351,6 +351,18 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Moved three single-file `window.*` globals to module-locals**
+  ([Closes #193](https://github.com/Yukuhu/edex-ui/issues/193)).
+  `docs/globals.md`'s "Suggested follow-ups" section flagged
+  `window.edexErrorsModals`, `window._settingsOpening`, and
+  `window.resizeTimeout` as tactical-not-intentional globals: every
+  reader was already same-file in `_renderer.js`. The original
+  motivating concern (handler-closure survival across hot reloads)
+  hasn't applied since Electron reload re-creates the renderer
+  window anyway. They're now `const _errorsModals = []` /
+  `let _settingsOpening = false` / `let _resizeTimeout = null` at
+  the top of `_renderer.js`. `docs/globals.md` updated; the
+  "Suggested follow-ups" section retired.
 - **Re-promoted the three ESLint rules demoted by #169 to clear the
   baseline** ([Closes #191](https://github.com/Yukuhu/edex-ui/issues/191)).
   `no-case-declarations`, `no-useless-escape`, and

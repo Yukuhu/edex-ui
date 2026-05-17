@@ -155,25 +155,11 @@ consumer live in different `<script>` tag scopes.
 | --- | --- | --- |
 | `window.passwordMode` | `src/classes/keyboard.class.js:521` (mirrors the on-screen keyboard's dataset attr) | `terminal.class.js:208` (decide whether to suppress visual echo) |
 | `window.isTermFilterValidated` | `src/classes/terminal.class.js:67` (sets once after the active theme's `colorFilter` array passes validation) | same file (`:30`, `:33`) on subsequent Terminal constructions |
-| `window.edexErrorsModals` | `_renderer.js:217` (initialised once when the post-boot Modal-based error handler is wired) | same file (`:225` on each uncaught error). Stored on `window` so the handler closure survives hot reloads cleanly. |
-| `window._settingsOpening` | `_renderer.js:703` (set), `:1047` (cleared) | `:702` guard against double-opening the settings editor while the open animation is still in flight |
-| `window.resizeTimeout` | `_renderer.js:1304` (initialised), `:1309` (replaced each resize) | `:1308` (cleared on next resize). Debounce handle. |
 | `window.NDEX_WEBAPP_DEBUG` | externally set (DevTools console) | `src/classes/webApp-preload.js:16` — flips preload-logging on |
 
-## Suggested follow-ups
-
-A pass through the inventory while writing this doc surfaced three
-candidates whose `window` lifetimes look tactical rather than
-intentional:
-
-- `window.resizeTimeout` and `window._settingsOpening` could be
-  module-locals (`let` at the top of `_renderer.js`). They're only
-  read from the same file. Globalising them serves no purpose.
-- `window.edexErrorsModals` similarly stays in `_renderer.js`. The
-  motivating concern (handler closure survival across hot reloads)
-  no longer applies because Electron's reload re-creates `window`
-  anyway.
-
-None of those are removed in #178 — the goal of this audit is to
-*describe* current state. Removals belong in their own PR so any
-behaviour regression is easy to bisect.
+Three entries in earlier revisions of this table —
+`window.edexErrorsModals`, `window._settingsOpening`,
+`window.resizeTimeout` — were moved off `window` to module-local
+declarations at the top of `_renderer.js` in [issue #193](https://github.com/Yukuhu/edex-ui/issues/193).
+Every reader was already same-file, so the global lifetime added
+nothing.

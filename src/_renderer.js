@@ -216,8 +216,16 @@ window._hotSwitchKeyboard = (name) => {
     }
 };
 
+// Per-launch state hoisted off `window` (issue #193). Each of these
+// was originally hung on `window` so the handler closure would
+// survive across hot reloads, but Electron's reload re-creates the
+// renderer's window anyway — making the global lifetime pure
+// noise. Now module-locals; readers all live below in this file.
+const _errorsModals = [];
+let _settingsOpening = false;
+let _resizeTimeout = null;
+
 function initGraphicalErrorHandling() {
-    window.edexErrorsModals = [];
     window.onerror = (msg, path, line, col, error) => {
         const safeMsg = typeof msg === "string" ? msg : JSON.stringify(msg);
         let errorModal = new Modal({
@@ -225,7 +233,7 @@ function initGraphicalErrorHandling() {
             title: error,
             message: `${safeMsg}<br/>        at ${path}  ${line}:${col}`
         });
-        window.edexErrorsModals.push(errorModal);
+        _errorsModals.push(errorModal);
 
         ipc.send(CHANNELS.LOG, "error", `${error}: ${safeMsg}`);
         ipc.send(CHANNELS.LOG, "debug", `at ${path} ${line}:${col}`);
@@ -702,8 +710,8 @@ window.openSettings = async () => {
     // in the DOM, stacking N copies (#50). Pair the DOM check with
     // an in-flight flag set synchronously after the guard and
     // cleared in finally, so only the first call wins the race.
-    if (window._settingsOpening || document.getElementById("settingsEditor")) return;
-    window._settingsOpening = true;
+    if (_settingsOpening || document.getElementById("settingsEditor")) return;
+    _settingsOpening = true;
     try {
 
     // Build lists of available keyboards, themes, monitors
@@ -1047,7 +1055,7 @@ window.openSettings = async () => {
     });
 
     } finally {
-        window._settingsOpening = false;
+        _settingsOpening = false;
     }
 };
 
@@ -1304,12 +1312,11 @@ window.onresize = () => {
 };
 
 // See #413
-window.resizeTimeout = null;
 let electronWin = remote.getCurrentWindow();
 electronWin.on("resize", () => {
     if (settings.keepGeometry === false) return;
-    clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(() => {
+    clearTimeout(_resizeTimeout);
+    _resizeTimeout = setTimeout(() => {
         let win = remote.getCurrentWindow();
         if (win.isFullScreen()) return false;
         if (win.isMaximized()) {

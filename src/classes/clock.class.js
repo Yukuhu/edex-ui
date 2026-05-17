@@ -26,37 +26,53 @@ class Clock {
             this.updateClock();
         }, 1000);
     }
-    updateClock() {
-        let time = new Date();
+    // Pure formatter — extracted as a static so the renderer-less
+    // unit suite can pin the 12-hour translation + zero-pad + per-
+    // char span wrapping without booting jsdom. Issue #201.
+    /**
+     * @param {Date} time
+     * @param {boolean} twelveHours
+     * @returns {{ html: string, ampm: string | null }}
+     */
+    static _formatClockHtml(time, twelveHours) {
         // Split into two phases:
         //   1. Numeric hours/minutes/seconds — used for the 12-hour
         //      translation arithmetic below.
         //   2. Zero-padded *string* slots fed into the final
         //      template literal. Keeping them as separate arrays
         //      lets the type-checker keep the numbers numeric for
-        //      the arithmetic phase. Issue #201.
+        //      the arithmetic phase.
         const nums = [time.getHours(), time.getMinutes(), time.getSeconds()];
+        /** @type {string | null} */
+        let ampm = null;
 
         // 12-hour mode translation
-        if (this.twelveHours) {
-            this.ampm = (nums[0] >= 12) ? "PM" : "AM";
+        if (twelveHours) {
+            ampm = (nums[0] >= 12) ? "PM" : "AM";
             if (nums[0] > 12) nums[0] = nums[0] - 12;
             if (nums[0] === 0) nums[0] = 12;
         }
 
         const parts = nums.map(n => n.toString().length === 2 ? n.toString() : "0" + n);
-        let clockString = `${parts[0]}:${parts[1]}:${parts[2]}`;
-        const chars = clockString.match(/.{1}/g) || [];
-        clockString = "";
+        const raw = `${parts[0]}:${parts[1]}:${parts[2]}`;
+        const chars = raw.match(/.{1}/g) || [];
+        let html = "";
         chars.forEach(e => {
-            if (e === ":") clockString += "<em>"+e+"</em>";
-            else clockString += "<span>"+e+"</span>";
+            if (e === ":") html += "<em>"+e+"</em>";
+            else html += "<span>"+e+"</span>";
         });
 
-        if (this.twelveHours) clockString += `<span>${this.ampm}</span>`;
+        if (twelveHours) html += `<span>${ampm}</span>`;
 
+        return { html, ampm };
+    }
+
+    updateClock() {
+        const time = new Date();
+        const { html, ampm } = Clock._formatClockHtml(time, this.twelveHours);
+        this.ampm = ampm;
         const target = document.getElementById("mod_clock_text");
-        if (target) target.innerHTML = clockString;
+        if (target) target.innerHTML = html;
         this.lastTime = time;
     }
 }

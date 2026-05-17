@@ -1,3 +1,6 @@
+"use strict";
+// @ts-check
+
 class AudioManager {
     constructor() {
         const path = require("node:path");

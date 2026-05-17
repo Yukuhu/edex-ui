@@ -311,6 +311,35 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Changed
 
+- **`_renderer.js` shrunk from 1,649 → 1,330 lines** by extracting two
+  cohesive modules ([Closes #173](https://github.com/Yukuhu/edex-ui/issues/173)):
+  - **`src/utils/settingsSerializer.js`** — pure module owning the
+    `SCHEMA` table that maps each persisted `settings.json` key to its
+    settings-editor input id and type. `serializeFromDom(getValue,
+    existing)` reads form values, coerces types, copies the
+    `preserve: true` keys from the previous settings object
+    (currently just `forceFullscreen`), and strips entries whose
+    value comes back literally `"undefined"`. The renderer's
+    `writeSettingsFile` is now a thin wrapper. Adding a new setting
+    becomes a one-file change in this module (issue #174 will fold
+    `_boot.js`'s bootstrap defaults into the same SCHEMA).
+  - **`src/classes/shortcuts.class.js`** — the
+    `SHORTCUTS_DEFINITION` lookup table, the help-modal render
+    helpers (`_renderShortcutsAppList`, `_renderShortcutsCustomList`,
+    `_shortcutsHelpHTML`, `_wireShortcutsAccordions`), the
+    `useAppShortcut` dispatcher, `openShortcutsHelp`,
+    `registerKeyboardShortcuts`, and a one-shot `init()` that wires
+    them onto `window` and clears stale `remote.globalShortcut`
+    registrations. The renderer calls `Shortcuts.init()` once at
+    startup and otherwise no longer hosts any shortcut logic.
+  - Loaded via `<script>` in `ui.html` matching the other class
+    files; bare-identifier access from `_renderer.js` works through
+    the classic-script shared lexical environment (the same
+    `RENDERER_SHARED` inventory the ESLint baseline declares).
+  - 17 new tests pin the SCHEMA inventory, the serializer's
+    type-coercion + `preserve` + `"undefined"`-strip semantics, the
+    shortcut definition table, and the help-modal render helpers'
+    escaping behaviour.
 - **Rebranded** from eDEX-UI to **nDEX-UI**: `name`, `productName`,
   `appId` (`com.ndex.ui`), in-app strings (window title, boot screen,
   welcome banner, crash dialog, `TERM_PROGRAM`, file-type labels,

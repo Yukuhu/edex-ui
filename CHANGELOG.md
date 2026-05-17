@@ -443,6 +443,20 @@ original author Gabriel "Squared" SAILLARD — see the README
   (which would otherwise execute `javascript:` or `file:` schemes
   via the OS handler). Defence layered both at extraction time and
   at the click site. (PR #4 follow-up)
+- **`_escapeHtml` / `_purifyCSS` hardening + tests**. Extracted both
+  helpers into `src/utils/escapeHelpers.js` and tightened their
+  contracts: null/undefined/non-string input now coerce safely
+  (the production functions used to crash on `null`, which forced
+  call sites in `fsModal.class.js` and `claudeChat.class.js` to
+  wrap them in `(window._escapeHtml || (s => s))`). The HTML
+  escape continues to cover the OWASP-recommended five characters
+  (`& < > " '`); the CSS sanitiser continues to strip only `<` to
+  prevent `<style>`-tag breakout, preserving `>` so child
+  combinators in `theme.injectCSS` keep working — both contracts
+  are now documented in-source. New unit-test file
+  `tests/unit/escapeHelpers.test.js` pins the threat model
+  (attribute-quote breakouts, `</style>` injection, null safety,
+  non-string coercion). (Closes #170)
 
 ## [2.2.8] — 2021-10-18
 

@@ -25,8 +25,14 @@ jobs:
 
       # ESLint + globals are root devDependencies; `npm ci` is enough.
       # The src/ workspace's runtime deps aren't needed for lint.
+      #
+      # `ELECTRON_SKIP_BINARY_DOWNLOAD=1` skips the ~100 MB Electron
+      # binary postinstall — ESLint never runs Electron, so the
+      # download is wasted time. See tests.yml for the longer note.
       - name: Install root devDependencies
         run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 
       - name: Run ESLint
         run: npm run lint

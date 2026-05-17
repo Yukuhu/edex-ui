@@ -35,8 +35,14 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # `ELECTRON_SKIP_BINARY_DOWNLOAD=1` skips the ~100 MB Electron
+      # binary postinstall — the coverage run uses `node --test`, not
+      # Electron, so the download is wasted time. See tests.yml for
+      # the longer note.
       - name: Install root devDependencies
         run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 
       - name: Run unit tests with coverage
         # Produces coverage/lcov.info which the Sonar scan reads via

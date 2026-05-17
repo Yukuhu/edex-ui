@@ -27,8 +27,18 @@ jobs:
       # `npm ci` is faster + deterministic vs `npm install`. The
       # devDependency we need (jsdom) is in the root package.json;
       # the src/ workspace's deps aren't needed for the unit tests.
+      #
+      # `ELECTRON_SKIP_BINARY_DOWNLOAD=1` skips the ~100 MB Electron
+      # binary that the `electron` npm package fetches in its
+      # postinstall. None of the unit tests launch Electron — they
+      # stub `electron` via `tests/helpers/mockElectron.js` — so the
+      # download is pure waste in this job. `setup-node`'s npm cache
+      # only covers the tarball cache, not postinstall side effects,
+      # so this env var is the only knob that actually saves the time.
       - name: Install root devDependencies
         run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 
       - name: Run unit tests
         run: npm test

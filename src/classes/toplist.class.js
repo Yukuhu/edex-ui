@@ -47,8 +47,16 @@ class Toplist {
             });
             list.forEach(proc => {
                 let el = document.createElement("tr");
+                // `proc.name` (and `proc.user` in the Active
+                // Processes modal below) come from
+                // systeminformation reading the OS process list.
+                // On Linux/macOS a process name can legitimately
+                // contain HTML metacharacters — a user could `mv`
+                // a binary to `<img onerror=…>` and run it — so
+                // escape before splicing into the row. Issue #171.
+                const esc = window._escapeHtml;
                 el.innerHTML = `<td>${proc.pid}</td>
-                                <td><strong>${proc.name}</strong></td>
+                                <td><strong>${esc(proc.name)}</strong></td>
                                 <td>${Math.round(proc.cpu*10)/10}%</td>
                                 <td>${Math.round(proc.mem*10)/10}%</td>`;
                 document.getElementById("mod_toplist_table").append(el);
@@ -159,13 +167,18 @@ class Toplist {
 
                     list.forEach(proc => {
                         let el = document.createElement("tr");
+                        // See the note in updateList() above —
+                        // proc.{name,user,state,started} all carry
+                        // OS-supplied text that can include HTML
+                        // metacharacters. Escape per cell. #171.
+                        const esc = window._escapeHtml;
                         el.innerHTML = `<td class="pid">${proc.pid}</td>
-                            <td class="name">${proc.name}</td>
-                            <td class="user">${proc.user}</td>
+                            <td class="name">${esc(proc.name)}</td>
+                            <td class="user">${esc(proc.user)}</td>
                             <td class="cpu">${Math.round(proc.cpu * 10) / 10}%</td>
                             <td class="mem">${Math.round(proc.mem * 10) / 10}%</td>
-                            <td class="state">${proc.state}</td>
-                            <td class="started">${proc.started}</td>
+                            <td class="state">${esc(proc.state)}</td>
+                            <td class="started">${esc(proc.started)}</td>
                             <td class="runtime">${formatRuntime(proc.runtime)}</td>`;
                         document.getElementById("processList").append(el);
                     });

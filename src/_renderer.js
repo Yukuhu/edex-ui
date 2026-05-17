@@ -73,8 +73,13 @@ window._delay = ms => {
 
 // Initiate basic error handling
 window.onerror = (msg, path, line, col, error) => {
+    // `msg`, `error.toString()`, and `path` can all carry text from
+    // third-party code or stack-trace frames that contain HTML
+    // metacharacters. Escape before splicing into the boot screen
+    // so a stray `<` doesn't get parsed as a tag. Issue #171.
     const safeMsg = typeof msg === "string" ? msg : JSON.stringify(msg);
-    document.getElementById("boot_screen").innerHTML += `${error} :  ${safeMsg}<br/>==> at ${path}  ${line}:${col}`;
+    const esc = window._escapeHtml;
+    document.getElementById("boot_screen").innerHTML += `${esc(String(error))} :  ${esc(safeMsg)}<br/>==> at ${esc(String(path))}  ${esc(String(line))}:${esc(String(col))}`;
 };
 
 const path = require("node:path");
@@ -475,7 +480,11 @@ async function initUI() {
 
     getDisplayName().then(user => {
         if (user) {
-            greeter.innerHTML += `Welcome back, <em>${user}</em>`;
+            // OS usernames are usually alphanumeric, but on Windows
+            // they can contain spaces and other punctuation. Escape
+            // for hygiene — `user` comes from the `username` npm
+            // package, which reads from the OS. Issue #171.
+            greeter.innerHTML += `Welcome back, <em>${window._escapeHtml(user)}</em>`;
         } else {
             greeter.innerHTML += "Welcome back";
         }
@@ -569,7 +578,12 @@ async function initUI() {
     };
     window.currentTerm = 0;
     window.term[0].onprocesschange = p => {
-        document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
+        // `p` is the PTY's current foreground process name. On
+        // Linux/macOS that name can legitimately contain HTML
+        // special chars — a user could `mv` a binary to
+        // `<img onerror=…>` and run it — so escape before splicing
+        // into the tab label. Issue #171.
+        document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${window._escapeHtml(p)}</p>`;
     };
     // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
     window.onmouseup = e => {
@@ -663,7 +677,9 @@ window.focusShellTab = number => {
                 };
 
                 window.term[number].onprocesschange = p => {
-                    document.getElementById("shell_tab"+number).innerHTML = `<p>#${number+1} - ${p}</p>`;
+                    // See note at the shell_tab0 handler above —
+                    // escape the PTY-supplied process name. #171.
+                    document.getElementById("shell_tab"+number).innerHTML = `<p>#${number+1} - ${window._escapeHtml(p)}</p>`;
                 };
 
                 document.getElementById("shell_tab"+number).innerHTML = `<p>::${port}</p>`;

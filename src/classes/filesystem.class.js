@@ -417,8 +417,19 @@ class FilesystemDisplay {
             if (this.fsLib.existsSync(block.mount)) {
                 let type = (block.type === "rom") ? "rom" : "disk";
                 if (block.removable && block.type !== "rom") type = "usb";
+                // `block.label` and `block.name` come from
+                // systeminformation reading the OS — on Windows
+                // they're the user-editable volume label and device
+                // name, which can contain HTML metacharacters.
+                // `_buildItemHTML` later splices `entry.name` raw
+                // into a <h3>; escape here for parity with the
+                // `readFS` path that already does. Issue #171.
+                const esc = window._escapeHtml;
+                const safeLabel = esc(block.label);
+                const safeName  = esc(block.name);
+                const safeMount = esc(block.mount);
                 devices.push({
-                    name: (block.label !== "") ? `${block.label} (${block.name})` : `${block.mount} (${block.name})`,
+                    name: (block.label !== "") ? `${safeLabel} (${safeName})` : `${safeMount} (${safeName})`,
                     type,
                     path: block.mount
                 });
@@ -625,14 +636,14 @@ class FilesystemDisplay {
 
     async _reCalculateDiskUsage(p) {
         this.fsBlock = null;
-        this.space_bar.text.innerHTML = "Calculating available space...";
+        this.space_bar.text.textContent = "Calculating available space...";
         this.space_bar.bar.removeAttribute("value");
         try {
             const d = await window.si.fsSize();
             d.forEach(b => { if (p.startsWith(b.mount)) this.fsBlock = b; });
             this._renderDiskUsage(this.fsBlock);
         } catch (_) {
-            this.space_bar.text.innerHTML = "Could not calculate mountpoint usage.";
+            this.space_bar.text.textContent = "Could not calculate mountpoint usage.";
             this.space_bar.bar.value = 100;
         }
     }
@@ -649,7 +660,7 @@ class FilesystemDisplay {
             this.space_bar.text.innerHTML = `Mount <strong>${displayMount}</strong> used <strong>${usage}%</strong>`;
             this.space_bar.bar.value = usage;
         } else {
-            this.space_bar.text.innerHTML = "Could not calculate mountpoint usage.";
+            this.space_bar.text.textContent = "Could not calculate mountpoint usage.";
             this.space_bar.bar.value = 100;
         }
     }

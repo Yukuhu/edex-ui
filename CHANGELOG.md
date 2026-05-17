@@ -311,6 +311,31 @@ original author Gabriel "Squared" SAILLARD — see the README
 
 ### Changed
 
+- **Bootstrap defaults moved into the same modules as the runtime
+  schema** ([Closes #174](https://github.com/Yukuhu/edex-ui/issues/174)):
+  - `defaultSettings({platform, userDataDir})` added to
+    `src/utils/settingsSerializer.js`. `_boot.js` now calls this
+    instead of carrying its own inline literal, so adding a new
+    setting is a one-file change.
+  - `src/utils/shortcutDefaults.js` (new Node-safe module) exports
+    `DEFAULT_SHORTCUTS` and a `MIGRATIONS` table the existing
+    backfill loop in `_boot.js` consumes. The CONTROL_MENU backfill
+    and the `Ctrl+Shift+Space → Ctrl+Shift+O` migration are
+    preserved as the first two migration entries.
+  - **Fixed five drifted settings keys** (`env`, `username`,
+    `monitor`, `iface`, `keepGeometry`) that had editor inputs in
+    the renderer but no bootstrap defaults — on first launch the
+    editor rendered them as `value="undefined"` and the save path
+    silently dropped them. `defaultSettings()` now seeds each with
+    the value that matches the renderer's "missing key" behaviour
+    (`""`, `0`, `true`) so the editor populates correctly from day
+    one.
+  - Cross-module integrity test
+    (`tests/unit/defaults-crossModule.test.js`, 11 tests) pins
+    SCHEMA ↔ defaults coverage in both directions, type alignment,
+    full round-trip through `serializeFromDom`, platform-aware
+    shell choice, and `DEFAULT_SHORTCUTS` ↔ `SHORTCUTS_DEFINITION`
+    coverage. The drift this PR fixes can't silently come back.
 - **`_renderer.js` shrunk from 1,649 → 1,330 lines** by extracting two
   cohesive modules ([Closes #173](https://github.com/Yukuhu/edex-ui/issues/173)):
   - **`src/utils/settingsSerializer.js`** — pure module owning the

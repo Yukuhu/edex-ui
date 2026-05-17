@@ -1,12 +1,20 @@
 "use strict";
 
-// Settings shape + serializer. Pure module — no DOM, no electron, no
-// file I/O — so the unit suite can exercise the schema and the
-// `value → settings.json` mapping without booting the renderer.
+// Settings shape, defaults, and serializer. Pure module — no DOM, no
+// electron, no file I/O — so the unit suite can exercise the schema
+// and the `value → settings.json` mapping without booting the
+// renderer.
 //
-// Issue #173 (extract from _renderer.js). Issue #174 will move the
-// bootstrap defaults in _boot.js to consume this same SCHEMA so adding
-// a new setting becomes a one-file change.
+// Both the renderer (settings-editor save path) and `_boot.js`
+// (first-launch template) require this module. Adding a new setting
+// is now a one-file change:
+//   1. add the key to `SCHEMA` with its editor input id and type,
+//   2. add a default in `defaultSettings()` below,
+//   3. add the editor input to the settings modal in `_renderer.js`.
+//
+// Issue #173 extracted SCHEMA + serializeFromDom from `_renderer.js`.
+// Issue #174 folds the `_boot.js` first-launch defaults into this
+// same module.
 
 // SCHEMA: one entry per persisted settings key.
 //
@@ -112,4 +120,76 @@ function serializeFromDom(getValue, existing) {
     return out;
 }
 
-module.exports = { SCHEMA, serializeFromDom };
+// Return the object `_boot.js` writes to settings.json on first
+// launch. The two platform-dependent fields (`shell` and `cwd`) are
+// pulled from the `env` argument so the function stays free of
+// electron / process imports and is unit-testable.
+//
+// `env.platform`     — e.g. `process.platform` ("win32"/"darwin"/…)
+// `env.userDataDir`  — e.g. `electron.app.getPath("userData")`
+//
+// Every key in SCHEMA (except `preserve: true` keys) is included.
+// Drift between SCHEMA and these defaults used to be a real bug: the
+// settings editor exposed inputs for `env` / `username` / `monitor` /
+// `iface` / `keepGeometry` which never had bootstrap defaults, so the
+// editor rendered them as `value="undefined"` and the save path
+// silently dropped them. Adding a SCHEMA entry without a default
+// here now fails the cross-module integrity test in
+// `tests/unit/settingsSerializer.test.js`.
+function defaultSettings(env) {
+    const platform = (env && env.platform) || "linux";
+    const userDataDir = (env && env.userDataDir) || "";
+    return {
+        shell:                     platform === "win32" ? "powershell.exe" : "bash",
+        shellArgs:                 "",
+        cwd:                       userDataDir,
+        // Empty string means "no env overrides" — the PTY-spawn path
+        // in _boot.js passes this straight to node-pty's options.env.
+        env:                       "",
+        // Empty string means "fall back to the OS username" — the
+        // renderer reads `settings.username || null` (see
+        // getDisplayName).
+        username:                  "",
+        keyboard:                  "en-US",
+        theme:                     "tron",
+        termFontSize:              15,
+        audio:                     true,
+        audioVolume:               1.0,
+        disableFeedbackAudio:      false,
+        pingAddr:                  "1.1.1.1",
+        clockHours:                24,
+        port:                      3000,
+        // 0 is the primary display — same outcome as the
+        // `!isNaN(settings.monitor)` guard in _boot.js's window
+        // setup, which falls through to `getPrimaryDisplay()`
+        // when the index is invalid.
+        monitor:                   0,
+        nointro:                   false,
+        nocursor:                  false,
+        // Empty string means "auto-detect the first connected
+        // interface" — the renderer's netstat.class.js typechecks
+        // `typeof settings.iface === "string"` and falls through
+        // to auto-detect when the lookup fails.
+        iface:                     "",
+        allowWindowed:             false,
+        forceFullscreen:           true,
+        // The renderer's check is `=== false`, so `true` and a
+        // missing value behaved identically pre-#174. Pinning to
+        // `true` keeps that behaviour for new users and makes
+        // the setting visible in settings.json from day one.
+        keepGeometry:              true,
+        excludeThreadsFromToplist: true,
+        hideDotfiles:              false,
+        fsListView:                false,
+        spawnOnTabCycle:           true,
+        modalCloseButton:          true,
+        ttsVoice:                  "af_heart",
+        ttsDtype:                  "q8",
+        chatBackend:               "claude-cli",
+        gemmaDtype:                "q4f16",
+        experimentalGlobeFeatures: false,
+        experimentalFeatures:      false
+    };
+}
+
+module.exports = { SCHEMA, serializeFromDom, defaultSettings };

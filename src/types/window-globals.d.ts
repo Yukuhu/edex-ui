@@ -1,3 +1,31 @@
+// Ambient module stubs for runtime deps that live in `src/node_modules`
+// rather than the repo root. The `Typecheck` workflow only `npm ci`s
+// the root (matches #183's Electron-skip), so these packages aren't
+// installed and `tsc` would otherwise error with TS2307. Stubbing as
+// `any` is fine — the renderer typechecks runtime calls against
+// these surfaces at the call site, not against the package's own
+// types.
+declare module "howler";
+declare module "node-pty";
+declare module "xterm";
+declare module "xterm-addon-attach";
+declare module "xterm-addon-fit";
+declare module "xterm-addon-ligatures";
+declare module "xterm-addon-webgl";
+declare module "@electron/remote";
+declare module "@huggingface/transformers";
+declare module "kokoro-js";
+declare module "nanoid";
+declare module "smoothie";
+declare module "systeminformation";
+declare module "username";
+declare module "geolite2-redist";
+declare module "maxmind";
+declare module "pretty-bytes";
+declare module "shell-env";
+declare module "tail";
+declare module "which";
+
 // Ambient TypeScript declarations for nDEX-UI's custom `window.*`
 // extensions. Loaded by `tsconfig.json` so any file with
 // `// @ts-check` can read renderer state from `window` without a

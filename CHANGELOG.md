@@ -351,6 +351,22 @@ original author Gabriel "Squared" SAILLARD — see the README
   ~250 MB to ~1 MB in those jobs; `build-binaries.yaml` is
   untouched (that workflow genuinely needs the binary).
   (Closes #179)
+- **Extended `// @ts-check` to `src/_main_claude.js`**
+  ([Closes #195](https://github.com/Yukuhu/edex-ui/issues/195)).
+  The IPC payload typedefs that landed with #176
+  (`ClaudeSendPayload`, `ClaudeDeltaPayload`, …) were dormant — no
+  file imported them, so no protocol drift would surface at
+  typecheck time. The main-process bridge to the `claude` CLI is
+  now the producer-side enforcer: five typed-sender wrappers
+  (`sendDelta`, `sendDone`, `sendError`, `sendResult`, `sendModel`)
+  validate every outgoing payload's shape against its typedef.
+  Inline `/** @type {ClaudeSendPayload} */` and `ClaudeCancelPayload`
+  annotations cover the inbound handlers.
+  The first typecheck pass surfaced one real drift: the renderer
+  side sends `firstTurn` in the `CLAUDE_SEND` payload (used by main
+  to decide between `--session-id` and `--resume`), but it wasn't
+  in the typedef. Added. `tsconfig.json` `include` extended to
+  cover `_main_claude.js`.
 - **Moved three single-file `window.*` globals to module-locals**
   ([Closes #193](https://github.com/Yukuhu/edex-ui/issues/193)).
   `docs/globals.md`'s "Suggested follow-ups" section flagged

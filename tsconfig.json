@@ -20,7 +20,8 @@
   },
   "include": [
     "src/utils/**/*.js",
-    "src/ipc/**/*.js"
+    "src/ipc/**/*.js",
+    "src/_main_claude.js"
   ],
   "exclude": [
     "node_modules",

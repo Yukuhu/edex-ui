@@ -101,6 +101,8 @@ function terminalChannel(port) {
  * @property {string} prompt        The user message.
  * @property {string} [model]       Optional model override (e.g. "claude-haiku-4-5").
  * @property {string} [sessionId]   UUIDv4 shared across turns within the modal.
+ * @property {boolean} [firstTurn]  True on the modal's first turn; main passes
+ *                                  `--session-id` then and `--resume` after.
  * @property {string} [systemPrompt]
  */
 

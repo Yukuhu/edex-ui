@@ -12,7 +12,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { escapeHtml, purifyCSS, strictCssNumber } = require("../../src/utils/escapeHelpers.js");
+const { escapeHtml, purifyCSS, strictCssNumber, safeCssValue } = require("../../src/utils/escapeHelpers.js");
 
 // ── escapeHtml ───────────────────────────────────────────────────
 
@@ -157,4 +157,67 @@ test("strictCssNumber returns 0 for non-string-non-number input", () => {
         "Number([]) is 0 — still 0; just pin the contract");
     assert.equal(strictCssNumber(true), 1,
         "Number(true) is 1 — finite — so passes through. Defensible.");
+});
+
+// ── safeCssValue ──────────────────────────────────────────────────
+
+test("safeCssValue leaves a normal hex colour untouched", () => {
+    assert.equal(safeCssValue("#aabbcc"), "#aabbcc");
+    assert.equal(safeCssValue("#000000"), "#000000");
+    assert.equal(safeCssValue("#fff"), "#fff");
+});
+
+test("safeCssValue leaves rgb()/rgba() functional values intact", () => {
+    assert.equal(safeCssValue("rgb(170, 207, 209)"), "rgb(170, 207, 209)");
+    assert.equal(safeCssValue("rgba(170,207,209,0.3)"), "rgba(170,207,209,0.3)");
+});
+
+test("safeCssValue leaves quoted font names intact (used for --font_main: \"X\")", () => {
+    // The renderer wraps the value in `"..."`. Quotes inside the
+    // value aren't dangerous here — the CSS string literal already
+    // owns them.
+    assert.equal(safeCssValue("United Sans Medium"), "United Sans Medium");
+    assert.equal(safeCssValue("Fira Code"), "Fira Code");
+});
+
+test("safeCssValue strips ; (declaration boundary)", () => {
+    // The actual attack pattern: theme.colors.black = "#000; background: red"
+    // renders as `:root { --color_black: #000; background: red; … }`,
+    // which applies `background: red` to <html>. After the strip:
+    //   --color_black: #000 background: red;
+    // → invalid → dropped.
+    assert.equal(safeCssValue("#000; background: red"), "#000 background: red");
+});
+
+test("safeCssValue strips { and } (rule-block boundaries)", () => {
+    assert.equal(safeCssValue("#000} body { background: red"), "#000 body  background: red");
+    assert.equal(safeCssValue("#000 { hack: yes }"), "#000  hack: yes ");
+});
+
+test("safeCssValue strips < and > (style-tag boundaries)", () => {
+    // < alone is what purifyCSS catches; safeCssValue adds > for
+    // belt-and-braces in value contexts where `>` has no legitimate
+    // role (child-combinator only matters in selectors).
+    assert.equal(safeCssValue("#000</style><script>alert(1)</script>"), "#000/stylescriptalert(1)/script");
+});
+
+test("safeCssValue strips \\ (CSS escape sequence prefix)", () => {
+    // CSS escapes (`\3c` = `<`) could otherwise smuggle a banned
+    // char past the regex strip.
+    assert.equal(safeCssValue("#000\\3c"), "#0003c");
+    // Both `\` and `;` are stripped in a single pass, so even an
+    // already-escaped boundary char loses both halves. That's
+    // strictly safer than letting the CSS parser later decode the
+    // escape into a literal `;`.
+    assert.equal(safeCssValue("red\\;background:red"), "redbackground:red");
+});
+
+test("safeCssValue returns \"\" for null/undefined", () => {
+    assert.equal(safeCssValue(null), "");
+    assert.equal(safeCssValue(undefined), "");
+});
+
+test("safeCssValue coerces non-string input via String()", () => {
+    assert.equal(safeCssValue(170), "170");
+    assert.equal(safeCssValue({ toString: () => "#aabbcc" }), "#aabbcc");
 });

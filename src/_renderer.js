@@ -70,6 +70,10 @@ window._purifyCSS = _escapeHelpers.purifyCSS;
 // `strictCssNumber` for the full contract. Issue #197.
 const _strictCssNumber = _escapeHelpers.strictCssNumber;
 window._strictCssNumber = _strictCssNumber;
+// Tightened sibling of _purifyCSS for value contexts (colors,
+// font names). Strips ;{}<>\ so a malicious theme can't break
+// out of the declaration. Issue #199.
+window._safeCssValue = _escapeHelpers.safeCssValue;
 window._encodePathURI = uri => {
     return encodeURI(uri).replace(/#/g, "%23");
 };
@@ -162,21 +166,26 @@ window._loadTheme = theme => {
     document.fonts.add(termFont);
     document.fonts.load("12px "+theme.terminal.fontFamily);
 
+    // safeCssValue (not _purifyCSS) for theme.colors.* / theme.cssvars.*
+    // — these are value contexts where a malicious theme could break
+    // out of the declaration with `;` and inject another. Issue #199.
+    // theme.injectCSS below stays on _purifyCSS by design.
+    const css = window._safeCssValue;
     document.querySelector("head").innerHTML += `<style class="theming">
     :root {
-        --font_main: "${window._purifyCSS(theme.cssvars.font_main)}";
-        --font_main_light: "${window._purifyCSS(theme.cssvars.font_main_light)}";
-        --font_mono: "${window._purifyCSS(theme.terminal.fontFamily)}";
-        --color_r: ${window._purifyCSS(theme.colors.r)};
-        --color_g: ${window._purifyCSS(theme.colors.g)};
-        --color_b: ${window._purifyCSS(theme.colors.b)};
-        --color_black: ${window._purifyCSS(theme.colors.black)};
-        --color_light_black: ${window._purifyCSS(theme.colors.light_black)};
-        --color_grey: ${window._purifyCSS(theme.colors.grey)};
+        --font_main: "${css(theme.cssvars.font_main)}";
+        --font_main_light: "${css(theme.cssvars.font_main_light)}";
+        --font_mono: "${css(theme.terminal.fontFamily)}";
+        --color_r: ${css(theme.colors.r)};
+        --color_g: ${css(theme.colors.g)};
+        --color_b: ${css(theme.colors.b)};
+        --color_black: ${css(theme.colors.black)};
+        --color_light_black: ${css(theme.colors.light_black)};
+        --color_grey: ${css(theme.colors.grey)};
 
         /* Used for error and warning modals */
-        --color_red: ${window._purifyCSS(theme.colors.red) || "red"};
-        --color_yellow: ${window._purifyCSS(theme.colors.yellow) || "yellow"};
+        --color_red: ${css(theme.colors.red) || "red"};
+        --color_yellow: ${css(theme.colors.yellow) || "yellow"};
     }
 
     body {

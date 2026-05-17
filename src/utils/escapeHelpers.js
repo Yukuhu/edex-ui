@@ -83,4 +83,33 @@ function strictCssNumber(v) {
     return Number.isFinite(n) ? n : 0;
 }
 
-module.exports = { escapeHtml, purifyCSS, strictCssNumber };
+// Tightened sibling of `purifyCSS` for *value* contexts — colors,
+// font names, and the like. Strips the small set of characters that
+// can break out of a CSS declaration value:
+//
+//   `;`     — declaration boundary; would let the value introduce
+//             a new declaration into the same rule.
+//   `{` `}` — rule-block boundaries; could open or close rules.
+//   `<` `>` — `<style>` tag boundaries; same threat purifyCSS already
+//             addresses for `<`, plus `>` (which purifyCSS keeps
+//             because theme.injectCSS uses it for child
+//             combinators — irrelevant in a color/font value).
+//   `\`     — CSS escape sequence prefix; could encode any of the
+//             above. Strip pre-emptively.
+//
+// Use this for theme.colors.* and theme.cssvars.* / theme.terminal.fontFamily
+// — anywhere the value is splice into a declaration body and the value
+// itself doesn't legitimately need any of those characters. Keep
+// `purifyCSS` for `theme.injectCSS`, which is intentionally arbitrary
+// CSS and needs `>` for selectors. Issue #199.
+/**
+ * @param {unknown} s
+ * @returns {string}
+ */
+function safeCssValue(s) {
+    if (s === null || s === undefined) return "";
+    const str = typeof s === "string" ? s : String(s);
+    return str.replace(/[;{}<>\\]/g, "");
+}
+
+module.exports = { escapeHtml, purifyCSS, strictCssNumber, safeCssValue };

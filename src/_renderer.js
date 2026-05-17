@@ -1,4 +1,8 @@
-// Disable eval()
+// Disable eval(). Reassigning `global.eval` is what `no-global-assign`
+// is designed to catch in general code; here it's the entire point —
+// we replace the renderer's eval with a thrower so any later attempt
+// to call it (in our code or in third-party scripts) fails loudly.
+// eslint-disable-next-line no-global-assign
 window.eval = global.eval = function () {
     throw new Error("eval() is disabled for security reasons.");
 };

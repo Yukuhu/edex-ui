@@ -118,10 +118,13 @@ const COMMON_RULES = {
     "no-implicit-globals": "error",
     "no-empty": ["warn", { "allowEmptyCatch": true }],
     "no-constant-condition": ["error", { "checkLoops": false }],
-    // Project intentionally hangs services off `window` in the
-    // renderer; SonarCloud's S7764 is suppressed for the same
-    // reason (see sonar-project.properties).
-    "no-global-assign": ["error", { "exceptions": ["eval"] }],
+    // Catches reassignment of read-only globals (undefined, NaN,
+    // eval, …). One legitimate site exists — `src/_renderer.js:2`
+    // intentionally replaces `global.eval` to disable eval as a
+    // hardening measure — and is annotated locally with
+    // `// eslint-disable-next-line no-global-assign` rather than
+    // exempting `eval` here.
+    "no-global-assign": "error",
 
     // The three rules below come from js.configs.recommended at
     // "error". For the baseline PR we want lint to pass against

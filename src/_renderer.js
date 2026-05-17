@@ -56,26 +56,14 @@ window.eval = global.eval = function () {
     window.addEventListener("resize", apply);
 })();
 
-// Security helper :)
-window._escapeHtml = text => {
-    let map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => {return map[m];});
-};
+// HTML/CSS interpolation helpers — live in src/utils/escapeHelpers.js
+// so the unit suite can exercise them without booting the renderer.
+// See that file for the full contract. Issue #170.
+const _escapeHelpers = require("./utils/escapeHelpers.js");
+window._escapeHtml = _escapeHelpers.escapeHtml;
+window._purifyCSS = _escapeHelpers.purifyCSS;
 window._encodePathURI = uri => {
     return encodeURI(uri).replace(/#/g, "%23");
-};
-window._purifyCSS = str => {
-    if (typeof str === "undefined") return "";
-    if (typeof str !== "string") {
-        str = str.toString();
-    }
-    return str.replace(/[<]/g, "");
 };
 window._delay = ms => {
     return new Promise((resolve, reject) => {

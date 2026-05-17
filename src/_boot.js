@@ -88,85 +88,42 @@ try {
 } catch(e) {
     signale.info(`Base config dir is ${electron.app.getPath("userData")}`);
 }
+// First-launch defaults + post-install migrations live in
+// `src/utils/settingsSerializer.js` (`defaultSettings`) and
+// `src/utils/shortcutDefaults.js` (`DEFAULT_SHORTCUTS` /
+// `MIGRATIONS`) — the renderer requires the same modules so adding
+// a setting / shortcut is a one-file change. Issue #174.
+const { defaultSettings } = require("./utils/settingsSerializer.js");
+const { DEFAULT_SHORTCUTS, MIGRATIONS } = require("./utils/shortcutDefaults.js");
+
 // Create default settings file
 if (!fs.existsSync(settingsFile)) {
-    fs.writeFileSync(settingsFile, JSON.stringify({
-        shell: (process.platform === "win32") ? "powershell.exe" : "bash",
-        shellArgs: '',
-        cwd: electron.app.getPath("userData"),
-        keyboard: "en-US",
-        theme: "tron",
-        termFontSize: 15,
-        audio: true,
-        audioVolume: 1.0,
-        disableFeedbackAudio: false,
-        clockHours: 24,
-        pingAddr: "1.1.1.1",
-        port: 3000,
-        nointro: false,
-        nocursor: false,
-        forceFullscreen: true,
-        allowWindowed: false,
-        excludeThreadsFromToplist: true,
-        hideDotfiles: false,
-        fsListView: false,
-        spawnOnTabCycle: true,
-        modalCloseButton: true,
-        ttsVoice: "af_heart",
-        ttsDtype: "q8",
-        gemmaDtype: "q4f16",
-        chatBackend: "claude-cli",
-        experimentalGlobeFeatures: false,
-        experimentalFeatures: false
-    }, "", 4));
+    fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings({
+        platform: process.platform,
+        userDataDir: electron.app.getPath("userData")
+    }), "", 4));
     signale.info(`Default settings written to ${settingsFile}`);
 }
 // Create default shortcuts file
 if (!fs.existsSync(shortcutsFile)) {
-    fs.writeFileSync(shortcutsFile, JSON.stringify([
-        { type: "app", trigger: "Ctrl+Shift+C", action: "COPY", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+V", action: "PASTE", enabled: true },
-        { type: "app", trigger: "Ctrl+Tab", action: "NEXT_TAB", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+Tab", action: "PREVIOUS_TAB", enabled: true },
-        { type: "app", trigger: "Ctrl+X", action: "TAB_X", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+S", action: "SETTINGS", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+K", action: "SHORTCUTS", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+F", action: "FUZZY_SEARCH", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+E", action: "FS_OPEN", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+L", action: "FS_LIST_VIEW", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+H", action: "FS_DOTFILES", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+P", action: "KB_PASSMODE", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+B", action: "KB_TOGGLE", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+M", action: "PANELS_TOGGLE", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+A", action: "CLAUDE_CHAT", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+O", action: "CONTROL_MENU", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+I", action: "DEV_DEBUG", enabled: false },
-        { type: "app", trigger: "Ctrl+Shift+F5", action: "DEV_RELOAD", enabled: true },
-        { type: "shell", trigger: "Ctrl+Shift+Alt+Space", action: "neofetch", linebreak: true, enabled: false }
-    ], "", 4));
+    fs.writeFileSync(shortcutsFile, JSON.stringify(DEFAULT_SHORTCUTS, "", 4));
     signale.info(`Default keymap written to ${shortcutsFile}`);
 } else {
-    // Backfill new bindings for users with a pre-existing shortcuts.json
-    // so they don't have to delete the file to discover new launchers.
+    // Run post-install migrations against the existing shortcuts.json
+    // so users upgrading from an older version pick up new bindings
+    // and re-bindings without having to delete the file.
     try {
         const cur = JSON.parse(fs.readFileSync(shortcutsFile, "utf-8"));
         let changed = false;
-        const existing = cur.find(s => s.action === "CONTROL_MENU");
-        if (!existing) {
-            cur.push({ type: "app", trigger: "Ctrl+Shift+O", action: "CONTROL_MENU", enabled: true });
-            changed = true;
-            signale.info("Backfilled CONTROL_MENU shortcut into existing shortcuts.json");
-        } else if (existing.trigger === "Ctrl+Shift+Space") {
-            // Migrate the original CONTROL_MENU trigger off Ctrl+Shift+Space,
-            // which is claimed by IBus / fcitx on most Linux desktops and
-            // therefore never reaches Electron.
-            existing.trigger = "Ctrl+Shift+O";
-            changed = true;
-            signale.info("Migrated CONTROL_MENU shortcut from Ctrl+Shift+Space to Ctrl+Shift+O");
+        for (const migration of MIGRATIONS) {
+            if (migration.apply(cur)) {
+                signale.info(`shortcuts.json migration applied: ${migration.description}`);
+                changed = true;
+            }
         }
         if (changed) fs.writeFileSync(shortcutsFile, JSON.stringify(cur, "", 4));
     } catch (e) {
-        signale.warn("CONTROL_MENU shortcut backfill failed:", e);
+        signale.warn("shortcuts.json migration failed:", e);
     }
 }
 // Create / backfill the WebApps registry (src/classes/webApp.class.js).

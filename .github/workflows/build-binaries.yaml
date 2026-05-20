@@ -13,7 +13,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -47,7 +47,7 @@ jobs:
         with:
           platforms: arm64
       - name: Cache Electron binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -86,7 +86,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/AppData/Local/electron/Cache
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -112,7 +112,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/Library/Caches/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}

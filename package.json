@@ -119,7 +119,7 @@
   "devDependencies": {
     "@types/node": "^22.19.19",
     "eslint": "^9.39.4",
-    "globals": "^15.15.0",
+    "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "typescript": "^5.9.3"
   }

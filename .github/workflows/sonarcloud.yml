@@ -22,7 +22,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Shallow clones disable blame info, which Sonar uses to
           # attribute issues to authors and to compute the "new code"

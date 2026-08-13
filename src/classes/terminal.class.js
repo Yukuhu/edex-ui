@@ -479,7 +479,21 @@ class Terminal {
                     this.ondisconnected(code, reason);
                 });
                 ws.on("message", msg => {
-                    this.tty.write(msg);
+                    if (typeof msg !== "string" && !Buffer.isBuffer(msg)) {
+                        return;
+                    }
+
+                    const normalizedMsg = Buffer.isBuffer(msg) ? msg.toString("utf8") : msg;
+                    if (!normalizedMsg || normalizedMsg.length > 8192) {
+                        return;
+                    }
+
+                    const safeMsg = normalizedMsg.replace(/[^\x20-\x7E\r\n\t\b\x1B]/g, "");
+                    if (!safeMsg) {
+                        return;
+                    }
+
+                    this.tty.write(safeMsg);
                 });
                 this.tty.onData(data => {
                     this._nextTickUpdateTtyCWD = true;

@@ -43,7 +43,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Setup QEMU (arm64 cross-build)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
       - name: Cache Electron binaries

@@ -111,7 +111,7 @@
     "electron-builder": "^26.15.3",
     "mime-types": "^3.0.2",
     "node-json-minify": "3.0.0",
-    "terser": "^5.31.0"
+    "terser": "^5.51.2"
   },
   "optionalDependencies": {
     "cson-parser": "4.0.9"
@@ -119,7 +119,7 @@
   "devDependencies": {
     "@types/node": "^25.9.1",
     "eslint": "^9.39.4",
-    "globals": "^17.6.0",
+    "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "typescript": "^5.9.3"
   }

@@ -118,7 +118,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.10.0",
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "typescript": "^5.9.3"

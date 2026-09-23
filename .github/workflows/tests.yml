@@ -14,10 +14,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           # Match Electron 42's bundled Node (22.x). Pinning major
           # so we don't pick up surprise behaviour in `node:test`.

@@ -6,14 +6,14 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -36,18 +36,18 @@ jobs:
   build-linux-arm64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Node.js 22 (for the prebuild script)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Setup QEMU (arm64 cross-build)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
       - name: Cache Electron binaries
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -79,14 +79,14 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/AppData/Local/electron/Cache
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
@@ -105,14 +105,14 @@ jobs:
   build-darwin:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Cache Electron binaries
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/Library/Caches/electron
           key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
